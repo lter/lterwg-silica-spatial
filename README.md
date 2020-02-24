@@ -1,4 +1,4 @@
-# LTER Working Group - FROM POLES TO TROPICS: A MULTI-BIOME SYNTHESIS INVESTIGATING THE CONTROLS ON RIVER SI EXPORTS
+# LTER Working Group - From Poles to Tropics: A Multi-Biome Synthesis Investigating the Controls on River Si Exports
 
 ## PIs: 
 
