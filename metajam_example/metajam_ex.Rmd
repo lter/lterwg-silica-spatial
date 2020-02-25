@@ -106,10 +106,9 @@ These are just a few examples of the kinds of questions we can answer with the m
 
 -------
 
-_Note_: There is also a `factor_metadata` dataframe inside `my_data`. This dataset doesn't contain any factor variables, so `factor_metadata` is an empty dataframe that can be ignored.
+_Note_: There is also a `factor_metadata` dataframe inside `my_data`. This dataset doesn't contain any factor variables, so `factor_metadata` is an empty dataframe that can be ignored. 
 
-
-
+For more information, see the documentation and articles here: https://nceas.github.io/metajam/
 
 
 
