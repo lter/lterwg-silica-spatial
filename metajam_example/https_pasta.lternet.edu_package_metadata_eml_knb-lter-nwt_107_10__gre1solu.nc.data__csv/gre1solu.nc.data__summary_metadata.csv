@@ -1,0 +1,21 @@
+name,value
+File_Name,gre1solu.nc.data
+Date_Downloaded,2020-02-24 16:12:24
+Data_ID,https://pasta.lternet.edu/package/data/eml/knb-lter-nwt/107/10/aef605d3ab0fba82ec95f665ff4b066b
+Data_URL,https://gmn.lternet.edu/mn/v2/object/https:%2F%2Fpasta.lternet.edu%2Fpackage%2Fdata%2Feml%2Fknb-lter-nwt%2F107%2F10%2Faef605d3ab0fba82ec95f665ff4b066b
+Metadata_ID,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/107/10
+Metadata_URL,https://gmn.lternet.edu/mn/v2/object/https:%2F%2Fpasta.lternet.edu%2Fpackage%2Fmetadata%2Feml%2Fknb-lter-nwt%2F107%2F10
+Metadata_EML_Version,2.1.1
+File_Description,"Stream water chemistry data for Green Lake 1, 1985 - 2010."
+Dataset_URL,https://search.dataone.org/#view/https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/107/10
+Dataset_Title,"Stream water chemistry data for Green Lake 1, 1985 - 2010."
+Dataset_StartDate,1985-06-06
+Dataset_EndDate,2006-10-05
+Dataset_Location,"Sampling location was at the plate weir where the stream emerges from the base of the Green Lake 1 dam, i.e. after drainage through the dam. Original data are stored with the NWT LTER data manager."
+Dataset_WestBoundingCoordinate,-105.643
+Dataset_EastBoundingCoordinate,-105.3753
+Dataset_NorthBoundingCoordinate,40.0615
+Dataset_SouthBoundingCoordinate,39.9932
+Dataset_Abstract,"This is a summary of major ion concentrations for stream water samples collected at the outlet stream from Green Lake 1. Sampling point was at the plate weir where the stream emerges from the base of the lake dam, i.e. after drainage through the dam."
+Dataset_Methods,Methods can be found in the metadata associated with this dataset at niwot.colorado.edu/data/data/stream-water-chemistry-data-for-green-lake-1-1985-2010
+Dataset_People,Nel; Caine

@@ -1,0 +1,2737 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eml:eml xmlns:eml="https://eml.ecoinformatics.org/eml-2.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:stmml="http://www.xml-cml.org/schema/stmml-1.2" packageId="knb-lter-nwt.107.10" xsi:schemaLocation="eml://ecoinformatics.org/eml-2.1.1 eml.xsd" scope="system" system="https://pasta.edirepository.org">
+  <access authSystem="https://pasta.edirepository.org/authentication" order="denyFirst" scope="document" system="https://pasta.edirepository.org">
+    <allow>
+      <principal>uid=nwt,o=LTER,dc=ecoinformatics,dc=org</principal>
+      <permission>all</permission>
+    </allow>
+    <allow>
+      <principal>uid=hhumphries,o=LTER,dc=ecoinformatics,dc=org</principal>
+      <permission>all</permission>
+    </allow>
+    <allow>
+      <principal>public</principal>
+      <permission>read</permission>
+    </allow>
+  </access>
+  <dataset scope="document">
+    <alternateIdentifier system="https://doi.org">doi:10.6073/pasta/ea17637406c07cd69b8de8ca263799ca</alternateIdentifier>
+    <title>Stream water chemistry data for Green Lake 1, 1985 - 2010.</title>
+    <creator id="nwtlter">
+      <organizationName>Niwot Ridge LTER</organizationName>
+      <address>
+        <deliveryPoint>4001 Discovery Drive, UCB 450</deliveryPoint>
+        <deliveryPoint>University of Colorado</deliveryPoint>
+        <city>Boulder</city>
+        <administrativeArea>CO</administrativeArea>
+        <postalCode>80303</postalCode>
+        <country>United States</country>
+      </address>
+      <onlineUrl>http://niwot.colorado.edu/</onlineUrl>
+    </creator>
+    <creator scope="document">
+      <individualName>
+        <givenName>Nel</givenName>
+        <surName>Caine</surName>
+      </individualName>
+      <address scope="document">
+        <deliveryPoint>Institute of Arctic and Alpine Research</deliveryPoint>
+        <deliveryPoint>4001 Discovery Drive, UCB 450</deliveryPoint>
+        <deliveryPoint>University of Colorado</deliveryPoint>
+        <city>Boulder</city>
+        <administrativeArea>CO</administrativeArea>
+        <postalCode>80303</postalCode>
+        <country>United States</country>
+      </address>
+      <phone phonetype="business">(303)492-5053</phone>
+      <phone phonetype="secondary business">(303)492-8642</phone>
+    </creator>
+    <pubDate>1993</pubDate>
+    <abstract>
+      <para>This is a summary of major ion concentrations for stream water samples collected at the outlet stream from Green Lake 1. Sampling point was at the plate weir where the stream emerges from the base of the lake dam, i.e. after drainage through the dam.</para>
+    </abstract>
+    <keywordSet>
+      <keyword>hydrology</keyword>
+      <keyword>water chemistry</keyword>
+      <keyword>solute concentration</keyword>
+      <keyword>stream water quality</keyword>
+      <keyword>surface water quality</keyword>
+      <keyword>biogeochemistry</keyword>
+      <keyword>inorganic_nutrients</keyword>
+      <keyword>pH</keyword>
+      <keyword>specific conductance</keyword>
+      <keyword>hydrogen ions</keyword>
+      <keyword>ammonium</keyword>
+      <keyword>calcium</keyword>
+      <keyword>magnesium</keyword>
+      <keyword>sodium</keyword>
+      <keyword>potassium</keyword>
+      <keyword>chloride</keyword>
+      <keyword>nitrate</keyword>
+      <keyword>sulfate</keyword>
+      <keyword>phosphate</keyword>
+      <keyword>silicon</keyword>
+      <keyword>cation sum</keyword>
+      <keyword>anion sum</keyword>
+      <keyword>charge balance</keyword>
+      <keyword>total nitrogen</keyword>
+      <keyword>total dissolved nitrogen</keyword>
+      <keyword>particulate nitrogen</keyword>
+      <keyword>dissolved organic nitrogen</keyword>
+      <keyword>inorganic nitrogen</keyword>
+      <keyword>total phosphorus</keyword>
+      <keyword>total dissolved phosphorus</keyword>
+      <keyword>particulate phosphorus</keyword>
+      <keyword>dissolved organic phosphorus</keyword>
+      <keyword>inorganic phosphorus</keyword>
+      <keyword>delta oxygen-18</keyword>
+      <keyword>delta deuterium</keyword>
+      <keyword>deuterium excess</keyword>
+      <keyword>total carbon</keyword>
+      <keyword>dissolved organic carbon</keyword>
+      <keyword>particulate carbon</keyword>
+      <keyword>Green Lakes Valley</keyword>
+      <keyword>Green Lake 1</keyword>
+      <keyword>Niwot Ridge LTER</keyword>
+      <keyword>NWT</keyword>
+      <keyword>long term</keyword>
+    </keywordSet>
+    <intellectualRights>
+      <para>This information is released under the Creative Commons license - Attribution - CC BY (https://creativecommons.org/licenses/by/4.0/). The consumer of these data ("Data User" herein) is required to cite it appropriately in any publication that results from its use. The Data User should realize that these data may be actively used by others for ongoing research and that coordination may be necessary to prevent duplicate publication. The Data User is urged to contact the authors of these data if any questions about methodology or results occur. Where appropriate, the Data User is encouraged to consider collaboration or co-authorship with the authors. The Data User should realize that misinterpretation of data may occur if used out of context of the original study. While substantial efforts are made to ensure the accuracy of data and associated documentation, complete accuracy of data sets cannot be guaranteed. All data are made available "as is." The Data User should be aware, however, that data are updated periodically and it is the responsibility of the Data User to check for new versions of the data. The data authors and the repository where these data were obtained shall not be liable for damages resulting from any use or misinterpretation of the data. Thank you.</para>
+    </intellectualRights>
+    <distribution scope="document">
+      <online>
+        <url function="download">http://niwot.colorado.edu/data_csvs/gre1solu.nc.data.csv</url>
+      </online>
+    </distribution>
+    <coverage scope="document">
+      <geographicCoverage scope="document">
+        <geographicDescription>Sampling location was at the plate weir where the stream emerges from the base of the Green Lake 1 dam, i.e. after drainage through the dam. Original data are stored with the NWT LTER data manager.</geographicDescription>
+        <boundingCoordinates>
+          <westBoundingCoordinate>-105.643</westBoundingCoordinate>
+          <eastBoundingCoordinate>-105.3753</eastBoundingCoordinate>
+          <northBoundingCoordinate>40.0615</northBoundingCoordinate>
+          <southBoundingCoordinate>39.9932</southBoundingCoordinate>
+        </boundingCoordinates>
+      </geographicCoverage>
+      <temporalCoverage scope="document">
+        <rangeOfDates>
+          <beginDate>
+            <calendarDate>1985-06-06</calendarDate>
+          </beginDate>
+          <endDate>
+            <calendarDate>2006-10-05</calendarDate>
+          </endDate>
+        </rangeOfDates>
+      </temporalCoverage>
+    </coverage>
+    <maintenance>
+      <description>
+        <para>The documentation section of this file was developed from the NWT LTER Data Directory (Symphony files DDABSTRA.WR1, DDDOCUME.WR1, DDMASTER.WR1, DDVARIAB.WR1; last updated 16 December 1991) by Susan Kindig and Rick Ingersoll in early November 1992. Additional information for the documentation section, as well as the header and data sections were supplied by Nel Caine on 12 February 1993. Data were compiled in January 1993 by Nel Caine from earlier files for individual years.[RCI, 15 February 1993] This file was put under sccs control on 30 March 1993. See the appropriate history file for additional log information.[RCI 30 March 1993] Truncation of the final 0 had occurred for October dates when the original data were saved from spreadsheet software and these zeroes were replaced on 23 November 1993.[RCI 23 November 1993] Data for 1985-1991 were reformatted in order to be consistent with post-1991 data formats on 2 May 1994. The variables, comments, and header sections were modified accordingly.[RCI 2 May 1994] Data for 1993 were appended to the data section on 4 May 1994.[RCI 4 May 1994] On 11 July 1994, it was discovered that the spring 1994 conversions from mg NO3/L to ueq NO3/L for 1985-1991 data had been incorrectly done (mg/L values were multiplied by 61.3 instead of 16.39). The 1985-1991 data were extracted from this file, a script to correct the error was run on the extracted data, and the corrected data were used to replace the erroneous data on 12 July 1994. [RCI 12 July 1994] Data for 1992, as well as one record for 1993, were provided by Chris Seibold on 16 November 1994; these data were processed and inserted into the data section on 17 November 1994.[RCI 17 November 1994] All data for 920709 were converted to missing because all values were deemed to be too low (presumably because the sample was inadvertently diluted) by Mark Williams and Nel Caine.[RCI 30 January 1995] Data for 1994 were appended to the data section on 12 February 1996. Columns for total and dissolved N and P were also added to the data section on 12 February 1996.[MAH 12 February 1996] Data for 1995 were appended to the data section on 26 September 1996.[MAH 26 September 1996] Data for 1996 were appended to the data section on 3 September 1997. Columns for particulate, inorganic, and dissolved organic N and P as well as for PO4--- were also added to the data section on that date.[MAH 3 September 1997] The investigator contact information was updated on 9 June 1999.[MAH 9 June 1999] Added stream water quality to keywords section on 21 July 1999.[MAH 21 July 1999] Data for 1997 and 1998 were appended to the data section on 31 August 2000.[MAH 31 August 2000] Data for 1999 were appended to the data section on 23 April 2001.[TMA 23 April 2001] Data for 2000 were appended to the data section on 05 November 2001.[TMA 05 November 2001] The values for total P, dissolved P, dissolved organic N, particulate N, and inorganic N were determined to be incorrect for 1997, 1998, and 1999. The values were corrected on 10 June 2003.[TMA 10 June 2003] Data for 2001 were appended to the data section.[TMA 03 November 2003] Data for 2002 were appended to the data section.[TMA 05 November 2003] Data for 2003 were appended to the data section.[TMA 22 March 2005]  Four new columns were added to the data file, 31-O18, 32-TOC, 33-DOC, 34-POC. Data for 2004 were appended to the data section.[TMA 25 May 2005] Data for 2005 were appended to the data section.[TMA 26 October 2006] Data for 1991-2005 were reinserted into the data section due to several column errors and the fact that the Kiowa Lab had re-run many samples.  Data for 2006 were appended to the data section.[TMA 23 May 2007] Data for 2007 to 2009 were appended to the data section. Edited title and keywords for inclusion in inorganic nutrients data sets.[HCH 21 April 2010] Data for 2010 were appended to the data section. Dates were reformatted to yyyy-mm-dd; absence of value changed to NP (not performed); variables, keywords, and cols updated to reflect all variables in the data.[HCH 29 June 2013] Labels, units, and definitions were edited.[HCH 22 December 2015] Minor text editing was conducted.[HCH 22 April 2016]</para>
+      </description>
+    </maintenance>
+    <contact>
+      <positionName>Information Manager, Niwot Ridge LTER</positionName>
+      <address>
+        <deliveryPoint>4001 Discovery Drive, UCB 450</deliveryPoint>
+        <deliveryPoint>University of Colorado</deliveryPoint>
+        <city>Boulder</city>
+        <administrativeArea>Colorado</administrativeArea>
+        <postalCode>80303</postalCode>
+        <country>USA</country>
+      </address>
+      <electronicMailAddress>lternwt@colorado.edu</electronicMailAddress>
+    </contact>
+    <publisher>
+      <organizationName>Niwot Ridge Long Term Ecological Research Project</organizationName>
+    </publisher>
+    <methods>
+      <methodStep>
+        <description>
+          <para>Methods can be found in the metadata associated with this dataset at niwot.colorado.edu/data/data/stream-water-chemistry-data-for-green-lake-1-1985-2010</para>
+        </description>
+      </methodStep>
+    </methods>
+    <dataTable scope="document">
+      <entityName>Stream water chemistry data for Green Lake 1</entityName>
+      <entityDescription>Stream water chemistry data for Green Lake 1, 1985 - 2010.</entityDescription>
+      <physical>
+        <objectName>gre1solu.nc.data.csv</objectName>
+        <authentication method="MD5">7b996c8ec3c4f4458cab2255d1623ac4</authentication>
+        <dataFormat>
+          <textFormat>
+            <numHeaderLines>1</numHeaderLines>
+            <recordDelimiter>\r\n</recordDelimiter>
+            <attributeOrientation>column</attributeOrientation>
+            <simpleDelimited>
+              <fieldDelimiter>,</fieldDelimiter>
+              <quoteCharacter>"</quoteCharacter>
+            </simpleDelimited>
+          </textFormat>
+        </dataFormat>
+        <distribution>
+          <online>
+            <url function="download">https://pasta.lternet.edu/package/data/eml/knb-lter-nwt/107/10/aef605d3ab0fba82ec95f665ff4b066b</url>
+          </online>
+          <access authSystem="https://pasta.edirepository.org/authentication" order="allowFirst" system="https://pasta.edirepository.org">
+            <allow>
+              <principal>public</principal>
+              <permission>read</permission>
+            </allow>
+            <allow>
+              <principal>uid=nwt,o=LTER,dc=ecoinformatics,dc=org</principal>
+              <permission>read</permission>
+              <permission>write</permission>
+            </allow>
+            <deny>
+              <principal>public</principal>
+              <permission>write</permission>
+            </deny>
+          </access>
+        </distribution>
+      </physical>
+      <attributeList>
+        <attribute>
+          <attributeName>LTER_site</attributeName>
+          <attributeDefinition>LTER site name</attributeDefinition>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <enumeratedDomain>
+                  <codeDefinition>
+                    <code>NWT</code>
+                    <definition>Niwot Ridge LTER</definition>
+                  </codeDefinition>
+                </enumeratedDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute scope="document">
+          <attributeName>samp_loc</attributeName>
+          <attributeDefinition>sample location</attributeDefinition>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <enumeratedDomain>
+                  <codeDefinition>
+                    <code>GREEN LAKE 1</code>
+                    <definition>plate weir where the stream emerges from the base of the Green Lake 1 dam</definition>
+                  </codeDefinition>
+                </enumeratedDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>year</attributeName>
+          <attributeDefinition>year (yyyy)</attributeDefinition>
+          <measurementScale>
+            <dateTime>
+              <formatString>YYYY</formatString>
+            </dateTime>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute scope="document">
+          <attributeName>date</attributeName>
+          <attributeDefinition>date (yyyy-mm-dd)</attributeDefinition>
+          <measurementScale>
+            <dateTime>
+              <formatString>YYYY-MM-DD</formatString>
+            </dateTime>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute scope="document">
+          <attributeName>time</attributeName>
+          <attributeDefinition>time collected (hhmm(MST)); DNS-data not submitted</attributeDefinition>
+          <measurementScale>
+            <dateTime>
+              <formatString>HHMM</formatString>
+            </dateTime>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute scope="document">
+          <attributeName>pH</attributeName>
+          <attributeDefinition>ph; NP-not performed</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>dimensionless</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute scope="document">
+          <attributeName>cond</attributeName>
+          <attributeDefinition>conductance, performed @ 25 deg C; NP-not performed</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microsiemenPerCentimeter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute scope="document">
+          <attributeName>ANC</attributeName>
+          <attributeDefinition>acid neutralizing capacity; NP-not performed</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>acid</attributeName>
+          <attributeDefinition>acidity</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>alkal</attributeName>
+          <attributeDefinition>alkalinity; NP-not performed</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>H+</attributeName>
+          <attributeDefinition>H+ concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>NH4+</attributeName>
+          <attributeDefinition>NH4+ concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Ca++</attributeName>
+          <attributeDefinition>Ca++ concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Mg++</attributeName>
+          <attributeDefinition>Mg++ concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Na+</attributeName>
+          <attributeDefinition>Na+ concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>K+</attributeName>
+          <attributeDefinition>K+ concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Cl-</attributeName>
+          <attributeDefinition>Cl- concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>NO3-</attributeName>
+          <attributeDefinition>NO3- concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>SO4--</attributeName>
+          <attributeDefinition>SO4-- concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>PO4---</attributeName>
+          <attributeDefinition>PO4--- concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Si</attributeName>
+          <attributeDefinition>Si concentration</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>cat_sum</attributeName>
+          <attributeDefinition>cation sum</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>an_sum</attributeName>
+          <attributeDefinition>anion sum</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>chg_bal</attributeName>
+          <attributeDefinition>charge balance</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TN</attributeName>
+          <attributeDefinition>total nitrogen</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TDN</attributeName>
+          <attributeDefinition>Total dissolved N</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>PN</attributeName>
+          <attributeDefinition>particulate N</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>DON</attributeName>
+          <attributeDefinition>dissolved organic N</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>IN</attributeName>
+          <attributeDefinition>inorganic N</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TP</attributeName>
+          <attributeDefinition>total phosphorus</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TDP</attributeName>
+          <attributeDefinition>Total Dissolved P</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>PP</attributeName>
+          <attributeDefinition>particulate P</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>DOP</attributeName>
+          <attributeDefinition>dissolved organic P</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>IP</attributeName>
+          <attributeDefinition>inorganic P</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>d18O</attributeName>
+          <attributeDefinition>delta 18O</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>d18O_sdev</attributeName>
+          <attributeDefinition>standard deviation delta 18O</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>dDeut</attributeName>
+          <attributeDefinition>delta Deuterium</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>dD_sdev</attributeName>
+          <attributeDefinition>standard deviation delta Deuterium</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>D_excess</attributeName>
+          <attributeDefinition>Deuterium excess</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Trit</attributeName>
+          <attributeDefinition>Tritium</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>TritiumUnit</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>T_sdev</attributeName>
+          <attributeDefinition>standard deviation tritium</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>TritiumUnit</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TOC</attributeName>
+          <attributeDefinition>total organic carbon</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>DOC</attributeName>
+          <attributeDefinition>dissolved organic carbon</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>POC</attributeName>
+          <attributeDefinition>particulate organic carbon</attributeDefinition>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>Data Not Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NA</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>N/A</code>
+            <codeExplanation>Not Applicable/Available</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>Not Performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NSS</code>
+            <codeExplanation>No Sample Submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NV</code>
+            <codeExplanation>Not Valid</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>QNS</code>
+            <codeExplanation>Quantity Not Sufficient</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>NaN</code>
+            <codeExplanation>Not a Number</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>trace</code>
+            <codeExplanation>trace value</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>comments</attributeName>
+          <attributeDefinition>comments</attributeDefinition>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>comments on sample testing</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+      </attributeList>
+      <caseSensitive>no</caseSensitive>
+      <numberOfRecords>440</numberOfRecords>
+    </dataTable>
+  </dataset>
+  <additionalMetadata>
+    <metadata>
+      <unitList>
+        <unit id="dimensionless" name="dimensionless" unitType="dimensionless">
+          <description>a designation asserting the absence of an associated unit
+				</description>
+        </unit>
+        <unit id="microsiemenPerCentimeter" name="microsiemenPerCentimeter" parentSI="siemenPerMeter" unitType="conductance">
+          <description>microSiemen per centimeter</description>
+        </unit>
+        <unit id="microequivalentPerLiter" name="microequivalentPerLiter" parentSI="" unitType="amountOfSubstanceConcentration">
+          <description>microequivalent per liter</description>
+        </unit>
+        <unit id="milligramPerLiter" name="milligramPerLiter" parentSI="" unitType="amountOfSubstanceConcentration">
+          <description>milligram per liter</description>
+        </unit>
+        <unit id="micromolePerLiter" name="micromolePerLiter" parentSI="mole" unitType="amountOfSubstanceConcentration">
+          <description>micromole per liter</description>
+        </unit>
+        <unit id="partPerThousand" name="partPerThousand" parentSI="none" unitType="dimensionless">
+          <description>part per thousand</description>
+        </unit>
+        <unit id="TritiumUnit" name="Tritium unit" parentSI="none" unitType="dimensionless">
+          <description>ratio of 1 tritium atom to 10^18 hydrogen atoms</description>
+        </unit>
+      </unitList>
+    </metadata>
+  </additionalMetadata>
+</eml:eml>
