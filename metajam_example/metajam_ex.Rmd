@@ -113,3 +113,92 @@ For more information, see the documentation and articles here: https://nceas.git
 
 
 
+
+--------
+
+## Formatting data
+Following the format of `stream_data_template.xlsx`, let's first import the template to see what columns we need
+```{r}
+# Read in the template
+template <- readxl::read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
+                               sheet = "Raw Data"
+                               )
+
+# The new data
+greenlake_data <- my_data$data
+```
+
+
+Next, let's create a new dataframe with the same number of rows as our new data
+
+```{r}
+# Create empty dataframe shell with new data's number of rows
+formatted_df <- tibble(.rows = nrow(greenlake_data)) 
+```
+
+Now we need to match the column names between the two tables. To do this, we'll try to make a lookup-table with the `template` column being the desired column names, and `greenlake` being the names from the new data we just downloaded.  
+
+We'll start this lookup table by using the `agrep()` function to fuzzy-match the two sets of names. The code below looks at each template name, and tries to find a match using the column names of `greenlake_data`. If it cannot find a close match, it will return an empty string.
+```{r}
+# Start by matching by closest name as a first pass
+(fuzzy_match <- tibble(template = names(template)) %>%
+  rowwise() %>%
+  mutate(greenlake = max("", agrep(template, names(greenlake_data), 
+                                   value = T))) %>% # max is a little hacky..
+  ungroup()
+)
+```
+
+
+This was an OK first pass, but we can see that there's still a lot of blanks (eg Site/Stream Name) didn't find a match, but there's also some missed matches (eg `Na` and `K` were both matched up with `year`). 
+
+To see if we can find a true match, we can look into the name descriptions using the below code.
+```{r}
+# To see if we can match up the other columns, check the documentation
+my_data$attribute_metadata %>% 
+  select(attributeName, attributeDefinition) 
+
+```
+
+
+Now that we have a better idea of which columns match up, we can fill in the missing / incorrect entries in our table. For example, the code below matches "Site/Stream Name" to "local_site" , matches "Sampling Date" with "date", and turns the incorrect matches "Na" and "K" to both be "".
+__Note:__ The last line `TRUE ~ greenlake` tells `R` to keep the values from the `fuzzy_match` unless you overwrite them here. E.g without that last line, "LTER" and "Time" (two of the correctly matched columns) would be overwritten as `NA`.
+```{r}
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+(lookup_table <- fuzzy_match %>%
+  mutate(greenlake = case_when(
+    template == "Site/Stream Name" ~ "local_site",
+    template == "Sampling Date" ~ "date",
+    template == "alkalinity" ~ "alkal",
+    template == "Na" ~ "",
+    template == "K" ~ "",
+    TRUE ~ greenlake
+    )
+    )
+)
+```
+
+Once the lookup table is as filled out as possible, we can remove all rows that still had no match (which we represented by an empty string in the `greenlake` column:
+```{r}
+lookup_table <- lookup_table %>%
+  filter(greenlake != "")
+```
+
+
+```{r}
+# rename operation
+names(greenlake_data) = lookup_table$greenlake[match(names(template), lookup_table$template)]
+
+
+# bind_rows, now that the column names match.
+formatted_df <- formatted_df %>%
+  bind_rows(greenlake_data)
+
+```
+
+
+
+
+
+
