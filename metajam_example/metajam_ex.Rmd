@@ -22,6 +22,9 @@ The `metajam` package gives us a convenient way to get the data (and the metadat
 library(metajam)
 library(tidyverse) # for convenience
 library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
 ```
 
 #### Step 2: Find the link to the dataset
@@ -119,10 +122,14 @@ For more information, see the documentation and articles here: https://nceas.git
 ## Formatting data
 Following the format of `stream_data_template.xlsx`, let's first import the template to see what columns we need
 ```{r}
-# Read in the template
-template <- readxl::read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
-                               sheet = "Raw Data"
-                               )
+# Read in the template.
+# the template isn't filled out, so column types are all over the place.
+  # I'm just going to make every text except date, so we can see different ways to change column type
+template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
+                               sheet = "Raw Data",
+                               col_types = "text"
+                               ) %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`))
 
 # The new data
 greenlake_data <- my_data$data
@@ -132,25 +139,26 @@ greenlake_data <- my_data$data
 Next, let's create a new dataframe with the same number of rows as our new data
 
 ```{r}
-# Create empty dataframe shell with new data's number of rows
-formatted_df <- tibble(.rows = nrow(greenlake_data)) 
+# Create empty dataframe shell with the right column names.
+formatted_df <- template %>% 
+  slice(0)
 ```
 
 Now we need to match the column names between the two tables. To do this, we'll try to make a lookup-table with the `template` column being the desired column names, and `greenlake` being the names from the new data we just downloaded.  
 
-We'll start this lookup table by using the `agrep()` function to fuzzy-match the two sets of names. The code below looks at each template name, and tries to find a match using the column names of `greenlake_data`. If it cannot find a close match, it will return an empty string.
+We'll start this lookup table by using the `amatch()` function from the `stringdist` package to fuzzy-match the two sets of names. The code below looks at each template name, and tries to find a match using the column names of `greenlake_data`. If it cannot find a close match, it will return `NA`
 ```{r}
-# Start by matching by closest name as a first pass
+# Start by matching by closest name as a first pass. 
+  # Note that we match the lower case names
+  # Note that the weight i= 0.1 says that we will be more likely to match if greenlake = template + extra
 (fuzzy_match <- tibble(template = names(template)) %>%
-  rowwise() %>%
-  mutate(greenlake = max("", agrep(template, names(greenlake_data), 
-                                   value = T))) %>% # max is a little hacky..
-  ungroup()
+   mutate(greenlake = names(greenlake_data)[amatch(tolower(template), tolower(names(greenlake_data)), 
+                                                   maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 ```
 
 
-This was an OK first pass, but we can see that there's still a lot of blanks (eg Site/Stream Name) didn't find a match, but there's also some missed matches (eg `Na` and `K` were both matched up with `year`). 
+This was an OK first pass, but we can see that there's still a lot of blanks (eg Site/Stream Name) didn't find a match, but there's also some missed matches (eg DIC,TKN, and PON were matched up with DOC, TN, and PN respectively). 
 
 To see if we can find a true match, we can look into the name descriptions using the below code.
 ```{r}
@@ -161,40 +169,55 @@ my_data$attribute_metadata %>%
 ```
 
 
-Now that we have a better idea of which columns match up, we can fill in the missing / incorrect entries in our table. For example, the code below matches "Site/Stream Name" to "local_site" , matches "Sampling Date" with "date", and turns the incorrect matches "Na" and "K" to both be "".
+Now that we have a better idea of which columns match up, we can fill in the missing / incorrect entries in our table. For example, the code below matches "Site/Stream Name" to "local_site" , matches "Sampling Date" with "date", and turns the incorrect matches into `NA`
 __Note:__ The last line `TRUE ~ greenlake` tells `R` to keep the values from the `fuzzy_match` unless you overwrite them here. E.g without that last line, "LTER" and "Time" (two of the correctly matched columns) would be overwritten as `NA`.
 ```{r}
 # Fill in the columns that didn't match, and correct the wrongly corrected matches
 # continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
 (lookup_table <- fuzzy_match %>%
   mutate(greenlake = case_when(
     template == "Site/Stream Name" ~ "local_site",
     template == "Sampling Date" ~ "date",
-    template == "alkalinity" ~ "alkal",
-    template == "Na" ~ "",
-    template == "K" ~ "",
+    template %in% c("DIC", "TKN", "PON") ~ NA_character_,
     TRUE ~ greenlake
     )
     )
 )
 ```
 
-Once the lookup table is as filled out as possible, we can remove all rows that still had no match (which we represented by an empty string in the `greenlake` column:
+Once the lookup table is as filled out as possible, we can remove all rows that still had no match (which we represented by `NA` in the `greenlake` column):
 ```{r}
 lookup_table <- lookup_table %>%
-  filter(greenlake != "")
+  filter(!is.na(greenlake))
+```
+
+Now we can write a function to use the lookup table
+```{r}
+#' @param name is a string from the greenlake column of the lookup table
+# Maybe have to do a little more work to deal with ordering, since rename_at should be vectorized.
+find_match<- function(name){
+  lookup_table %>%
+    filter(greenlake == name) %>%
+    pull(template)
+}
+```
+
+Now we can subset and rename the columns of the greenlake data that appear in the lookup table
+```{r}
+greenlake_data_of_interest <- greenlake_data %>%
+  select_at(vars(lookup_table$greenlake), find_match) 
 ```
 
 
+Finally, we can join this table to the the template format using the `vec_rbind` function from the `vctrs` package, to get the desired result.
 ```{r}
-# rename operation
-names(greenlake_data) = lookup_table$greenlake[match(names(template), lookup_table$template)]
-
-
-# bind_rows, now that the column names match.
-formatted_df <- formatted_df %>%
-  bind_rows(greenlake_data)
-
+# combine the dataframes now that the names match up
+# note: .ptype says to use the column types of greenlake_data_of_interest.
+  # can switch this to formatted_df if you want to take column types from the template.
+(final_output <- formatted_df %>%
+  vec_rbind(greenlake_data_of_interest, .ptype = template)
+)
 ```
 
 
