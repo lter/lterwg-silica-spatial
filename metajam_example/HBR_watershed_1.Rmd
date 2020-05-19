@@ -1,0 +1,203 @@
+---
+title: "Si River Data Wrangling"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Step 1: Load packages
+
+```{r}
+
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(metajam)
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+
+
+```
+
+####Step 2: Find the link to the dataset
+Go to the web address for the dataset and find the download button for the data. 
+
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.3.15&entityid=fdc489886309c2f3076ffaea26eb0f28
+
+#### Step 3: Choose where you want the files to be saved
+In our case, we'll just put it into the metajam_example folder.
+
+```{r}
+
+#eg desired_path_to_data <- "~/Desktop"
+desired_path_to_data <- "/home/kpeach/R/SI_river_data/lterwg-si-export/metajam_example"
+
+```
+
+
+#### Step 4: Download the data by pasting the link you just copied
+
+```{r}
+
+
+# this will download the data into a folder and save the path to that folder
+downloaded_data <- download_d1_data("https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.3.15&entityid=fdc489886309c2f3076ffaea26eb0f28", path = desired_path_to_data)
+
+
+```
+
+#### Step 5: Now read in the data (with all the metadata)
+
+```{r}
+
+my_data <- read_d1_files(downloaded_data)
+
+
+```
+
+It's a list of 3 dataframes! With this, everything we need is inside our `R` environment. 
+
+#### Taking a deeper look at each of these dataframes
+
+The dataset of interest:
+
+```{r}
+
+my_data$data
+
+
+my_data$attribute_metadata
+```
+
+Reading in template
+
+```{r}
+
+
+template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
+                               sheet = "Raw Data",
+                               col_types = "text"
+                               ) %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`))
+
+
+
+```
+
+
+
+```{r}
+
+
+HBR_watershed_1_data <- my_data$data
+#There are 652 rows in this df
+
+#Adding a column to identify the LTER site - Hubbar Brook HBR
+
+LTER_name <- rep('HBR', 652)
+
+HBR_watershed_1_data <- cbind(HBR_watershed_1_data, 'LTER' = LTER_name)
+
+Site_name <- rep('knb-lter-hbr.3.15', 652)
+
+HBR_watershed_1_data <- cbind(HBR_watershed_1_data, 'Site/Stream Name' = Site_name)
+# I can see that the column Year_Month includes the info from the column in the template 'Sampling Date' so I want to rename that column 
+
+HBR_watershed_1_data <- HBR_watershed_1_data %>% 
+  rename('Sampling Date' = 'Year_Month')
+
+
+
+
+#Removing the volwt_ preface from many of the column names. That preface was preventing me from identifying which columns were a match to the template 
+
+names(HBR_watershed_1_data)[5:29] <- substring(names(HBR_watershed_1_data)[5:29],7,12)
+
+HBR_watershed_1_data <- HBR_watershed_1_data %>% 
+  rename('Si' = 'SiO2')
+
+
+```
+
+
+```{r}
+
+
+# Start by matching by closest name as a first pass. 
+  # Note that we match the lower case names
+  # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
+(fuzzy_match <- tibble(template = names(template)) %>%
+   mutate(watershed1 = names(HBR_watershed_1_data)[amatch(tolower(template), tolower(names(HBR_watershed_1_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+# To see if we can match up the other columns, check the documentation
+my_data$attribute_metadata %>% 
+  select(attributeName, attributeDefinition) 
+
+```
+```{r}
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table <- fuzzy_match %>%
+  mutate(watershed1 = case_when(
+    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP") ~ NA_character_,
+    TRUE ~ watershed1)))
+
+correct_colnames <- lookup_table$template
+
+```
+
+
+Once the lookup table is as filled out as possible, we can remove all rows that still had no match (which we represented by `NA` in the `watershed1` column):
+
+```{r}
+
+
+lookup_table <- lookup_table %>%
+  filter(!is.na(watershed1))
+
+
+```
+
+
+```{r}
+
+correct_colnames <- lookup_table$template
+
+new_datatable <- HBR_watershed_1_data %>% 
+        select(one_of(c(correct_colnames)))
+
+
+```
+
+```{r}
+
+# Fix NAs. In this dataset "-888.888" is the missing value code. So we need to replace those with NAs
+
+new_datatable <- na_if(new_datatable, "-888.888")
+new_datatable <- na_if(new_datatable, "-888.88")
+
+
+```
+
+
+
+
+
+
+
+

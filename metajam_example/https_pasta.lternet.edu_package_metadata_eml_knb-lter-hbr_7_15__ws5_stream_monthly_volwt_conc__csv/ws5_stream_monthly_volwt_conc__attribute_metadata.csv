@@ -1,0 +1,30 @@
+attributeName,attributeLabel,attributeDefinition,storageType,formatString,measurementScale,domain,unit,numberType,missingValueCode,missingValueCodeExplanation,metadata_pid
+Year,Year,Year,date,YYYY,dateTime,dateTimeDomain,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+Month,Month,Month,date,MM,dateTime,dateTimeDomain,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+Year_Month,Year_Month,Year_Month,date,YYYY-MM,dateTime,dateTimeDomain,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+flow_mm,flow_mm,streamflow,float,NA,ratio,numericDomain,millimeter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Ca,volwt_Ca,calcium,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Mg,volwt_Mg,magnesium,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_K,volwt_K,potassium,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Na,volwt_Na,sodium,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Al_Ferron,volwt_Al_Ferron,Aluminum by the Ferron orthophenanthroline method,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_TMAl,volwt_TMAl,Total Monomeric Aluminum,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_OMAl,volwt_OMAl,Organic Monomeric Aluminum,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Al_ICP,volwt_Al_ICP,total dissolved Aluminum analyzed on the ICP,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_NH4,volwt_NH5,ammonium,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_SO4,volwt_SO5,sulphate,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_NO3,volwt_NO4,nitrate,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Cl,volwt_Cl,chloride,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_PO4,volwt_PO5,phosphate,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_DOC,volwt_DOC,dissolved organic carbon,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_TDN,volwt_TDN,total dissolved nitrogen,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_DON,volwt_DON,total organic nitrogen,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_DIC,volwt_DIC,dissolved inorganic carbon,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_SiO2,volwt_SiO3,silicate,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Mn,volwt_Mn,magnesium,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_Fe,volwt_Fe,iron,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_F,volwt_F,flourine,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.88,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_H,volwt_H,hydrogen,float,NA,ratio,numericDomain,milligramPerLiter,real,-888.8888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_pH,volwt_pH,pH ,float,NA,ratio,numericDomain,pH,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_SpecCond,volwt_SpecCond,specific conductivity,float,NA,ratio,numericDomain,microsiemensPerCentimeter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
+volwt_ANC,volwt_ANC,acid neutralizing capacity,float,NA,ratio,numericDomain,microequivalentPerLiter,real,-888.888,no data available,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/7/15
