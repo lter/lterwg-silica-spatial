@@ -58,6 +58,7 @@ my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lt
 downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
 
 
+
 ```
 
 #### Step 5: Now read in the data (with all the metadata)
@@ -105,11 +106,6 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
 HBR_watershed_1_data <- my_data$data
 #There are 652 rows in this df
 
-#Adding a column to identify the LTER site - Hubbar Brook HBR
-# Use nrow() instead
-# LTER_name <- rep('HBR', nrow(HBR_watershed_1_data))
-# 
-# # HBR_watershed_1_data <- cbind(HBR_watershed_1_data, 'LTER' = LTER_name)
 
 # But this is not necessary, R will repeat the value for you (also in base R with HBR_watershed_1_data$LTER <- "HBR")
 # the tidy way
@@ -118,21 +114,21 @@ HBR_watershed_1_data <- HBR_watershed_1_data %>%
 
 # same below
 
-Site_name <- rep('knb-lter-hbr.3.15', 652)
+HBR_watershed_1_data <- HBR_watershed_1_data %>% 
+  add_column('Site/Stream Name' = 'knb-lter-hbr.3.15', .before = "Year")
 
-HBR_watershed_1_data <- cbind(HBR_watershed_1_data, 'Site/Stream Name' = Site_name)
 # I can see that the column Year_Month includes the info from the column in the template 'Sampling Date' so I want to rename that column 
 
 HBR_watershed_1_data <- HBR_watershed_1_data %>% 
   rename('Sampling Date' = 'Year_Month')
 
-
 #Removing the volwt_ preface from many of the column names. That preface was preventing me from identifying which columns were a match to the template 
 
-names(HBR_watershed_1_data)[5:29] <- substring(names(HBR_watershed_1_data)[5:29],7,12)
+names(HBR_watershed_1_data)[7:31] <- substring(names(HBR_watershed_1_data)[7:31],7,12)
 
-HBR_watershed_1_data <- HBR_watershed_1_data %>% 
-  rename('Si' = 'SiO2')
+#SiO2 (silicon dioxide) is a close match to Si (silicon) but not identical
+close_match <- my_data$attribute_metadata %>% 
+  filter(attributeName == 'volwt_SiO2')
 
 
 ```
@@ -154,6 +150,7 @@ my_data$attribute_metadata %>%
   select(attributeName, attributeDefinition) 
 
 ```
+
 ```{r}
 
 # Fill in the columns that didn't match, and correct the wrongly corrected matches

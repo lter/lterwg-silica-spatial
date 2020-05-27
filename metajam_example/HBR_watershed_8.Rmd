@@ -1,5 +1,5 @@
 ---
-title: "HBR_watershed_4"
+title: "HBR_watershed_8"
 output: html_document
 ---
 
@@ -25,19 +25,18 @@ library(stringdist) # for first pass of naming-matching
 library(vctrs) # for joining tables
 library(readxl) # for reading the template excel sheet
 
-
-
 ```
+
 
 ####Step 2: Find the link to the dataset
 Go to the web address for the dataset and find the download button for the data. 
 
-In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.6.15&entityid=693eaf5a834ae7fecc5111a5ce0a420b
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.10.16&entityid=0b6199379b8a1fd8d696312916120066
 
 #### Step 3: Choose where you want the files to be saved
 In our case, we'll just put it into the metajam_example folder.
-```{r}
 
+```{r}
 #eg desired_path_to_data <- "~/Desktop"
 desired_path_to_data <- "~/SI_river_data"
 
@@ -46,16 +45,19 @@ dir.create(desired_path_to_data, showWarnings = FALSE)
 
 ```
 
+
 #### Step 4: Download the data by pasting the link you just copied
 
 ```{r}
 
-my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.6.15&entityid=693eaf5a834ae7fecc5111a5ce0a420b"
+
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.10.16&entityid=0b6199379b8a1fd8d696312916120066"
 
 # this will download the data into a folder and save the path to that folder
 downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
 
 ```
+
 
 #### Step 5: Now read in the data (with all the metadata)
 
@@ -63,8 +65,7 @@ downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_
 
 my_data <- read_d1_files(downloaded_data)
 
-HBR_watershed_4_data <- my_data$data
-
+HBR_watershed_8_data <- my_data$data
 
 ```
 
@@ -72,21 +73,23 @@ HBR_watershed_4_data <- my_data$data
 
 ```{r}
 
-#There are 652 rows in this df
+#There are 268 rows in this df
 #Adding a column to identify the LTER site - Hubbar Brook HBR
 
 # the tidy way
-HBR_watershed_4_data <- HBR_watershed_4_data %>% 
+HBR_watershed_8_data <- HBR_watershed_8_data %>% 
   add_column(LTER = 'HBR', .before = "Year")
+
 
 #There is no site name in the csv file so I pulled this site identifier from the data portal
 
-HBR_watershed_4_data <- HBR_watershed_4_data %>% 
-  add_column('Site/Stream Name' = 'knb-lter-hbr.6.15', .before = "Year")
+HBR_watershed_8_data <- HBR_watershed_8_data %>% 
+  add_column('Site/Stream Name' = 'knb-lter-hbr.10.16', .before = "Year")
+
 
 # I can see that the column Year_Month includes the info from the column in the template 'Sampling Date' so I want to rename that column 
 
-HBR_watershed_4_data <- HBR_watershed_4_data %>% 
+HBR_watershed_8_data <- HBR_watershed_8_data %>% 
   rename('Sampling Date' = 'Year_Month')
 
 ```
@@ -95,12 +98,11 @@ HBR_watershed_4_data <- HBR_watershed_4_data %>%
 
 #Removing the volwt_ preface from many of the column names. That preface was preventing me from identifying which columns were a match to the template 
 
-names(HBR_watershed_4_data)[7:31] <- substring(names(HBR_watershed_4_data)[7:31],7,15)
+names(HBR_watershed_8_data)[7:31] <- substring(names(HBR_watershed_8_data)[7:31],7,15)
 
-#SpecCond is a match for the template column 'Spec Cond' i just need to make them match exactly
-HBR_watershed_4_data <- HBR_watershed_4_data %>% 
-  rename('Spec Cond' = 'SpecCond')
-
+#SpecCond is an exact match I just want to make the column names an exact match
+HBR_watershed_8_data <- HBR_watershed_8_data %>% 
+  rename('Spec Cond' = 'SpecCond')	
 
 #SiO2 (silicon dioxide) is a close match to Si (silicon) but not identical
 close_match <- my_data$attribute_metadata %>% 
@@ -121,51 +123,40 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
 ```
 
 Fuzzy match
-
 ```{r}
 
 # Start by matching by closest name as a first pass. 
   # Note that we match the lower case names
   # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
 (fuzzy_match <- tibble(template = names(template)) %>%
-   mutate(watershed4 = names(HBR_watershed_4_data)[amatch(tolower(template), tolower(names(HBR_watershed_4_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+   mutate(watershed8 = names(HBR_watershed_8_data)[amatch(tolower(template), tolower(names(HBR_watershed_8_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
 
 (lookup_table <- fuzzy_match %>%
-  mutate(watershed4 = case_when(
+  mutate(watershed8 = case_when(
     template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP", "Si") ~ NA_character_,
-    TRUE ~ watershed4)))
+    TRUE ~ watershed8)))
 
 correct_colnames <- lookup_table$template
-
-
 
 ```
 
 ```{r}
-
 
 lookup_table <- lookup_table %>%
-  filter(!is.na(watershed4))
+  filter(!is.na(watershed8))
 
 correct_colnames <- lookup_table$template
 
-new_datatable4 <- HBR_watershed_4_data %>% 
+new_datatable8 <- HBR_watershed_8_data %>% 
         select(one_of(c(correct_colnames)))
 
-
-
-```
-
-```{r}
-
 # Fix NAs. In this dataset "-888.888" is the missing value code. So we need to replace those with NAs
-new_datatable4 <- na_if(new_datatable4, "-888.888")
+new_datatable8 <- na_if(new_datatable8, "-888.888")
 
-new_datatable4 <- na_if(new_datatable4, "-888.88")
+new_datatable8 <- na_if(new_datatable8, "-888.88")
 
 
 
 ```
-

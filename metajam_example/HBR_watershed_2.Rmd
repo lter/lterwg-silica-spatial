@@ -40,8 +40,13 @@ In our case, we'll just put it into the metajam_example folder.
 
 ```{r}
 
+
 #eg desired_path_to_data <- "~/Desktop"
-desired_path_to_data <- "/home/kpeach/R/SI_river_data/lterwg-si-export/metajam_example"
+desired_path_to_data <- "~/SI_river_data"
+
+# create the folder if it does not exist yet
+dir.create(desired_path_to_data, showWarnings = FALSE)
+
 
 
 ```
@@ -50,10 +55,10 @@ desired_path_to_data <- "/home/kpeach/R/SI_river_data/lterwg-si-export/metajam_e
 
 ```{r}
 
-
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.4.15&entityid=ab131091ce4cf463e0a75c1f2511e05d"
 
 # this will download the data into a folder and save the path to that folder
-downloaded_data <- download_d1_data("https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.4.15&entityid=ab131091ce4cf463e0a75c1f2511e05d", path = desired_path_to_data)
+downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
 
 
 ```
@@ -77,15 +82,17 @@ HBR_watershed_2_data <- my_data$data
 
 #Adding a column to identify the LTER site - Hubbar Brook HBR
 
-LTER_name <- rep('HBR', 651)
+# the tidy way
+HBR_watershed_2_data <- HBR_watershed_2_data %>% 
+  add_column(LTER = 'HBR', .before = "Year")
 
-HBR_watershed_2_data <- cbind(HBR_watershed_2_data, 'LTER' = LTER_name)
 
 #There is no site name in the csv file so I pulled this site identifier from the data portal
 
-Site_name <- rep('knb-lter-hbr.4.15', 651)
+HBR_watershed_2_data <- HBR_watershed_2_data %>% 
+  add_column('Site/Stream Name' = 'knb-lter-hbr.4.15', .before = "Year")
 
-HBR_watershed_2_data <- cbind(HBR_watershed_2_data, 'Site/Stream Name' = Site_name)
+
 # I can see that the column Year_Month includes the info from the column in the template 'Sampling Date' so I want to rename that column 
 
 HBR_watershed_2_data <- HBR_watershed_2_data %>% 
@@ -100,14 +107,16 @@ HBR_watershed_2_data <- HBR_watershed_2_data %>%
 
 #Removing the volwt_ preface from many of the column names. That preface was preventing me from identifying which columns were a match to the template 
 
-names(HBR_watershed_2_data)[5:29] <- substring(names(HBR_watershed_2_data)[5:29],7,15)
 
-HBR_watershed_2_data <- HBR_watershed_2_data %>% 
-  rename('Si' = 'SiO2') 
+names(HBR_watershed_2_data)[7:31] <- substring(names(HBR_watershed_2_data)[7:31],7,15)
 
+#SpecCond is an exact match I just want to make the column names an exact match
 HBR_watershed_2_data <- HBR_watershed_2_data %>% 
   rename('Spec Cond' = 'SpecCond')	
 
+#SiO2 (silicon dioxide) is a close match to Si (silicon) but not identical
+close_match <- my_data$attribute_metadata %>% 
+  filter(attributeName == 'volwt_SiO2')
 
 ```
 
@@ -140,7 +149,7 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
 
 (lookup_table <- fuzzy_match %>%
   mutate(watershed2 = case_when(
-    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP") ~ NA_character_,
+    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP", "Si") ~ NA_character_,
     TRUE ~ watershed2)))
 
 correct_colnames <- lookup_table$template

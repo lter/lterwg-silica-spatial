@@ -1,0 +1,155 @@
+---
+title: "HBR_watershed_10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###Step 1: Load packages
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(metajam)
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+
+```
+
+
+####Step 2: Find the link to the dataset
+Go to the web address for the dataset and find the download button for the data. 
+
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.103.12&entityid=413c3eb5a1a52e3ce2f9e52b3565aadd
+
+#### Step 3: Choose where you want the files to be saved
+In our case, we'll just put it into the metajam_example folder.
+
+```{r}
+
+#eg desired_path_to_data <- "~/Desktop"
+desired_path_to_data <- "~/SI_river_data"
+
+# create the folder if it does not exist yet
+dir.create(desired_path_to_data, showWarnings = FALSE)
+
+
+```
+
+
+#### Step 4: Download the data by pasting the link you just copied
+
+```{r}
+
+
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.103.12&entityid=413c3eb5a1a52e3ce2f9e52b3565aadd"
+
+# this will download the data into a folder and save the path to that folder
+downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
+
+```
+
+
+#### Step 5: Now read in the data (with all the metadata)
+
+```{r}
+
+my_data <- read_d1_files(downloaded_data)
+
+albisolu_NWT_data <- my_data$data
+
+my_data$attribute_metadata
+
+```
+
+###Step 6: data cleanup
+
+```{r}
+
+my_data$attribute_metadata
+# I can see that the column Year_Month includes the info from the column in the template 'Sampling Date' so I want to rename that column 
+
+albisolu_NWT_data <- albisolu_NWT_data %>% 
+  rename('Sampling Date' = 'date')
+
+albisolu_NWT_data <- albisolu_NWT_data %>% 
+  rename('Site/Stream name' = 'local_site')
+
+albisolu_NWT_data <- albisolu_NWT_data %>% 
+  rename('LTER' = 'LTER_site')
+
+albisolu_NWT_data <- albisolu_NWT_data %>% 
+  rename('Time' = 'time')
+
+albisolu_NWT_data <- albisolu_NWT_data %>% 
+  rename('Conductivity' = 'cond')
+
+albisolu_NWT_data <- albisolu_NWT_data %>% 
+  rename('alkalinity' = 'alkal')
+
+
+
+#albisolu_NWT_data <- albisolu_NWT_data %>% 
+#  rename('NO3' = 'NO3-')
+
+#albisolu_NWT_data <- albisolu_NWT_data %>% 
+#  rename('PO4' = 'PO4---')
+
+#albisolu_NWT_data <- albisolu_NWT_data %>% 
+#  rename('NH4' = 'NH4+')
+
+#albisolu_NWT_data <- albisolu_NWT_data %>% 
+ # rename('Na' = 'Na+')
+
+#albisolu_NWT_data <- albisolu_NWT_data %>% 
+#  rename('K' = 'K+')
+
+#albisolu_NWT_data <- albisolu_NWT_data %>% 
+#  rename('Mg' = 'Mg++')
+
+```
+
+
+
+Read in template
+```{r}
+
+template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
+                               sheet = "Raw Data",
+                               col_types = "text"
+                               ) %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`))
+
+
+```
+
+Fuzzy match
+```{r}
+
+# Start by matching by closest name as a first pass. 
+  # Note that we match the lower case names
+  # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
+(fuzzy_match <- tibble(template = names(template)) %>%
+   mutate(watershed10 = names(albisolu_NWT_data)[amatch(tolower(template), tolower(names(albisolu_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+close_matches_albisolu_NWT_data <- my_data$attribute_metadata %>% 
+  filter(attributeName %in% c('NO3-','PO4---','NH4+','NH4+','Na+','K+','Mg++'))
+
+write.csv(close_matches_albisolu_NWT_data, file = "close_matches_albisolu_NWT_data.csv", row.names = FALSE)
+
+
+```
+

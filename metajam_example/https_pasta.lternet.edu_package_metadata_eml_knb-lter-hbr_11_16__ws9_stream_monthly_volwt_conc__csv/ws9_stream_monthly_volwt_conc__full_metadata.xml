@@ -1,0 +1,871 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eml:eml xmlns:eml="https://eml.ecoinformatics.org/eml-2.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:stmml="http://www.xml-cml.org/schema/stmml-1.2" packageId="knb-lter-hbr.11.16" xsi:schemaLocation="eml://ecoinformatics.org/eml-2.1.1 http://nis.lternet.edu/schemas/EML/eml-2.1.1/eml.xsd" system="https://pasta.edirepository.org">
+  <access authSystem="https://pasta.edirepository.org/authentication" order="allowFirst" scope="document" system="https://pasta.edirepository.org">
+    <allow>
+      <principal>uid=HBR,o=LTER,dc=ecoinformatics,dc=org</principal>
+      <permission>all</permission>
+    </allow>
+    <allow>
+      <principal>public</principal>
+      <permission>read</permission>
+    </allow>
+  </access>
+  <dataset>
+    <alternateIdentifier>knb-lter-hbr.11</alternateIdentifier>
+    <alternateIdentifier system="https://doi.org">doi:10.6073/pasta/dffd665c34907717722ff009d968a23a</alternateIdentifier>
+    <shortName>Streamwater Chemistry WS9</shortName>
+    <title>Hubbard Brook Experimental Forest: Chemistry of Streamwater – Monthly Volume Weighted Concentrations, Watershed 9, 1995 - present</title>
+    <creator>
+      <individualName>
+        <givenName>John L</givenName>
+        <surName>Campbell</surName>
+      </individualName>
+      <electronicMailAddress>john.campbell2@usda.gov</electronicMailAddress>
+      <userId directory="http://orcid.org/">https://orcid.org/0000-0003-4956-1696</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Emily</givenName>
+        <surName>Bernhardt</surName>
+      </individualName>
+      <electronicMailAddress>ebernhar@duke.edu</electronicMailAddress>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Charles T</givenName>
+        <surName>Driscoll</surName>
+      </individualName>
+      <userId directory="http://orcid.org/">https://orcid.org/0000-0003-2692-2890</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Mark B</givenName>
+        <surName>Green</surName>
+      </individualName>
+      <electronicMailAddress>mbgreen@plymouth.edu</electronicMailAddress>
+      <userId directory="http://orcid.org/">https://orcid.org/0000-0002-7415-7209</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Gene E</givenName>
+        <surName>Likens</surName>
+      </individualName>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>William H</givenName>
+        <surName>McDowell</surName>
+      </individualName>
+      <electronicMailAddress>bill.mcdowell@unh.edu</electronicMailAddress>
+      <userId directory="http://orcid.org/">https://orcid.org/0000-0002-8739-9047</userId>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Emma</givenName>
+        <surName>Rosi</surName>
+      </individualName>
+      <electronicMailAddress>rosie@caryinstitute.org</electronicMailAddress>
+    </creator>
+    <creator>
+      <individualName>
+        <givenName>Lindsey E</givenName>
+        <surName>Rustad</surName>
+      </individualName>
+      <electronicMailAddress>lindsey.rustad@usda.gov</electronicMailAddress>
+    </creator>
+    <pubDate>2019-05-31</pubDate>
+    <language>English</language>
+    <abstract>
+      <para>
+  These data include volume-weighted, average, monthly concentrations of
+  cations, anions, and pH measured in Watershed 9.
+</para>
+      <para>
+  HBWatER is a long-term record of stream and precipitation chemistry
+  and volume. Currently this record is supported by NSF LTREB funding
+  (for sample collection and processing), USDA Forest Service (USFS)
+  funding (for maintenance of stream gauges, analytical chemistry and
+  sample archiving), and LTER (for disposable supplies). The HBWatER
+  supervisory team currently includes Emma Rosi (Cary Institute of
+  Ecosystem Studies), Emily Bernhardt (Duke University), John Campbell
+  (USFS), Charley Driscoll (Syracuse University.), Mark Green (Case
+  Western Reserve University), Bill McDowell (University of NH ), and
+  Lindsey Rustad (USFS).
+</para>
+      <para>
+  The long-term hydrologic record and calculation of fluxes are
+  currently supervised by John Campbell (USFS). The collection and
+  management of the long-term chemistry record is currently supervised
+  by Emma Rosi (Cary Institute of Ecosystem Studies) and Emily Bernhardt
+  (Duke University). At present field samples are collected by Tammy
+  Wooster (Cary Institute of Ecosystem Studies), Chemical analyses are
+  performed by Jeff Merriam (USFS). Data management and archiving is
+  performed by Mary Martin (University of NH)
+</para>
+      <para>
+  HBWatER was initiated in 1963 by G.E. Likens, F. H. Bormann, R.
+  Pierce, and N. Johnson. The record has been funded over its lifetime
+  by the Mary Flagler Cary Charitable Trust, The Andrew W. Mellon
+  Foundation, HBR LTER grants (#8702331, #9211768, #9810221, #0423259,
+  #1114804, #1637685) and NSF LTREB (# 1256696). A full list of
+  contributors to the HBWatER over its lifetime is provided at:
+  Bernhardt E., G. Likens, E. Rosi. 2019. <emphasis>Continuous
+  precipitation and stream chemistry data, Hubbard Brook Ecosystem
+  Study, 1963 – present..</emphasis> Environmental Data Initiative.
+  https://doi.org/10.6073/pasta/4022d829f3a1fa4057b63b5db8b1a172.
+</para>
+      <para>
+  These data were gathered as part of the Hubbard Brook Ecosystem Study
+  (HBES). The HBES is a collaborative effort at the Hubbard Brook
+  Experimental Forest, which is operated and maintained by the USDA
+  Forest Service, Northern Research Station.
+</para>
+    </abstract>
+    <keywordSet>
+      <keyword>HBR</keyword>
+      <keyword>Hubbard Brook Experimental Forest</keyword>
+      <keyword>Hubbard Brook LTER</keyword>
+      <keywordThesaurus>Hubbard Brook Ecosystem Study</keywordThesaurus>
+    </keywordSet>
+    <keywordSet>
+      <keyword>acid neutralizing capacity</keyword>
+      <keyword>aluminum</keyword>
+      <keyword>ammonium</keyword>
+      <keyword>calcium</keyword>
+      <keyword>chemistry</keyword>
+      <keyword>chloride</keyword>
+      <keyword>dissolved inorganic carbon</keyword>
+      <keyword>dissolved organic carbon</keyword>
+      <keyword>dissolved organic nitrogen</keyword>
+      <keyword>magnesium</keyword>
+      <keyword>nitrate</keyword>
+      <keyword>pH</keyword>
+      <keyword>phosphate</keyword>
+      <keyword>potassium</keyword>
+      <keyword>silica</keyword>
+      <keyword>sodium</keyword>
+      <keyword>streamflow</keyword>
+      <keyword>sulfate</keyword>
+      <keyword>total dissolved nitrogen</keyword>
+      <keywordThesaurus>LTER Network Controlled Vocabulary</keywordThesaurus>
+    </keywordSet>
+    <keywordSet>
+      <keyword>disturbance</keyword>
+      <keyword>inorganic nutrients</keyword>
+      <keywordThesaurus>LTER Network Core Research Areas</keywordThesaurus>
+    </keywordSet>
+    <intellectualRights>
+      <para>
+  This information is released under the Creative Commons license -
+  Attribution - CC BY (https://creativecommons.org/licenses/by/4.0/).
+  The consumer of these data ("Data User" herein) is required
+  to cite it appropriately in any publication that results from its use.
+  The Data User should realize that these data may be actively used by
+  others for ongoing research and that coordination may be necessary to
+  prevent duplicate publication. The Data User is urged to contact the
+  authors of these data if any questions about methodology or results
+  occur. Where appropriate, the Data User is encouraged to consider
+  collaboration or co-authorship with the authors. The Data User should
+  realize that misinterpretation of data may occur if used out of
+  context of the original study.
+</para>
+      <para>
+  While substantial efforts are made to ensure the accuracy of data and
+  associated documentation, complete accuracy of data sets cannot be
+  guaranteed. All data are made available "as is." The Data
+  User should be aware, however, that data are updated periodically and
+  it is the responsibility of the Data User to check for new versions of
+  the data. The data authors and the repository where these data were
+  obtained shall not be liable for damages resulting from any use or
+  misinterpretation of the data. Thank you.
+</para>
+    </intellectualRights>
+    <coverage>
+      <geographicCoverage>
+        <geographicDescription>Hubbard Brook Experimental Forest Watershed 9</geographicDescription>
+        <boundingCoordinates>
+          <westBoundingCoordinate>-71.758507</westBoundingCoordinate>
+          <eastBoundingCoordinate>-71.687683</eastBoundingCoordinate>
+          <northBoundingCoordinate>43.948246</northBoundingCoordinate>
+          <southBoundingCoordinate>43.915962</southBoundingCoordinate>
+        </boundingCoordinates>
+      </geographicCoverage>
+      <temporalCoverage>
+        <rangeOfDates>
+          <beginDate>
+            <calendarDate>1995-06-01</calendarDate>
+          </beginDate>
+          <endDate>
+            <calendarDate>2017-09-30</calendarDate>
+          </endDate>
+        </rangeOfDates>
+      </temporalCoverage>
+    </coverage>
+    <contact>
+      <organizationName>Hubbard Brook Ecosystem Study</organizationName>
+      <positionName>Information Manager</positionName>
+      <address>
+        <deliveryPoint>234 Mirror Lake Road</deliveryPoint>
+        <city>North Woodstock</city>
+        <administrativeArea>NH</administrativeArea>
+        <postalCode>03262</postalCode>
+        <country>United States</country>
+      </address>
+      <electronicMailAddress>hbr-im@lternet.edu</electronicMailAddress>
+      <onlineUrl>https://hubbardbrook.org</onlineUrl>
+    </contact>
+    <publisher>
+      <organizationName>Hubbard Brook Ecosystem Study</organizationName>
+      <address>
+        <deliveryPoint>234 Mirror Lake Road</deliveryPoint>
+        <city>North Woodstock</city>
+        <administrativeArea>NH</administrativeArea>
+        <postalCode>03262</postalCode>
+        <country>United States</country>
+      </address>
+    </publisher>
+    <methods>
+      <methodStep>
+        <description>
+          <para>
+  Solute flux calculations for precipitation and streams are based on
+  the following data packages, which contain detailed methods on
+  sampling and analytical chemistry.
+</para>
+          <para>
+  Daily watershed precipitation:
+  https://portal.lternet.edu/nis/mapbrowse?scope=knb-lter-hbr&amp;amp;identifier=14
+</para>
+          <para>
+  Daily streamflow:
+  https://portal.lternet.edu/nis/mapbrowse?scope=knb-lter-hbr&amp;amp;identifier=2
+</para>
+          <para>
+  Stream and precipitation chemistry:
+  https://portal.lternet.edu/nis/mapbrowse?scope=knb-lter-hbr&amp;amp;identifier=208
+</para>
+        </description>
+      </methodStep>
+    </methods>
+    <project>
+      <title>Hubbard Brook Stream and Precipitation Chemistry</title>
+      <personnel>
+        <individualName>
+          <givenName>Gene</givenName>
+          <surName>Likens</surName>
+        </individualName>
+        <role>principalInvestigator</role>
+      </personnel>
+      <personnel>
+        <individualName>
+          <givenName>Emily</givenName>
+          <surName>Bernhardt</surName>
+        </individualName>
+        <role>principalInvestigator</role>
+      </personnel>
+      <funding>
+        <para>The record has been funded over its lifetime by the Mary Flagler Cary Charitable Trust, The Andrew W. Mellon Foundation, HBR LTER grants (#8702331, #9211768, #9810221, #0423259, #1114804, #1637685) and NSF LTREB (# 1256696), and USDA Forest Service. </para>
+      </funding>
+    </project>
+    <dataTable>
+      <entityName>WS9MonthlyVolWtConcentrationStream</entityName>
+      <entityDescription>Watershed 9 monthly volume weighted concentrations stream water</entityDescription>
+      <physical>
+        <objectName>ws9_stream_monthly_volwt_conc.csv</objectName>
+        <size unit="byte">48216</size>
+        <authentication method="MD5">79c138ea4a71a0d26a05bf00baf6a583</authentication>
+        <dataFormat>
+          <textFormat>
+            <numHeaderLines>1</numHeaderLines>
+            <recordDelimiter>\r\n</recordDelimiter>
+            <attributeOrientation>column</attributeOrientation>
+            <simpleDelimited>
+              <fieldDelimiter>,</fieldDelimiter>
+              <quoteCharacter>"</quoteCharacter>
+            </simpleDelimited>
+          </textFormat>
+        </dataFormat>
+        <distribution>
+          <online>
+            <url function="download">https://pasta.lternet.edu/package/data/eml/knb-lter-hbr/11/16/5d79a0ab7b312e7f1aa7b4cd1e64ac78</url>
+          </online>
+        </distribution>
+      </physical>
+      <attributeList>
+        <attribute>
+          <attributeName>Year</attributeName>
+          <attributeLabel>Year</attributeLabel>
+          <attributeDefinition>Year</attributeDefinition>
+          <storageType>date</storageType>
+          <measurementScale>
+            <dateTime>
+              <formatString>YYYY</formatString>
+            </dateTime>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>Month</attributeName>
+          <attributeLabel>Month</attributeLabel>
+          <attributeDefinition>Month</attributeDefinition>
+          <storageType>date</storageType>
+          <measurementScale>
+            <dateTime>
+              <formatString>MM</formatString>
+            </dateTime>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>Year_Month</attributeName>
+          <attributeLabel>Year_Month</attributeLabel>
+          <attributeDefinition>Year_Month</attributeDefinition>
+          <storageType>date</storageType>
+          <measurementScale>
+            <dateTime>
+              <formatString>YYYY-MM</formatString>
+            </dateTime>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>flow_mm</attributeName>
+          <attributeLabel>flow_mm</attributeLabel>
+          <attributeDefinition>streamflow</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <standardUnit>millimeter</standardUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Ca</attributeName>
+          <attributeLabel>volwt_Ca</attributeLabel>
+          <attributeDefinition>calcium</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Mg</attributeName>
+          <attributeLabel>volwt_Mg</attributeLabel>
+          <attributeDefinition>magnesium</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_K</attributeName>
+          <attributeLabel>volwt_K</attributeLabel>
+          <attributeDefinition>potassium</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Na</attributeName>
+          <attributeLabel>volwt_Na</attributeLabel>
+          <attributeDefinition>sodium</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Al_Ferron</attributeName>
+          <attributeLabel>volwt_Al_Ferron</attributeLabel>
+          <attributeDefinition>Aluminum by the Ferron orthophenanthroline method</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_TMAl</attributeName>
+          <attributeLabel>volwt_TMAl</attributeLabel>
+          <attributeDefinition>Total Monomeric Aluminum</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_OMAl</attributeName>
+          <attributeLabel>volwt_OMAl</attributeLabel>
+          <attributeDefinition>Organic Monomeric Aluminum</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Al_ICP</attributeName>
+          <attributeLabel>volwt_Al_ICP</attributeLabel>
+          <attributeDefinition>total dissolved Aluminum analyzed on the ICP</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_NH4</attributeName>
+          <attributeLabel>volwt_NH5</attributeLabel>
+          <attributeDefinition>ammonium</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_SO4</attributeName>
+          <attributeLabel>volwt_SO5</attributeLabel>
+          <attributeDefinition>sulphate</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_NO3</attributeName>
+          <attributeLabel>volwt_NO4</attributeLabel>
+          <attributeDefinition>nitrate</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Cl</attributeName>
+          <attributeLabel>volwt_Cl</attributeLabel>
+          <attributeDefinition>chloride</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_PO4</attributeName>
+          <attributeLabel>volwt_PO5</attributeLabel>
+          <attributeDefinition>phosphate</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_DOC</attributeName>
+          <attributeLabel>volwt_DOC</attributeLabel>
+          <attributeDefinition>dissolved organic carbon</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_TDN</attributeName>
+          <attributeLabel>volwt_TDN</attributeLabel>
+          <attributeDefinition>total dissolved nitrogen</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_DON</attributeName>
+          <attributeLabel>volwt_DON</attributeLabel>
+          <attributeDefinition>total organic nitrogen</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_DIC</attributeName>
+          <attributeLabel>volwt_DIC</attributeLabel>
+          <attributeDefinition>dissolved inorganic carbon</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_SiO2</attributeName>
+          <attributeLabel>volwt_SiO3</attributeLabel>
+          <attributeDefinition>silicate</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Mn</attributeName>
+          <attributeLabel>volwt_Mn</attributeLabel>
+          <attributeDefinition>magnesium</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_Fe</attributeName>
+          <attributeLabel>volwt_Fe</attributeLabel>
+          <attributeDefinition>iron</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_F</attributeName>
+          <attributeLabel>volwt_F</attributeLabel>
+          <attributeDefinition>flourine</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.88</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_H</attributeName>
+          <attributeLabel>volwt_H</attributeLabel>
+          <attributeDefinition>hydrogen</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.8888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_pH</attributeName>
+          <attributeLabel>volwt_pH</attributeLabel>
+          <attributeDefinition>pH </attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>pH</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_SpecCond</attributeName>
+          <attributeLabel>volwt_SpecCond</attributeLabel>
+          <attributeDefinition>specific conductivity</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microsiemensPerCentimeter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>volwt_ANC</attributeName>
+          <attributeLabel>volwt_ANC</attributeLabel>
+          <attributeDefinition>acid neutralizing capacity</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>-888.888</code>
+            <codeExplanation>no data available</codeExplanation>
+          </missingValueCode>
+        </attribute>
+      </attributeList>
+      <numberOfRecords>268</numberOfRecords>
+    </dataTable>
+  </dataset>
+  <additionalMetadata>
+    <metadata>
+      <unitList xmlns:eml="eml://ecoinformatics.org/eml-2.1.1" xmlns:stmml="http://www.xml-cml.org/schema/stmml-1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <unit id="microequivalentPerLiter" constantToSI="0" name="microequivalentPerLiter" parentSI="molesPerMeterCubed" unitType="amountOfSubstanceConcentration">
+          <description>concentration of charge (on dissolved ions). A single ultiplier to SI is not possible, since conversion includes valence of ion, which can vary</description>
+        </unit>
+        <unit id="microsiemensPerCentimeter" name="microsiemensPerCentimeter" unitType="NA"/>
+        <unit id="milligramPerLiter" constantToSI="0" name="milligramPerLiter" parentSI="kilogramPerCubicMeter" unitType="volumetricMassDensity">
+          <description>concentration unit, sometimes used for pigments in natural waters</description>
+        </unit>
+        <unit id="millimeter" abbreviation="mm" multiplierToSI="0.001" name="millimeter" parentSI="meter" unitType="NA">
+          <description>.001 meters</description>
+        </unit>
+        <unit id="pH" abbreviation="pH" name="pH" unitType="dimensionless">
+          <description>log of hydrogen ion concentration </description>
+        </unit>
+      </unitList>
+    </metadata>
+  </additionalMetadata>
+</eml:eml>
