@@ -156,5 +156,74 @@ new_datatable9 <- na_if(new_datatable9, "-888.888")
 new_datatable9 <- na_if(new_datatable9, "-888.88")
 
 
+```
+
+
+Loading the solute units template
+
+```{r}
+
+
+solute_units_Template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), sheet = "Solute Units" )
+
+solute_units_Template <- solute_units_Template  %>%
+  select(Measurement, Unit)
+
+
+```
+
+Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
+```{r}
+
+attributes <- data.frame(my_data$attribute_metadata)
+
+attributes <- attributes  %>%
+  select(attributeName, unit)
+
+#Removing the "volwt_" preface from the attribute names so that I can match them
+attributes$attributeName <- gsub("volwt_", "", attributes$attributeName)
+
+attributes$attributeName <- gsub("SpecCond", "Specific Conductance", attributes$attributeName)
+
+```
+
+
+
+Fuzzy matching template solute units table to attribute table
+```{r}
+
+(fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
+   mutate(watershed_units_2 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+```
+
+
+```{r}
+
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table_units <- fuzzy_match %>%
+  mutate(watershed_units_2 = case_when(
+    solute_units_Template$Measurement %in% c("DO","Q", "DO%","TOC", "TDP","PON", "PP", "TKN","DOP","TN", "Si", "TP") ~ NA_character_,
+    TRUE ~ watershed_units_2)))
+
+#Make a string of the correct names
+correct_names <- lookup_table_units$'solute_units_Template$Measurement'
+
+
+```
+
+```{r}
+
+#Make a table that matches the template
+solute_units_table_new <- attributes %>% 
+        filter(attributeName %in% c(correct_names))
+
+solute_units_table_new  %>% 
+  rename(Measurement = attributeName, Unit = unit)
 
 ```

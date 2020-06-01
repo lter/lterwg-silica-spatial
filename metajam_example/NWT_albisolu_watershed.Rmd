@@ -1,6 +1,8 @@
 ---
 title: "HBR_watershed_10"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -147,6 +149,7 @@ Fuzzy match
 
 close_matches_albisolu_NWT_data <- my_data$attribute_metadata %>% 
   filter(attributeName %in% c('NO3-','PO4---','NH4+','NH4+','Na+','K+','Mg++'))
+
 
 write.csv(close_matches_albisolu_NWT_data, file = "close_matches_albisolu_NWT_data.csv", row.names = FALSE)
 

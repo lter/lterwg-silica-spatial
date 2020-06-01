@@ -123,7 +123,7 @@ Fuzzy Match
    mutate(watershed11 = names(arikaree_NWT_data)[amatch(tolower(template), tolower(names(arikaree_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
-#I want to make an excel file about all of the columns that are close matches but not quite the same to ask the PIs about
+#I want to make an csv file about all of the columns that are close matches but not quite the same to ask the PIs about
 
 #my_data$attribute_metadata
 
