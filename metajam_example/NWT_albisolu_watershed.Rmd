@@ -27,6 +27,8 @@ library(here) # for file path management
 library(stringdist) # for first pass of naming-matching
 library(vctrs) # for joining tables
 library(readxl) # for reading the template excel sheet
+install.packages("naniar")
+library(naniar)
 
 ```
 
@@ -103,7 +105,7 @@ albisolu_NWT_data <- albisolu_NWT_data %>%
 albisolu_NWT_data <- albisolu_NWT_data %>% 
   rename('alkalinity' = 'alkal')
 
-names(albisolu_NWT_data) <- gsub("[^0-9A-Za-z///' ]"," ", names(albisolu_NWT_data))
+names(albisolu_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(albisolu_NWT_data))
 
 my_data$attribute_metadata
 
@@ -155,67 +157,102 @@ lookup_table <- lookup_table %>%
 
 correct_colnames <- lookup_table$template
 
+correct_colnames <- as.character(correct_colnames)
+
+correct_colnames
 
 ```
-Once the lookup table is as filled out as possible, we can remove all rows that still had no match (which we represented by `NA` in the `watershed1` column):
+Once the lookup table is as filled out as possible, we can remove all rows that still had no match.
+
+```{r}
 
 
+new_datatable_NWT_1 <- albisolu_NWT_data %>% 
+        select(all_of(c(correct_colnames)))
+
+
+```
 
 ```{r}
 
 
 
-new_datatable <- albisolu_NWT_data %>% 
-        select(one_of(c(correct_colnames)))
-
-
-```
-
-```{r}
-
-# Fix NAs. In this dataset "-888.888" is the missing value code. So we need to replace those with NAs
-
-my_data$attribute_metadata
 
 #Changing missing value codes for columns for which NP is the missing value code
-new_datatable$alkalinity <- na_if(new_datatable$alkalinity, "NP")
+new_datatable_NWT_1$alkalinity <- na_if(new_datatable_NWT_1$alkalinity, "NP")
 
-new_datatable$DOC <- na_if(new_datatable$DOC, "NP")
+new_datatable_NWT_1$DOC <- na_if(new_datatable_NWT_1$DOC, "NP")
 
-new_datatable$TOC <- na_if(new_datatable$TOC, "NP")
+new_datatable_NWT_1$TOC <- na_if(new_datatable_NWT_1$TOC, "NP")
 
-new_datatable$TDN <- na_if(new_datatable$TDN, "NP")
+new_datatable_NWT_1$TDN <- na_if(new_datatable_NWT_1$TDN, "NP")
 
-new_datatable$TN <- na_if(new_datatable$TN, "NP")
+new_datatable_NWT_1$TN <- na_if(new_datatable_NWT_1$TN, "NP")
 
-new_datatable$DON <- na_if(new_datatable$DON, "NP")
+new_datatable_NWT_1$DON <- na_if(new_datatable_NWT_1$DON, "NP")
 
-new_datatable$NO3 <- na_if(new_datatable$NO3, "NP")
+new_datatable_NWT_1$NO3 <- na_if(new_datatable_NWT_1$NO3, "NP")
 
-new_datatable$NH4 <- na_if(new_datatable$NH4, "NP")
+new_datatable_NWT_1$NH4 <- na_if(new_datatable_NWT_1$NH4, "NP")
 
-new_datatable$PO4 <- na_if(new_datatable$PO4, "NP")
+new_datatable_NWT_1$PO4 <- na_if(new_datatable_NWT_1$PO4, "NP")
 
-new_datatable$TDP <- na_if(new_datatable$TDP, "NP")
+new_datatable_NWT_1$TDP <- na_if(new_datatable_NWT_1$TDP, "NP")
 
-new_datatable$DOP <- na_if(new_datatable$DOP, "NP")
+new_datatable_NWT_1$DOP <- na_if(new_datatable_NWT_1$DOP, "NP")
 
-new_datatable$TP <- na_if(new_datatable$TP, "NP")
+new_datatable_NWT_1$TP <- na_if(new_datatable_NWT_1$TP, "NP")
 
-new_datatable$PP <- na_if(new_datatable$PP, "NP")
+new_datatable_NWT_1$PP <- na_if(new_datatable_NWT_1$PP, "NP")
 
-new_datatable$pH <- na_if(new_datatable$pH, "NP")
+new_datatable_NWT_1$pH <- na_if(new_datatable_NWT_1$pH, "NP")
+
+new_datatable_NWT_1$Si <- na_if(new_datatable_NWT_1$Si, "NP")
+
+new_datatable_NWT_1$Na <- na_if(new_datatable_NWT_1$Na, "NP")
+
+new_datatable_NWT_1$K <- na_if(new_datatable_NWT_1$K, "NP")
+
+new_datatable_NWT_1$Ca <- na_if(new_datatable_NWT_1$Ca, "NP")
+
+new_datatable_NWT_1$SO4 <- na_if(new_datatable_NWT_1$SO4, "NP")
+
+new_datatable_NWT_1$TDP <- na_if(new_datatable_NWT_1$TDP, "NP")
 
 #Changing missing value codes to NA for columns with alternate exisiting missing value codes
 
-new_datatable$Time<- na_if(new_datatable$Time, "DNS")
+new_datatable_NWT_1$Time<- na_if(new_datatable_NWT_1$Time, "DNS")
 
-new_datatable$SO4 <- na_if(new_datatable$SO4 , "<.28")
+new_datatable_NWT_1$NO3 <- na_if(new_datatable_NWT_1$NO3, "u")
 
-new_datatable$NH4 <- na_if(new_datatable$NH4 , "<0.1428")
+new_datatable_NWT_1$TP <- na_if(new_datatable_NWT_1$TP, "u")
+
+new_datatable_NWT_1$PP <- na_if(new_datatable_NWT_1$PP, "u")
+
+new_datatable_NWT_1$DON <- na_if(new_datatable_NWT_1$DON, "EQCL")
+
+new_datatable_NWT_1$DOP <- na_if(new_datatable_NWT_1$DOP, "EQCL")
+
+#still trying to figure out how to do these numeric thresholds to input NAS
+new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+ mutate(NH4 = ifelse(NH4 < 0.1428, "NA", NH4))
+
+
+
+new_datatable_NWT_1 <- replace_with_na_all(data = new_datatable_NWT_1$NH4, condition = ~NH4 < 0.1428)
+
+
+
+new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+ mutate(SO4 = ifelse(SO4 < 0.28, "NA", SO4))
+
+new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+ mutate(TDP = ifelse(TDP < 0.0258, "NA", TDP))
 
 #PN has a missing value code of u but that attribute is not in the new table
 
+
+my_data$attribute_metadata
 
 ```
 
@@ -240,7 +277,7 @@ attributes <- data.frame(my_data$attribute_metadata)
 attributes <- attributes  %>%
   select(attributeName, unit)
 
-#Removing the "volwt_" preface from the attribute names so that I can match them
+#Changing some attribute names so that they are easier to match
 
 attributes$attributeName <- gsub("cond", "Conductivity", attributes$attributeName)
 
