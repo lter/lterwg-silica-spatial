@@ -84,7 +84,7 @@ arikaree_NWT_data <- arikaree_NWT_data %>%
   rename('Sampling Date' = 'date')
 
 arikaree_NWT_data <- arikaree_NWT_data %>% 
-  rename('Site/Stream name' = 'local_site')
+  rename('Site/Stream Name' = 'local_site')
 
 arikaree_NWT_data <- arikaree_NWT_data %>% 
   rename('LTER' = 'LTER_site')
@@ -98,6 +98,7 @@ arikaree_NWT_data <- arikaree_NWT_data %>%
 arikaree_NWT_data <- arikaree_NWT_data %>% 
   rename('alkalinity' = 'alkal')
 
+names(arikaree_NWT_data) <- gsub("[^0-9A-Za-z///' ]"," ", names(arikaree_NWT_data))
 
 ```
 
@@ -109,6 +110,10 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
                                col_types = "text"
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
+
+
+template <- template %>% 
+  add_column('NOx' = '.', .before = "NO3")
 
 
 ```
@@ -123,14 +128,38 @@ Fuzzy Match
    mutate(watershed11 = names(arikaree_NWT_data)[amatch(tolower(template), tolower(names(arikaree_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
-#I want to make an csv file about all of the columns that are close matches but not quite the same to ask the PIs about
-
-#my_data$attribute_metadata
-
-close_matches_arikaree_NWT_data <- my_data$attribute_metadata %>% 
-  filter(attributeName %in% c('NO3-','PO4---','NH4+','Ca++','SO4--','CI-','Na+','K+','Mg++'))
-
-write.csv(close_matches_arikaree_NWT_data, file = "close_matches_arikaree_NWT_data.csv", row.names = FALSE)
 
 ```
 
+```{r}
+
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table <- fuzzy_match %>%
+  mutate(watershed11 = case_when(
+    template %in% c("DIC","TKN", "PON", "NOx") ~ NA_character_,
+    TRUE ~ watershed11)))
+
+lookup_table <- lookup_table %>%
+  filter(!is.na(watershed11))
+
+correct_colnames <- lookup_table$template
+
+
+
+
+```
+
+
+
+```{r}
+
+
+
+new_datatable <- arikaree_NWT_data %>% 
+        select(one_of(c(correct_colnames)))
+
+
+```

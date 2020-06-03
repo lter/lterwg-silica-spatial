@@ -80,14 +80,16 @@ my_data$attribute_metadata
 
 ```{r}
 
-my_data$attribute_metadata
+
 # I can see that the column Year_Month includes the info from the column in the template 'Sampling Date' so I want to rename that column 
+
+names(albisolu_NWT_data) <- as.character(names(albisolu_NWT_data))
 
 albisolu_NWT_data <- albisolu_NWT_data %>% 
   rename('Sampling Date' = 'date')
 
 albisolu_NWT_data <- albisolu_NWT_data %>% 
-  rename('Site/Stream name' = 'local_site')
+  rename('Site/Stream Name' = 'local_site')
 
 albisolu_NWT_data <- albisolu_NWT_data %>% 
   rename('LTER' = 'LTER_site')
@@ -101,25 +103,9 @@ albisolu_NWT_data <- albisolu_NWT_data %>%
 albisolu_NWT_data <- albisolu_NWT_data %>% 
   rename('alkalinity' = 'alkal')
 
+names(albisolu_NWT_data) <- gsub("[^0-9A-Za-z///' ]"," ", names(albisolu_NWT_data))
 
-
-#albisolu_NWT_data <- albisolu_NWT_data %>% 
-#  rename('NO3' = 'NO3-')
-
-#albisolu_NWT_data <- albisolu_NWT_data %>% 
-#  rename('PO4' = 'PO4---')
-
-#albisolu_NWT_data <- albisolu_NWT_data %>% 
-#  rename('NH4' = 'NH4+')
-
-#albisolu_NWT_data <- albisolu_NWT_data %>% 
- # rename('Na' = 'Na+')
-
-#albisolu_NWT_data <- albisolu_NWT_data %>% 
-#  rename('K' = 'K+')
-
-#albisolu_NWT_data <- albisolu_NWT_data %>% 
-#  rename('Mg' = 'Mg++')
+my_data$attribute_metadata
 
 ```
 
@@ -135,6 +121,9 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
 
 
+template <- template %>% 
+  add_column('NOx' = '.', .before = "NO3")
+
 ```
 
 Fuzzy match
@@ -147,12 +136,162 @@ Fuzzy match
    mutate(watershed10 = names(albisolu_NWT_data)[amatch(tolower(template), tolower(names(albisolu_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
-close_matches_albisolu_NWT_data <- my_data$attribute_metadata %>% 
-  filter(attributeName %in% c('NO3-','PO4---','NH4+','NH4+','Na+','K+','Mg++'))
+
+```
+
+```{r}
 
 
-write.csv(close_matches_albisolu_NWT_data, file = "close_matches_albisolu_NWT_data.csv", row.names = FALSE)
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table <- fuzzy_match %>%
+  mutate(watershed10 = case_when(
+    template %in% c("DIC", "NOx", "TKN", "PON") ~ NA_character_,
+    TRUE ~ watershed10)))
+
+lookup_table <- lookup_table %>%
+  filter(!is.na(watershed10))
+
+correct_colnames <- lookup_table$template
 
 
 ```
+Once the lookup table is as filled out as possible, we can remove all rows that still had no match (which we represented by `NA` in the `watershed1` column):
+
+
+
+```{r}
+
+
+
+new_datatable <- albisolu_NWT_data %>% 
+        select(one_of(c(correct_colnames)))
+
+
+```
+
+```{r}
+
+# Fix NAs. In this dataset "-888.888" is the missing value code. So we need to replace those with NAs
+
+my_data$attribute_metadata
+
+#Changing missing value codes for columns for which NP is the missing value code
+new_datatable$alkalinity <- na_if(new_datatable$alkalinity, "NP")
+
+new_datatable$DOC <- na_if(new_datatable$DOC, "NP")
+
+new_datatable$TOC <- na_if(new_datatable$TOC, "NP")
+
+new_datatable$TDN <- na_if(new_datatable$TDN, "NP")
+
+new_datatable$TN <- na_if(new_datatable$TN, "NP")
+
+new_datatable$DON <- na_if(new_datatable$DON, "NP")
+
+new_datatable$NO3 <- na_if(new_datatable$NO3, "NP")
+
+new_datatable$NH4 <- na_if(new_datatable$NH4, "NP")
+
+new_datatable$PO4 <- na_if(new_datatable$PO4, "NP")
+
+new_datatable$TDP <- na_if(new_datatable$TDP, "NP")
+
+new_datatable$DOP <- na_if(new_datatable$DOP, "NP")
+
+new_datatable$TP <- na_if(new_datatable$TP, "NP")
+
+new_datatable$PP <- na_if(new_datatable$PP, "NP")
+
+new_datatable$pH <- na_if(new_datatable$pH, "NP")
+
+#Changing missing value codes to NA for columns with alternate exisiting missing value codes
+
+new_datatable$Time<- na_if(new_datatable$Time, "DNS")
+
+new_datatable$SO4 <- na_if(new_datatable$SO4 , "<.28")
+
+new_datatable$NH4 <- na_if(new_datatable$NH4 , "<0.1428")
+
+#PN has a missing value code of u but that attribute is not in the new table
+
+
+```
+
+Loading the solute units template
+
+```{r}
+
+
+solute_units_Template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), sheet = "Solute Units" )
+
+solute_units_Template <- solute_units_Template  %>%
+  select(Measurement, Unit)
+
+
+```
+
+Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
+```{r}
+
+attributes <- data.frame(my_data$attribute_metadata)
+
+attributes <- attributes  %>%
+  select(attributeName, unit)
+
+#Removing the "volwt_" preface from the attribute names so that I can match them
+
+attributes$attributeName <- gsub("cond", "Conductivity", attributes$attributeName)
+
+attributes$attributeName <- gsub("alkal", "Alkalinity", attributes$attributeName)
+
+#Remove ionic notations
+attributes$attributeName <- gsub("[^0-9A-Za-z///' ]"," ", attributes$attributeName)
+
+```
+
+
+
+Fuzzy matching template solute units table to attribute table
+```{r}
+
+(fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
+   mutate(watershed_units_10 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+```
+
+
+```{r}
+
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table_units <- fuzzy_match %>%
+  mutate(watershed_units_10 = case_when(
+    solute_units_Template$Measurement %in% c("DIC","DO", "DO%","PON", "TKN") ~ NA_character_,
+    TRUE ~ watershed_units_10)))
+
+#Make a string of the correct names
+correct_names <- lookup_table_units$'solute_units_Template$Measurement'
+
+
+```
+
+```{r}
+
+#Make a table that matches the template
+solute_units_table_new <- attributes %>% 
+        filter(attributeName %in% c(correct_names))
+
+solute_units_table_new  %>% 
+  rename(Measurement = attributeName, Unit = unit)
+
+```
+
+
+
 
