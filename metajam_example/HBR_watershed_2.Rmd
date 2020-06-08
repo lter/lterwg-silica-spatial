@@ -25,7 +25,7 @@ library(here) # for file path management
 library(stringdist) # for first pass of naming-matching
 library(vctrs) # for joining tables
 library(readxl) # for reading the template excel sheet
-
+library(openxlsx) #for writing the excel file
 
 ```
 
@@ -63,12 +63,12 @@ downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_
 
 ```
 
-#### Step 5: Now read in the data (with all the metadata)
+#### Step 5: Now read in the data (with all the metadata). The missingvalueCodes for this dataset are "-888.88", "-888.888", and "-888".
 
 ```{r}
 
 
-my_data <- read_d1_files(downloaded_data)
+my_data <- read_d1_files(downloaded_data, na = c("-888.88", "-888.888", "-888"))
 
 HBR_watershed_2_data <- my_data$data
 
@@ -78,7 +78,6 @@ HBR_watershed_2_data <- my_data$data
 ###Step 6: data cleanup
 ```{r}
 
-#There are 651 rows in this df
 
 #Adding a column to identify the LTER site - Hubbar Brook HBR
 
@@ -99,8 +98,6 @@ HBR_watershed_2_data <- HBR_watershed_2_data %>%
   rename('Sampling Date' = 'Year_Month')
 
 
-
-
 ```
 
 ```{r}
@@ -114,9 +111,8 @@ names(HBR_watershed_2_data)[7:31] <- substring(names(HBR_watershed_2_data)[7:31]
 HBR_watershed_2_data <- HBR_watershed_2_data %>% 
   rename('Spec Cond' = 'SpecCond')	
 
-#SiO2 (silicon dioxide) is a close match to Si (silicon) but not identical
-close_match <- my_data$attribute_metadata %>% 
-  filter(attributeName == 'volwt_SiO2')
+HBR_watershed_2_data <- HBR_watershed_2_data %>% 
+  rename('Si' = 'SiO2')
 
 ```
 
@@ -133,7 +129,9 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
 
-
+#Adding a column for NO3 so that the template includes both an NO3 column and NOx column
+template <- template %>% 
+  add_column('NOx' = '.', .before = "NO3")
 
 ```
 
@@ -149,7 +147,7 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
 
 (lookup_table <- fuzzy_match %>%
   mutate(watershed2 = case_when(
-    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP", "Si") ~ NA_character_,
+    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP") ~ NA_character_,
     TRUE ~ watershed2)))
 
 correct_colnames <- lookup_table$template
@@ -171,18 +169,6 @@ new_datatable2 <- HBR_watershed_2_data %>%
 
 ```
 
-
-```{r}
-
-
-missing_value_codes<- my_data$attribute_metadata$missingValueCode
-
-# Fix NAs. In this dataset "-888.888" is the missing value code. So we need to replace those with NAs
-
-new_datatable2 <- na_if(new_datatable2, "-888.888")
-new_datatable2 <- na_if(new_datatable2, "-888.88")
-
-```
 
 Loading the solute units template
 
@@ -233,7 +219,7 @@ Fuzzy matching template solute units table to attribute table
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table_units <- fuzzy_match %>%
   mutate(watershed_units_2 = case_when(
-    solute_units_Template$Measurement %in% c("DO","Q", "DO%","TOC", "TDP","PON", "PP", "TKN","DOP","TN", "Si", "TP") ~ NA_character_,
+    solute_units_Template$Measurement %in% c("DO","Q", "DO%","TOC", "TDP","PON", "PP", "TKN","DOP","TN", "TP") ~ NA_character_,
     TRUE ~ watershed_units_2)))
 
 #Make a string of the correct names
@@ -253,6 +239,35 @@ solute_units_table_new  %>%
 
 ```
 
+Export an excel workbook with two sheets
+
+```{r}
+
+
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = new_datatable2)
+
+addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "HBR_2_watershed.xlsx", overwrite = TRUE)
+
+```
+
+What proportion of cells in the new data table are NA?
+
+```{r}
+
+sum(is.na(new_datatable2))/prod(dim(new_datatable2))
+
+#for columns
+colMeans(is.na(new_datatable2))
+
+```
 
 
 

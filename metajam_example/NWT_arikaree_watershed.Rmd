@@ -25,6 +25,8 @@ library(here) # for file path management
 library(stringdist) # for first pass of naming-matching
 library(vctrs) # for joining tables
 library(readxl) # for reading the template excel sheet
+library(naniar)
+library(openxlsx)
 
 ```
 
@@ -67,7 +69,7 @@ downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_
 ```{r}
 
 
-my_data <- read_d1_files(downloaded_data)
+my_data <- read_d1_files(downloaded_data, na = c("u", "NP", "DNS", "EQCL"))
 
 arikaree_NWT_data <- my_data$data
 
@@ -111,7 +113,7 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
 
-
+#Adding a column for NO3 so that the template includes both an NO3 column and NOx column
 template <- template %>% 
   add_column('NOx' = '.', .before = "NO3")
 
@@ -145,8 +147,10 @@ Fuzzy Match
 lookup_table <- lookup_table %>%
   filter(!is.na(watershed11))
 
+
 correct_colnames <- lookup_table$template
 
+correct_colnames <- as.character(correct_colnames)
 
 
 

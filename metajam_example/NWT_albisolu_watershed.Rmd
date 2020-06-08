@@ -27,8 +27,8 @@ library(here) # for file path management
 library(stringdist) # for first pass of naming-matching
 library(vctrs) # for joining tables
 library(readxl) # for reading the template excel sheet
-install.packages("naniar")
 library(naniar)
+library(openxlsx)
 
 ```
 
@@ -70,11 +70,11 @@ downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_
 
 ```{r}
 
-my_data <- read_d1_files(downloaded_data)
+my_data <- read_d1_files(downloaded_data, na = c("u", "NP", "DNS", "EQCL"))
 
 albisolu_NWT_data <- my_data$data
 
-my_data$attribute_metadata
+
 
 ```
 
@@ -107,7 +107,7 @@ albisolu_NWT_data <- albisolu_NWT_data %>%
 
 names(albisolu_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(albisolu_NWT_data))
 
-my_data$attribute_metadata
+
 
 ```
 
@@ -122,7 +122,7 @@ template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"),
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
 
-
+#Adding a column for NO3 so that the template includes both an NO3 column and NOx column
 template <- template %>% 
   add_column('NOx' = '.', .before = "NO3")
 
@@ -159,7 +159,6 @@ correct_colnames <- lookup_table$template
 
 correct_colnames <- as.character(correct_colnames)
 
-correct_colnames
 
 ```
 Once the lookup table is as filled out as possible, we can remove all rows that still had no match.
@@ -179,82 +178,19 @@ new_datatable_NWT_1 <- albisolu_NWT_data %>%
 
 
 #Changing missing value codes for columns for which NP is the missing value code
-new_datatable_NWT_1$alkalinity <- na_if(new_datatable_NWT_1$alkalinity, "NP")
-
-new_datatable_NWT_1$DOC <- na_if(new_datatable_NWT_1$DOC, "NP")
-
-new_datatable_NWT_1$TOC <- na_if(new_datatable_NWT_1$TOC, "NP")
-
-new_datatable_NWT_1$TDN <- na_if(new_datatable_NWT_1$TDN, "NP")
-
-new_datatable_NWT_1$TN <- na_if(new_datatable_NWT_1$TN, "NP")
-
-new_datatable_NWT_1$DON <- na_if(new_datatable_NWT_1$DON, "NP")
-
-new_datatable_NWT_1$NO3 <- na_if(new_datatable_NWT_1$NO3, "NP")
-
-new_datatable_NWT_1$NH4 <- na_if(new_datatable_NWT_1$NH4, "NP")
-
-new_datatable_NWT_1$PO4 <- na_if(new_datatable_NWT_1$PO4, "NP")
-
-new_datatable_NWT_1$TDP <- na_if(new_datatable_NWT_1$TDP, "NP")
-
-new_datatable_NWT_1$DOP <- na_if(new_datatable_NWT_1$DOP, "NP")
-
-new_datatable_NWT_1$TP <- na_if(new_datatable_NWT_1$TP, "NP")
-
-new_datatable_NWT_1$PP <- na_if(new_datatable_NWT_1$PP, "NP")
-
-new_datatable_NWT_1$pH <- na_if(new_datatable_NWT_1$pH, "NP")
-
-new_datatable_NWT_1$Si <- na_if(new_datatable_NWT_1$Si, "NP")
-
-new_datatable_NWT_1$Na <- na_if(new_datatable_NWT_1$Na, "NP")
-
-new_datatable_NWT_1$K <- na_if(new_datatable_NWT_1$K, "NP")
-
-new_datatable_NWT_1$Ca <- na_if(new_datatable_NWT_1$Ca, "NP")
-
-new_datatable_NWT_1$SO4 <- na_if(new_datatable_NWT_1$SO4, "NP")
-
-new_datatable_NWT_1$TDP <- na_if(new_datatable_NWT_1$TDP, "NP")
-
-#Changing missing value codes to NA for columns with alternate exisiting missing value codes
-
-new_datatable_NWT_1$Time<- na_if(new_datatable_NWT_1$Time, "DNS")
-
-new_datatable_NWT_1$NO3 <- na_if(new_datatable_NWT_1$NO3, "u")
-
-new_datatable_NWT_1$TP <- na_if(new_datatable_NWT_1$TP, "u")
-
-new_datatable_NWT_1$PP <- na_if(new_datatable_NWT_1$PP, "u")
-
-new_datatable_NWT_1$DON <- na_if(new_datatable_NWT_1$DON, "EQCL")
-
-new_datatable_NWT_1$DOP <- na_if(new_datatable_NWT_1$DOP, "EQCL")
-
-#still trying to figure out how to do these numeric thresholds to input NAS
-new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(NH4 = ifelse(NH4 < 0.1428, "NA", NH4))
-
-
-
-new_datatable_NWT_1 <- replace_with_na_all(data = new_datatable_NWT_1$NH4, condition = ~NH4 < 0.1428)
-
-
 
 new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(SO4 = ifelse(SO4 < 0.28, "NA", SO4))
+ mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
 
 new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(TDP = ifelse(TDP < 0.0258, "NA", TDP))
+ mutate(SO4 = ifelse(SO4 < 0.28, NA, SO4))
 
-#PN has a missing value code of u but that attribute is not in the new table
+new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+ mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
 
-
-my_data$attribute_metadata
 
 ```
+
 
 Loading the solute units template
 
@@ -329,6 +265,32 @@ solute_units_table_new  %>%
 
 ```
 
+#Export an excel workbook with two sheets
+
+```{r}
 
 
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
 
+writeDataTable(wb = wb, sheet = 1, x = new_datatable_NWT_1)
+
+addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "NWT_albisolu_watershed.xlsx", overwrite = TRUE)
+
+```
+
+What proportion of cells in the new data table are NA?
+
+```{r}
+
+sum(is.na(new_datatable_NWT_1))/prod(dim(new_datatable_NWT_1))
+
+#for columns
+colMeans(is.na(new_datatable_NWT_1))
+
+```
