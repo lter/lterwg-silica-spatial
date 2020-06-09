@@ -1,5 +1,5 @@
 ---
-title: "arikaree_NWT_watershed"
+title: "NWT_soddie_watershed"
 output: html_document
 ---
 
@@ -34,7 +34,7 @@ library(openxlsx)
 ####Step 2: Find the link to the dataset
 Go to the web address for the dataset and find the download button for the data. 
 
-In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.104.11&entityid=1f6d60d3f8fb0b902358b3b6da579f67
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.213.1&entityid=191b29ee0884b9c5848fe3c6db329a63
 
 #### Step 3: Choose where you want the files to be saved
 In our case, we'll just put it into the metajam_example folder.
@@ -55,10 +55,10 @@ dir.create(desired_path_to_data, showWarnings = FALSE)
 
 ```{r}
 
-my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.104.11&entityid=1f6d60d3f8fb0b902358b3b6da579f67"
+meta_obj <- "doi:10.6073/pasta/49ace263067caf02c0b27c8b6a877683"
 
 # this will download the data into a folder and save the path to that folder
-downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
+downloaded_data <- download_d1_data_pkg(meta_obj = "doi:10.6073/pasta/49ace263067caf02c0b27c8b6a877683", path = desired_path_to_data)
 
 
 ```
@@ -71,9 +71,12 @@ downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_
 
 my_data <- read_d1_files(downloaded_data, na = c("u", "NP", "DNS", "EQCL"))
 
-arikaree_NWT_data <- my_data$data
+soddie_NWT_data <- my_data$data
+
+#refusing to read in data so uploading manually
 
 
+soddie_NWT_data <- read_csv(here::here("metajam_example/soddsolu.mw.data.csv"), na = c("NP", "Not Performed"))
 
 ```
 
@@ -82,25 +85,25 @@ Data cleanup
 ```{r}
 
 #these columns already have the info we want but we need to change the column names to match the template
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+soddie_NWT_data <- soddie_NWT_data %>% 
   rename('Sampling Date' = 'date')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
-  rename('Site/Stream Name' = 'local_site')
+soddie_NWT_data <- soddie_NWT_data %>% 
+  rename('Site/Stream Name' = 'samp_loc')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+soddie_NWT_data <- soddie_NWT_data %>% 
   rename('LTER' = 'LTER_site')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+soddie_NWT_data <- soddie_NWT_data %>% 
   rename('Time' = 'time')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+soddie_NWT_data <- soddie_NWT_data %>% 
   rename('Conductivity' = 'cond')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+soddie_NWT_data <- soddie_NWT_data %>% 
   rename('alkalinity' = 'alkal')
 
-names(arikaree_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(arikaree_NWT_data))
+names(soddie_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(soddie_NWT_data))
 
 ```
 
@@ -128,7 +131,7 @@ Fuzzy Match
   # Note that we match the lower case names
   # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
 (fuzzy_match <- tibble(template = names(template)) %>%
-   mutate(watershed11 = names(arikaree_NWT_data)[amatch(tolower(template), tolower(names(arikaree_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+   mutate(watershed15 = names(soddie_NWT_data)[amatch(tolower(template), tolower(names(soddie_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
 
@@ -140,12 +143,12 @@ Fuzzy Match
 # continue in the same way until you've filled out everything you could.
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table <- fuzzy_match %>%
-  mutate(watershed11 = case_when(
+  mutate(watershed15 = case_when(
     template %in% c("DIC", "NOx", "TKN", "PON") ~ NA_character_,
-    TRUE ~ watershed11)))
+    TRUE ~ watershed15)))
 
 lookup_table <- lookup_table %>%
-  filter(!is.na(watershed11))
+  filter(!is.na(watershed15))
 
 correct_colnames <- lookup_table$template
 
@@ -161,31 +164,15 @@ correct_colnames <- as.character(correct_colnames)
 
 
 
-new_datatable_NWT_2 <- arikaree_NWT_data %>% 
+new_datatable_NWT_6 <- soddie_NWT_data %>% 
         select(all_of(c(correct_colnames)))
 
 
-my_data$attribute_metadata
-
-```
-
-```{r}
-
-#Changing missing value codes for columns for which NP is the missing value code
-
-new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
- mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
-
-
-new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
- mutate(PO4 = ifelse(PO4 < 0.038, NA, PO4))
-
-
-new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
- mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
 
 
 ```
+
+
 
 Loading the solute units template
 
@@ -202,6 +189,9 @@ solute_units_Template <- solute_units_Template  %>%
 
 Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
 ```{r}
+
+
+download_d1_data_pkg(meta_obj, path)
 
 attributes <- data.frame(my_data$attribute_metadata)
 

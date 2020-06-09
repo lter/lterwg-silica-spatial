@@ -1,11 +1,12 @@
 ---
-title: "arikaree_NWT_watershed"
+title: "NWT_flume_watershed"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 
 ###Step 1: Load packages
 
@@ -34,7 +35,7 @@ library(openxlsx)
 ####Step 2: Find the link to the dataset
 Go to the web address for the dataset and find the download button for the data. 
 
-In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.104.11&entityid=1f6d60d3f8fb0b902358b3b6da579f67
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.162.1&entityid=8f10ecbc48e8432a7100fa07f80f34bb
 
 #### Step 3: Choose where you want the files to be saved
 In our case, we'll just put it into the metajam_example folder.
@@ -55,7 +56,7 @@ dir.create(desired_path_to_data, showWarnings = FALSE)
 
 ```{r}
 
-my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.104.11&entityid=1f6d60d3f8fb0b902358b3b6da579f67"
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.162.1&entityid=8f10ecbc48e8432a7100fa07f80f34bb"
 
 # this will download the data into a folder and save the path to that folder
 downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
@@ -69,9 +70,9 @@ downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_
 ```{r}
 
 
-my_data <- read_d1_files(downloaded_data, na = c("u", "NP", "DNS", "EQCL"))
+my_data <- read_d1_files(downloaded_data, na = c("NP", "Not Performed"))
 
-arikaree_NWT_data <- my_data$data
+flume_NWT_data <- my_data$data
 
 
 
@@ -82,25 +83,25 @@ Data cleanup
 ```{r}
 
 #these columns already have the info we want but we need to change the column names to match the template
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+flume_NWT_data <- flume_NWT_data %>% 
   rename('Sampling Date' = 'date')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+flume_NWT_data <- flume_NWT_data %>% 
   rename('Site/Stream Name' = 'local_site')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+flume_NWT_data <- flume_NWT_data %>% 
   rename('LTER' = 'LTER_site')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+flume_NWT_data <- flume_NWT_data %>% 
   rename('Time' = 'time')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+flume_NWT_data <- flume_NWT_data %>% 
   rename('Conductivity' = 'cond')
 
-arikaree_NWT_data <- arikaree_NWT_data %>% 
+flume_NWT_data <- flume_NWT_data %>% 
   rename('alkalinity' = 'alkal')
 
-names(arikaree_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(arikaree_NWT_data))
+names(flume_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(flume_NWT_data))
 
 ```
 
@@ -128,7 +129,7 @@ Fuzzy Match
   # Note that we match the lower case names
   # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
 (fuzzy_match <- tibble(template = names(template)) %>%
-   mutate(watershed11 = names(arikaree_NWT_data)[amatch(tolower(template), tolower(names(arikaree_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+   mutate(watershed14 = names(flume_NWT_data)[amatch(tolower(template), tolower(names(flume_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
 
@@ -140,12 +141,12 @@ Fuzzy Match
 # continue in the same way until you've filled out everything you could.
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table <- fuzzy_match %>%
-  mutate(watershed11 = case_when(
+  mutate(watershed14 = case_when(
     template %in% c("DIC", "NOx", "TKN", "PON") ~ NA_character_,
-    TRUE ~ watershed11)))
+    TRUE ~ watershed14)))
 
 lookup_table <- lookup_table %>%
-  filter(!is.na(watershed11))
+  filter(!is.na(watershed14))
 
 correct_colnames <- lookup_table$template
 
@@ -161,7 +162,7 @@ correct_colnames <- as.character(correct_colnames)
 
 
 
-new_datatable_NWT_2 <- arikaree_NWT_data %>% 
+new_datatable_NWT_5 <- flume_NWT_data %>% 
         select(all_of(c(correct_colnames)))
 
 
@@ -169,23 +170,6 @@ my_data$attribute_metadata
 
 ```
 
-```{r}
-
-#Changing missing value codes for columns for which NP is the missing value code
-
-new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
- mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
-
-
-new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
- mutate(PO4 = ifelse(PO4 < 0.038, NA, PO4))
-
-
-new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
- mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
-
-
-```
 
 Loading the solute units template
 
@@ -225,7 +209,7 @@ Fuzzy matching template solute units table to attribute table
 ```{r}
 
 (fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
-   mutate(watershed_units_11 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+   mutate(watershed_units_14 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
 
@@ -238,8 +222,8 @@ Fuzzy matching template solute units table to attribute table
 # continue in the same way until you've filled out everything you could.
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table_units <- fuzzy_match %>%
-  mutate(watershed_units_11 = case_when(
-    solute_units_Template$Measurement %in% c("DIC","DO", "DO%","PON", "TKN") ~ NA_character_, TRUE ~ watershed_units_11)))
+  mutate(watershed_units_14 = case_when(
+    solute_units_Template$Measurement %in% c("DIC","DO", "DO%","PON", "TKN") ~ NA_character_, TRUE ~ watershed_units_14)))
 
 #Make a string of the correct names
 correct_names <- lookup_table_units$'solute_units_Template$Measurement'
@@ -267,13 +251,13 @@ Export an excel workbook with two sheets
 wb <- createWorkbook()
 addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
 
-writeDataTable(wb = wb, sheet = 1, x = new_datatable_NWT_2)
+writeDataTable(wb = wb, sheet = 1, x = new_datatable_NWT_5)
 
 addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
 
 writeData(wb = wb, sheet = 2, x = solute_units_table_new)
 
-saveWorkbook(wb, "NWT_arikaree_watershed.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "NWT_flume_watershed.xlsx", overwrite = TRUE)
 
 ```
 
@@ -281,9 +265,9 @@ What proportion of cells in the new data table are NA?
 
 ```{r}
 
-sum(is.na(new_datatable_NWT_2))/prod(dim(new_datatable_NWT_2))
+sum(is.na(new_datatable_NWT_5))/prod(dim(new_datatable_NWT_5))
 
 #for columns
-colMeans(is.na(new_datatable_NWT_2))
+colMeans(is.na(new_datatable_NWT_5))
 
 ```

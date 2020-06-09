@@ -159,6 +159,7 @@ correct_colnames <- lookup_table$template
 
 correct_colnames <- as.character(correct_colnames)
 
+my_data$attribute_metadata
 
 ```
 Once the lookup table is as filled out as possible, we can remove all rows that still had no match.
@@ -183,10 +184,13 @@ new_datatable_NWT_1 <- new_datatable_NWT_1 %>%
  mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
 
 new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(SO4 = ifelse(SO4 < 0.28, NA, SO4))
+ mutate(PO4 = ifelse(SO4 < 0.0387, NA, PO4))
 
 new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
  mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
+
+new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+ mutate(Cl = ifelse(Cl < 0.28, NA, Cl))
 
 
 ```
@@ -265,7 +269,7 @@ solute_units_table_new  %>%
 
 ```
 
-#Export an excel workbook with two sheets
+Export an excel workbook with two sheets
 
 ```{r}
 
