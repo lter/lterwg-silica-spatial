@@ -101,6 +101,9 @@ saddle_NWT_data <- saddle_NWT_data %>%
 saddle_NWT_data <- saddle_NWT_data %>% 
   rename('alkalinity' = 'alkal')
 
+saddle_NWT_data <- saddle_NWT_data %>% 
+  rename('DSi' = 'Si')
+
 names(saddle_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(saddle_NWT_data))
 
 ```
@@ -108,15 +111,10 @@ names(saddle_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(saddle_NWT_data))
 Read in template
 ```{r}
 
-template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
-                               sheet = "Raw Data",
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
                                col_types = "text"
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
-
-#Adding a column for NO3 so that the template includes both an NO3 column and NOx column
-template <- template %>% 
-  add_column('NOx' = '.', .before = "NO3")
 
 
 ```
@@ -142,7 +140,7 @@ Fuzzy Match
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table <- fuzzy_match %>%
   mutate(watershed13 = case_when(
-    template %in% c("DIC", "NOx", "TKN", "PON") ~ NA_character_,
+    template %in% c("DIN", "NOx", "DIC") ~ NA_character_,
     TRUE ~ watershed13)))
 
 lookup_table <- lookup_table %>%
@@ -219,7 +217,7 @@ Fuzzy matching template solute units table to attribute table
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table_units <- fuzzy_match %>%
   mutate(watershed_units_13 = case_when(
-    solute_units_Template$Measurement %in% c("DIC","DO", "DO%","PON", "TKN") ~ NA_character_, TRUE ~ watershed_units_13)))
+    solute_units_Template$Measurement %in% c("DIC","DO", "DO%", "TKN", "PON") ~ NA_character_, TRUE ~ watershed_units_13)))
 
 #Make a string of the correct names
 correct_names <- lookup_table_units$'solute_units_Template$Measurement'

@@ -91,15 +91,10 @@ Reading in template
 
 ```{r}
 
-template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
-                               sheet = "Raw Data",
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
                                col_types = "text"
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
-
-#Adding a column for NO3 so that the template includes both an NO3 column and NOx column
-template <- template %>% 
-  add_column('NOx' = '.', .before = "NO3")
 
 ```
 
@@ -128,7 +123,7 @@ HBR_watershed_1_data <- HBR_watershed_1_data %>%
 names(HBR_watershed_1_data)[7:31] <- substring(names(HBR_watershed_1_data)[7:31],7,12)
 
 HBR_watershed_1_data <- HBR_watershed_1_data %>% 
-  rename('Si' = 'SiO2')
+  rename('DSi' = 'SiO2')
 
 ```
 
@@ -144,9 +139,6 @@ HBR_watershed_1_data <- HBR_watershed_1_data %>%
 )
 
 
-# To see if we can match up the other columns, check the documentation
-my_data$attribute_metadata %>% 
-  select(attributeName, attributeDefinition) 
 
 ```
 
@@ -157,7 +149,7 @@ my_data$attribute_metadata %>%
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table <- fuzzy_match %>%
   mutate(watershed1 = case_when(
-    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP") ~ NA_character_,
+    template %in% c("DIN", "TN", "NOx",  "TOC") ~ NA_character_,
     TRUE ~ watershed1)))
 
 correct_colnames <- lookup_table$template
@@ -236,7 +228,7 @@ Fuzzy matching template solute units table to attribute table
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table_units <- fuzzy_match %>%
   mutate(watershed_units_1 = case_when(
-    solute_units_Template$Measurement %in% c("DO", "TOC", "TN", "Si", "TP") ~ NA_character_,
+    solute_units_Template$Measurement %in% c("DO","Q", "DO%","TOC", "TDP","PON", "PP", "TKN","DOP","TN", "TP") ~ NA_character_,
     TRUE ~ watershed_units_1)))
 
 #Make a string of the correct names

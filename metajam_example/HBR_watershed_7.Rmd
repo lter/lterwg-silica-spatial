@@ -106,7 +106,7 @@ HBR_watershed_7_data <- HBR_watershed_7_data %>%
 
 
 HBR_watershed_7_data <- HBR_watershed_7_data %>% 
-  rename('Si' = 'SiO2')
+  rename('DSi' = 'SiO2')
 
 
 ```
@@ -114,16 +114,10 @@ HBR_watershed_7_data <- HBR_watershed_7_data %>%
 Read in template
 ```{r}
 
-template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
-                               sheet = "Raw Data",
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
                                col_types = "text"
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
-
-#Adding a column for NO3 so that the template includes both an NO3 column and NOx column
-template <- template %>% 
-  add_column('NOx' = '.', .before = "NO3")
-
 
 ```
 
@@ -140,7 +134,7 @@ Fuzzy match
 
 (lookup_table <- fuzzy_match %>%
   mutate(watershed7 = case_when(
-    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP", "NOx") ~ NA_character_,
+    template %in% c("DIN", "TN", "NOx",  "TOC") ~ NA_character_,
     TRUE ~ watershed7)))
 
 correct_colnames <- lookup_table$template

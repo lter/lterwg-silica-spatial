@@ -105,6 +105,9 @@ albisolu_NWT_data <- albisolu_NWT_data %>%
 albisolu_NWT_data <- albisolu_NWT_data %>% 
   rename('alkalinity' = 'alkal')
 
+albisolu_NWT_data <- albisolu_NWT_data %>% 
+  rename('DSi' = 'Si')
+
 names(albisolu_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(albisolu_NWT_data))
 
 
@@ -116,15 +119,10 @@ names(albisolu_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(albisolu_NWT_data
 Read in template
 ```{r}
 
-template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
-                               sheet = "Raw Data",
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
                                col_types = "text"
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
-
-#Adding a column for NO3 so that the template includes both an NO3 column and NOx column
-template <- template %>% 
-  add_column('NOx' = '.', .before = "NO3")
 
 ```
 
@@ -149,7 +147,7 @@ Fuzzy match
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table <- fuzzy_match %>%
   mutate(watershed10 = case_when(
-    template %in% c("DIC", "NOx", "TKN", "PON") ~ NA_character_,
+    template %in% c("DIN", "NOx", "DIC") ~ NA_character_,
     TRUE ~ watershed10)))
 
 lookup_table <- lookup_table %>%
@@ -180,17 +178,17 @@ new_datatable_NWT_1 <- albisolu_NWT_data %>%
 
 #Changing missing value codes for columns for which NP is the missing value code
 
-new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+ #mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
 
-new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(PO4 = ifelse(SO4 < 0.0387, NA, PO4))
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+#mutate(PO4 = ifelse(PO4 < 0.0387, NA, PO4))
 
-new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+#mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
 
-new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
- mutate(Cl = ifelse(Cl < 0.28, NA, Cl))
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+# mutate(Cl = ifelse(Cl < 0.28, NA, Cl))
 
 
 ```
@@ -249,7 +247,7 @@ Fuzzy matching template solute units table to attribute table
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table_units <- fuzzy_match %>%
   mutate(watershed_units_10 = case_when(
-    solute_units_Template$Measurement %in% c("DIC","DO", "DO%","PON", "TKN") ~ NA_character_,
+    solute_units_Template$Measurement %in% c("DIC","DO", "DO%", "TKN", "PON") ~ NA_character_,
     TRUE ~ watershed_units_10)))
 
 #Make a string of the correct names

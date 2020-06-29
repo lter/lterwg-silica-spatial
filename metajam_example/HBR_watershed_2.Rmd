@@ -112,7 +112,7 @@ HBR_watershed_2_data <- HBR_watershed_2_data %>%
   rename('Spec Cond' = 'SpecCond')	
 
 HBR_watershed_2_data <- HBR_watershed_2_data %>% 
-  rename('Si' = 'SiO2')
+  rename('DSi' = 'SiO2')
 
 ```
 
@@ -123,15 +123,25 @@ Reading in template
 
 ```{r}
 
-template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
-                               sheet = "Raw Data",
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
                                col_types = "text"
                                ) %>%
   mutate(`Sampling Date` = as.Date(`Sampling Date`))
 
+```
+
+
+```{r}
+
+#template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), 
+   #                            sheet = "Raw Data",
+     #                          col_types = "text"
+     #                          ) %>%
+  #mutate(`Sampling Date` = as.Date(`Sampling Date`))
+
 #Adding a column for NO3 so that the template includes both an NO3 column and NOx column
-template <- template %>% 
-  add_column('NOx' = '.', .before = "NO3")
+#template <- template %>% 
+ # add_column('NOx' = '.', .before = "NO3")
 
 ```
 
@@ -147,7 +157,7 @@ template <- template %>%
 
 (lookup_table <- fuzzy_match %>%
   mutate(watershed2 = case_when(
-    template %in% c("TOC", "TN", "TKN", "TDP", "PP", "PON", "DOP") ~ NA_character_,
+    template %in% c("DIN", "TN", "NOx",  "TOC") ~ NA_character_,
     TRUE ~ watershed2)))
 
 correct_colnames <- lookup_table$template
