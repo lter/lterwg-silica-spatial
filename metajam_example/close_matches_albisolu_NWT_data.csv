@@ -1,7 +1,0 @@
-"attributeName","attributeLabel","attributeDefinition","storageType","definition","measurementScale","domain","formatString","minimum","maximum","missingValueCode","missingValueCodeExplanation","unit","numberType","metadata_pid"
-"NH4+","NH4+","NH4+; NP-not performed","float",NA,"ratio","numericDomain",NA,NA,NA,"<0.1428","less than 0.1428","microequivalentPerLiter","real","https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12"
-"Mg++","Mg++","Mg++; NP-not performed","float",NA,"ratio","numericDomain",NA,NA,NA,"NP","not performed","microequivalentPerLiter","real","https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12"
-"Na+","Na+","Na+; NP-not performed","float",NA,"ratio","numericDomain",NA,NA,NA,"NP","not performed","microequivalentPerLiter","real","https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12"
-"K+","K+","K+; NP-not performed","float",NA,"ratio","numericDomain",NA,NA,NA,"NP","not performed","microequivalentPerLiter","real","https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12"
-"NO3-","NO3-","NO3-; NP-not performed","float",NA,"ratio","numericDomain",NA,NA,NA,"u","under method detection limit","microequivalentPerLiter","real","https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12"
-"PO4---","PO4---","NP-not performed","float",NA,"ratio","numericDomain",NA,NA,NA,"<0.0387","less than 0.0387","microequivalentPerLiter","real","https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12"

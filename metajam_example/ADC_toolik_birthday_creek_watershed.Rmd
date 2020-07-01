@@ -130,6 +130,10 @@ Toolik_birthday_creek_watershed <- Toolik_birthday_creek_watershed %>%
   select(-'Site Code', -'Station', -'Reach', -'Method / Instrument', -'Units', -'Comments')  %>% 
   rename('Sampling Date' = 'Date',  'Site/Stream Name' = 'River')
 
+
+#extracting 'time' from sampling date column and making it it's own column
+Toolik_birthday_creek_watershed <- Toolik_birthday_creek_watershed %>% 
+  add_column('Time' = substr(Toolik_birthday_creek_watershed$`Sampling Date`, 11, 16), .after = 'Sampling Date')
 #removing empty time sot "00:00" from sampling date column since it is "00:00" in every cell (not informative)
 Toolik_birthday_creek_watershed$`Sampling Date` <- gsub("00:00", "", Toolik_birthday_creek_watershed$`Sampling Date`)
 
@@ -161,7 +165,7 @@ Fuzzy Match
   # Note that we match the lower case names
   # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
 (fuzzy_match <- tibble(template = names(template)) %>%
-   mutate(watershed_toolik_1 = names(Toolik_birthday_creek_watershed )[amatch(tolower(template), tolower(names(Toolik_birthday_creek_watershed )), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+   mutate(watershed_toolik_1 = names(Toolik_birthday_creek_watershed)[amatch(tolower(template), tolower(names(Toolik_birthday_creek_watershed )), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
 ```

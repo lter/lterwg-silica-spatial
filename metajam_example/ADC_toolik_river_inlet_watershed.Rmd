@@ -1,12 +1,11 @@
 ---
-title: "Toolik_burn_reference_watershed"
+title: "ADC_toolik_rivers_watershed"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 
 ###Step 1: Load packages
 
@@ -65,7 +64,7 @@ downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_
 ```{r}
 
 
-my_data <- read_d1_files(downloaded_data, na = c("-888.88", "-888.888", "-888"))
+my_data <- read_d1_files(downloaded_data, na = c("-888.88", "-888.888", "-888", "-999", "-9999"))
 
 Toolik_watershed_data <- my_data$data
 
@@ -92,44 +91,55 @@ Toolik_watershed_data$Type  <- trimws(Toolik_watershed_data$Type, which = c("lef
 #Create a list of unique watershed names 
 Toolik_stream_names <- unique(Toolik_watershed_data$River)
 
-
+Toolik_stream_names 
 #Adding a column to identify the LTER site - ARC
 
 Toolik_watershed_data <- Toolik_watershed_data %>% 
   add_column(LTER = 'ARC', .before = "River")
 
-Toolik_burn_reference_watershed <- Toolik_watershed_data %>% 
-  filter(River == "Burn Reference Streams")
 
+Toolik_river_inlet_watershed <- Toolik_watershed_data %>% 
+  filter(River == "Toolik Inlet")
+
+
+Toolik_river_inlet_watershed  <- Toolik_river_inlet_watershed  %>% 
+add_column('Site/Stream Name' = paste(Toolik_river_inlet_watershed$River, Toolik_river_inlet_watershed$Station), .before = 'River')
+
+#Toolik_rivers_watershed <- Toolik_watershed_data %>% 
+ # filter(River %in% c( "I-Minus 2", "I-Minus 2 TK", "Imnavait Creek", "Itkillik Tributary", "Kuparuk River", "North River", "Oksrukuyik Creek", "Roche Moutonnee Creek", "Shrew River", "South River", "South River Trib", "Toolik Inlet","Toolik River", "Toolik River TK", "Toolik River TK-4", "Trevor Creek", "Upper Kuparuk", "VTK IMP", "VTK REF"))
 
 ```
+
+
 
 ```{r}
 
 #Changing from long format to wide format like template
-Toolik_burn_reference_watershed <- spread(Toolik_burn_reference_watershed, key = 'Type', value = 'Value')
 
-#Unsure what the 'Site/Stream Name' should be so combining river name and station
-Toolik_burn_reference_watershed <- Toolik_burn_reference_watershed  %>% 
-add_column('Site/Stream Name' = paste(Toolik_burn_reference_watershed$River, Toolik_burn_reference_watershed$Station), .before = 'River')
+Toolik_river_inlet_watershed<- spread(Toolik_river_inlet_watershed, key = 'Type', value = 'Value')
+
 
 #Removing columns we don't need
-Toolik_burn_reference_watershed <- Toolik_burn_reference_watershed %>% 
+Toolik_river_inlet_watershed <- Toolik_river_inlet_watershed %>% 
   select(-'Site Code', -'Station', -'Reach', -'Method / Instrument', -'Units', -'Comments', -'River')  %>% 
   rename('Sampling Date' = 'Date')
 
 
 #extracting 'time' from sampling date column and making it it's own column
-Toolik_burn_reference_watershed  <- Toolik_burn_reference_watershed  %>% 
-  add_column('Time' = substr(Toolik_burn_reference_watershed$`Sampling Date`, 11, 16), .after = 'Sampling Date')
-#removing empty time sot "00:00" from sampling date column since it is "00:00" in every cell (not informative)
-Toolik_burn_reference_watershed$`Sampling Date` <- gsub("00:00", "", Toolik_burn_reference_watershed$`Sampling Date`)
+Toolik_river_inlet_watershed <- Toolik_river_inlet_watershed %>% 
+  add_column('Time' = substr(Toolik_river_inlet_watershed$`Sampling Date`, 11, 16), .after = 'Sampling Date')
+
+#removing time from date column
+Toolik_river_inlet_watershed <- Toolik_river_inlet_watershed %>% 
+  mutate('Sampling Date' = substr(Toolik_river_inlet_watershed$`Sampling Date`, 1, 10))
+
 
 #Renaming columns to match template abbreviations
-Toolik_burn_reference_watershed  <- Toolik_burn_reference_watershed  %>% 
-  rename('Ca' = 'Calcium', 'Spec Cond' = 'Specific Conductivity', 'Na' = 'Sodium', 'K' = 'Potassium', 'Mg' = 'Magnesium', 'CO2' = 'Carbon Dioxide', 'TDP' = 'Total Dissolved Phosphorus', 'DOC' = 'Dissolved Organic Carbon', 'CH4' = 'Methane', 'NH4' = 'Ammonium', 'TDN' = 'Total Dissolved Nitrogen', 'Suspended Chl' = 'Sestonic Chlorophyll a', 'Temp C' = 'Temp when sample collected', 'SRP' = 'Soluble Reactive Phosphorus', 'Cl' = 'Chloride', 'alkalinity' = 'Alkalinity' )
+Toolik_river_inlet_watershed  <- Toolik_river_inlet_watershed %>% 
+  rename('Spec Cond' = 'Specific Conductivity', 'TDP' = 'Total Dissolved Phosphorus', 'DOC' = 'Dissolved Organic Carbon', 'NH4' = 'Ammonium', 'TDN' = 'Total Dissolved Nitrogen', 'Temp C' = 'Temp when sample collected', 'SRP' = 'Soluble Reactive Phosphorus', 'NOx' = 'NitrateNitrite')
 
 ```
+
 
 
 Read in template. Doulbe check the template is correct!
@@ -150,11 +160,10 @@ Fuzzy Match
   # Note that we match the lower case names
   # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
 (fuzzy_match <- tibble(template = names(template)) %>%
-   mutate(watershed_toolik_2 = names(Toolik_burn_reference_watershed )[amatch(tolower(template), tolower(names(Toolik_burn_reference_watershed)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+   mutate(watershed_toolik_5 = names(Toolik_river_inlet_watershed)[amatch(tolower(template), tolower(names(Toolik_river_inlet_watershed)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
 ```
-
 
 ```{r}
 
@@ -162,23 +171,23 @@ Fuzzy Match
 # continue in the same way until you've filled out everything you could.
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table <- fuzzy_match %>%
-  mutate(watershed_toolik_2 = case_when(
+  mutate(watershed_toolik_5 = case_when(
     template %in% c("TN", "TP", "TOC", "DIC") ~ NA_character_,
-    TRUE ~ watershed_toolik_2)))
+    TRUE ~ watershed_toolik_5)))
 
 lookup_table <- lookup_table %>%
-  filter(!is.na(watershed_toolik_2))
+  filter(!is.na(watershed_toolik_5))
 
 correct_colnames <- lookup_table$template
 
-
 ```
+New data table with only the columns that match the template
 
 ```{r}
 
-new_datatable_toolik_2 <- Toolik_burn_reference_watershed %>% 
-        select(all_of(c(correct_colnames)))
 
+new_datatable_toolik_5 <- Toolik_river_inlet_watershed %>% 
+        select(all_of(c(correct_colnames)))
 
 ```
 
@@ -195,7 +204,6 @@ solute_units_Template <- solute_units_Template  %>%
 
 
 ```
-
 Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
 
 
@@ -222,12 +230,19 @@ attributes$Measurement <- gsub('Dissolved Organic Carbon', 'DOC', attributes$Mea
 attributes$Measurement <- gsub('Methane', 'CH4', attributes$Measurement)
 attributes$Measurement <- gsub('Ammonium', 'NH4', attributes$Measurement)
 attributes$Measurement <- gsub('Total Dissolved Nitrogen', 'TDN', attributes$Measurement)
-attributes$Measurement <- gsub("Sestonic Chlorophyll a", 'Suspended Chl', attributes$Measurement)
+attributes$Measurement <- gsub("Sestonic Total Chlorophyll", 'Suspended Chl', attributes$Measurement)
 attributes$Measurement <- gsub("Temp when sample collected", 'Temp', attributes$Measurement)
 attributes$Measurement <- gsub("Specific Conductivity", 'Specific Conductance', attributes$Measurement)
 attributes$Measurement <- gsub("Nickel", 'Ni', attributes$Measurement)
 attributes$Measurement <- gsub("Chloride", 'Cl', attributes$Measurement)
 attributes$Measurement <- gsub("Copper", 'Cu', attributes$Measurement)
+attributes$Measurement <- gsub("Sulfate", 'SO4', attributes$Measurement)
+attributes$Measurement <- gsub('Soluble Reactive Phosphorus', 'SRP', attributes$Measurement)
+attributes$Measurement <- gsub('Phosphate', 'PO4', attributes$Measurement)
+
+attributes$Measurement <- gsub('NitrateNitrite', 'NOx', attributes$Measurement)
+
+
 
 
 ```
@@ -275,23 +290,12 @@ Export an excel workbook with two sheets
 wb <- createWorkbook()
 addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
 
-writeDataTable(wb = wb, sheet = 1, x = new_datatable_toolik_2)
+writeDataTable(wb = wb, sheet = 1, x = new_datatable_toolik_5)
 
 addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
 
 writeData(wb = wb, sheet = 2, x = solute_units_table_new)
 
-saveWorkbook(wb, "ADC_Toolik_burn_reference_watershed.xlsx", overwrite = TRUE)
-
-```
-
-What proportion of cells in the new data table are NA?
-
-```{r}
-
-sum(is.na(new_datatable_toolik_2))/prod(dim(new_datatable_toolik_2))
-
-#for columns
-colMeans(is.na(new_datatable_toolik_2))
+saveWorkbook(wb, "ADC_Toolik_river_inlet_watershed.xlsx", overwrite = TRUE)
 
 ```
