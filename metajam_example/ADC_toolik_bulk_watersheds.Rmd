@@ -78,40 +78,61 @@ Toolik_watershed_data <-  Toolik_watershed_data[-c(1, 2, 3),]
 
 ```{r}
 
+#removing colons and dashes from attribute column names
 Toolik_watershed_data$Type <- gsub("[^0-9A-Za-z///' ]","", Toolik_watershed_data$Type)
 
 #removing cation preface
 Toolik_watershed_data$Type <- gsub("Cations", "", Toolik_watershed_data$Type)
 
 #strip white space
-
 Toolik_watershed_data$Type  <- trimws(Toolik_watershed_data$Type, which = c("left"))
 
 
-#Create a list of unique watershed names 
-Toolik_stream_names <- unique(Toolik_watershed_data$River)
-
-Toolik_stream_names
-
 #Adding a column to identify the LTER site - ARC
-
 Toolik_watershed_data <- Toolik_watershed_data %>% 
   add_column(LTER = 'ARC', .before = "River")
 
-
+#all watershed except the fog lake series
 Toolik_rivers_watershed <- Toolik_watershed_data %>% 
  filter(River %in% c("Birthday Creek", "Burn Reference Streams", "Caterpillar Creek", "Caterpillar Creek TK", "Dimple Inlet", "Dimple Outlet", "I-Minus 2", "I-Minus 2 TK", "Imnavait Creek", "Itkillik Tributary", "Kuparuk River", "North River", "Oksrukuyik Creek", "Roche Moutonnee Creek", "Shrew River", "South River", "South River Trib", "Toolik Inlet","Toolik River", "Toolik River TK", "Toolik River TK-4", "Trevor Creek", "Upper Kuparuk", "VTK IMP", "VTK REF"))
 
 #Unsure what the 'Site/Stream Name' should be so combining river name and station
-
 Toolik_rivers_watershed  <- Toolik_rivers_watershed  %>% 
 add_column('Site/Stream Name' = paste(Toolik_rivers_watershed$River, Toolik_rivers_watershed$Station), .before = 'River')
 
 ```
 
+```{r}
+
+#distinct df that highlights the duplicates
+Toolik_watershed_with_duplicates <- pivot_wider(Toolik_rivers_watershed, names_from = 'Type', values_from = 'Value')
+
+#cleaning up duplicates file to share
+Toolik_watershed_with_duplicates   <- Toolik_watershed_with_duplicates %>% 
+  select(-'Site Code', -'Station', -'Reach', -'Method / Instrument', -'Units', -'River')  %>% 
+  rename('Sampling Date' = 'Date')
+
+
+#extracting 'time' from sampling date column and making it it's own column
+Toolik_watershed_with_duplicates   <- add_column(.data = Toolik_watershed_with_duplicates, 'Time' = substr(Toolik_watershed_with_duplicates$`Sampling Date`, 11, 16), .after = 'Sampling Date')
+
+#removing time from sampling date column
+Toolik_watershed_with_duplicates  <- Toolik_watershed_with_duplicates %>% 
+  mutate('Sampling Date' = substr(Toolik_watershed_with_duplicates$`Sampling Date`, 1, 10))
+
+#Renaming columns to match template abbreviations
+Toolik_watershed_with_duplicates <- Toolik_watershed_with_duplicates  %>% 
+  rename('Ca' = 'Calcium', 'Spec Cond' = 'Specific Conductivity', 'Na' = 'Sodium', 'K' = 'Potassium', 'Mg' = 'Magnesium', 'TDP' = 'Total Dissolved Phosphorus', 'DOC' = 'Dissolved Organic Carbon', 'NH4' = 'Ammonium', 'TDN' = 'Total Dissolved Nitrogen', 'Suspended Chl' = 'Sestonic Total Chlorophyll', 'Temp C' = 'Temp when sample collected', 'SRP' = 'Soluble Reactive Phosphorus', 'Cl' = 'Chloride', 'alkalinity' = 'Alkalinity', 'Pb' = 'Lead', 'Fe' = 'Iron', 'SO4' = 'Sulfate', 'Cu' = 'Copper', 'TSS' = 'Total Suspended Sediment', 'CO2' = 'Carbon Dioxide', 'DIC' = 'Dissolved Inorganic Carbon', 'CH4' = 'Methane')
+
+
+
+
+```
 
 
 ```{r}
+
+
 
 #if I add unique row names I can identify each row as unique so spread() will work even if there are duplicates...
 id <- rownames(Toolik_rivers_watershed)
@@ -122,7 +143,7 @@ Toolik_rivers_watershed <- spread(Toolik_rivers_watershed, key = 'Type', value =
 
 #Removing columns we don't need
 Toolik_rivers_watershed  <- Toolik_rivers_watershed %>% 
-  select(-'Site Code', -'Station', -'Reach', -'Method / Instrument', -'Units', -'Comments', -'River')  %>% 
+  select(-'Site Code', -'Station', -'Reach', -'Method / Instrument', -'Units', -'River')  %>% 
   rename('Sampling Date' = 'Date')
 
 
@@ -147,7 +168,8 @@ Read in template. Doulbe check the template is correct!
 template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
                                col_types = "text"
                                ) %>%
-  mutate(`Sampling Date` = as.Date(`Sampling Date`))
+  mutate(`Sampling Date` = as.Date(`Sampling Date`))  %>% 
+  add_column('Comments' = ' ')
 
 ```
 
@@ -229,7 +251,7 @@ attributes$Measurement <- gsub('Dissolved Organic Carbon', 'DOC', attributes$Mea
 attributes$Measurement <- gsub('Methane', 'CH4', attributes$Measurement)
 attributes$Measurement <- gsub('Ammonium', 'NH4', attributes$Measurement)
 attributes$Measurement <- gsub('Total Dissolved Nitrogen', 'TDN', attributes$Measurement)
-attributes$Measurement <- gsub("Sestonic Total Chlorophyll", 'Suspended Chl', attributes$Measurement)
+attributes$Measurement <- gsub("Sestonic Chlorophyll a", 'Suspended Chl', attributes$Measurement)
 attributes$Measurement <- gsub("Temp when sample collected", 'Temp', attributes$Measurement)
 attributes$Measurement <- gsub("Specific Conductivity", 'Specific Conductance', attributes$Measurement)
 attributes$Measurement <- gsub("Nickel", 'Ni', attributes$Measurement)
