@@ -26,6 +26,7 @@ library(stringdist) # for first pass of naming-matching
 library(vctrs) # for joining tables
 library(readxl) # for reading the template excel sheet
 library(openxlsx) #for writing the excel file
+library(expss)
 
 ```
 
@@ -126,8 +127,31 @@ Toolik_watershed_with_duplicates <- Toolik_watershed_with_duplicates  %>%
 
 
 
+Toolik_watershed_with_duplicates2 <- Toolik_watershed_with_duplicates %>% 
+filter(str_detect(alkalinity, pattern = ",")) %>% 
+
+
+Toolik_watershed_with_duplicates3 = sapply(Toolik_watershed_with_duplicates[6:20],
+              function(x) grep(",", x, value = TRUE))
+
+
+names(Toolik_watershed_with_duplicates3)
 
 ```
+
+```{r}
+
+
+Toolik_watershed_with_duplicates4 <- Toolik_watershed_with_duplicates %>% 
+  separate(alkalinity, c("A", "B", "C"),sep=",")  %>%
+  mutate(mean_alkalinity = mean("A", "B", "C")) 
+
+Toolik_watershed_with_duplicates4$mean_alkalinity <- ifelse(is.na(Toolik_watershed_with_duplicates4$mean_alkalinity), Toolik_watershed_with_duplicates4$A, Toolik_watershed_with_duplicates4$mean_alkalinity)
+
+
+```
+
+
 
 
 ```{r}
@@ -156,7 +180,7 @@ Toolik_rivers_watershed <- Toolik_rivers_watershed %>%
 
 #Renaming columns to match template abbreviations
 Toolik_rivers_watershed  <- Toolik_rivers_watershed %>% 
-  rename('Ca' = 'Calcium', 'Spec Cond' = 'Specific Conductivity', 'Na' = 'Sodium', 'K' = 'Potassium', 'Mg' = 'Magnesium', 'TDP' = 'Total Dissolved Phosphorus', 'DOC' = 'Dissolved Organic Carbon', 'NH4' = 'Ammonium', 'TDN' = 'Total Dissolved Nitrogen', 'Suspended Chl' = 'Sestonic Total Chlorophyll', 'Temp C' = 'Temp when sample collected', 'SRP' = 'Soluble Reactive Phosphorus', 'Cl' = 'Chloride', 'alkalinity' = 'Alkalinity', 'Pb' = 'Lead', 'Fe' = 'Iron', 'SO4' = 'Sulfate', 'Cu' = 'Copper', 'TSS' = 'Total Suspended Sediment', 'CO2' = 'Carbon Dioxide', 'DIC' = 'Dissolved Inorganic Carbon', 'CH4' = 'Methane')
+  rename('Ca' = 'Calcium', 'Spec Cond' = 'Specific Conductivity', 'Na' = 'Sodium', 'K' = 'Potassium', 'Mg' = 'Magnesium', 'TDP' = 'Total Dissolved Phosphorus', 'DOC' = 'Dissolved Organic Carbon', 'NH4' = 'Ammonium', 'TDN' = 'Total Dissolved Nitrogen', 'Suspended Chl' = 'Sestonic Chlorophyll a', 'Temp C' = 'Temp when sample collected', 'SRP' = 'Soluble Reactive Phosphorus', 'Cl' = 'Chloride', 'alkalinity' = 'Alkalinity', 'Pb' = 'Lead', 'Fe' = 'Iron', 'SO4' = 'Sulfate', 'Cu' = 'Copper', 'TSS' = 'Total Suspended Sediment', 'CO2' = 'Carbon Dioxide', 'DIC' = 'Dissolved Inorganic Carbon', 'CH4' = 'Methane')
 
 ```
 

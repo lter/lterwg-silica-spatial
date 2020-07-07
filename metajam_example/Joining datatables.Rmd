@@ -1,0 +1,103 @@
+---
+title: "Joining_watershed_datatables"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Import data
+```{r}
+
+ADC_Toolik_ALL_watershed <- read_excel(here::here("/metajam_example/ADC_Toolik_ALL_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_1_watershed <- read_excel(here::here("metajam_example/HBR_1_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_2_watershed <- read_excel(here::here("metajam_example/HBR_2_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_3_watershed <- read_excel(here::here("metajam_example/HBR_3_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_4_watershed <- read_excel(here::here("metajam_example/HBR_4_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_5_watershed <- read_excel(here::here("metajam_example/HBR_5_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_6_watershed <- read_excel(here::here("metajam_example/HBR_6_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_7_watershed <- read_excel(here::here("metajam_example/HBR_7_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_8_watershed <- read_excel(here::here("metajam_example/HBR_8_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_9_watershed <- read_excel(here::here("metajam_example/HBR_9_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_albisolu_watershed <- read_excel(here::here("metajam_example/NWT_albisolu_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_arikaree_watershed <- read_excel(here::here("metajam_example/NWT_arikaree_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_flume_watershed <- read_excel(here::here("metajam_example/NWT_flume_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_martinelli_watershed <- read_excel(here::here("metajam_example/NWT_martinelli_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_saddle_watershed <- read_excel(here::here("metajam_example/NWT_saddle_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+```
+
+```{r}
+
+#Niwot Ridge Watersheds
+
+NWT_1 <- merge(NWT_saddle_watershed, NWT_martinelli_watershed, all = TRUE)
+
+NWT_2 <- merge(NWT_1, NWT_flume_watershed, all = TRUE)
+
+NWT_3 <- merge(NWT_2, NWT_arikaree_watershed, all = TRUE)
+
+NWT_WATERSHEDS <- merge(NWT_3, NWT_albisolu_watershed, all = TRUE)
+
+#Hubbard Brook datasets
+
+HBR_1 <- merge(HBR_1_watershed, HBR_2_watershed, all = TRUE)
+
+HBR_2 <- merge(HBR_1, HBR_3_watershed, all = TRUE)
+
+HBR_3 <- merge(HBR_2, HBR_4_watershed, all = TRUE)
+
+HBR_4 <- merge(HBR_3, HBR_5_watershed, all = TRUE)
+
+HBR_5 <- merge(HBR_4, HBR_6_watershed, all = TRUE)
+
+HBR_6 <- merge(HBR_5, HBR_7_watershed, all = TRUE)
+
+HBR_7 <- merge(HBR_6, HBR_8_watershed, all = TRUE)
+
+HBR_WATERSHEDS <- merge(HBR_7, HBR_9_watershed, all = TRUE)
+
+```
+
+```{r}
+
+
+HBR_ADC <- merge(ADC_Toolik_ALL_watershed, HBR_WATERSHEDS, all = TRUE)
+
+ALL_WATERSHEDS <- merge(HBR_ADC, NWT_WATERSHEDS, all =TRUE)
+
+```
+
+Export workbook
+```{r}
+
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = ALL_WATERSHEDS)
+
+#addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+#writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "ALL_watershed.xlsx", overwrite = TRUE)
+
+```
+
+
