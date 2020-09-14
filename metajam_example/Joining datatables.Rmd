@@ -74,6 +74,19 @@ HBR_WATERSHEDS <- merge(HBR_7, HBR_9_watershed, all = TRUE)
 
 ```
 
+Adding day '-15' to Sampling Date column for HBR watershed data
+
+```{r}
+
+
+HBR_WATERSHEDS <- HBR_WATERSHEDS  %>% 
+mutate('Sampling Date' = paste0(HBR_WATERSHEDS$`Sampling Date`, '-15'))
+
+
+```
+
+
+
 ```{r}
 
 
@@ -81,16 +94,28 @@ HBR_ADC <- merge(ADC_Toolik_ALL_watershed, HBR_WATERSHEDS, all = TRUE)
 
 ALL_WATERSHEDS <- merge(HBR_ADC, NWT_WATERSHEDS, all =TRUE)
 
+#rearrange column order
+
+#ALL_WATERSHEDS[, c("LTER", "Site/Stream Name", "Sampling Date", "Time", "Temp C", "Conductivity", "Spec Cond", "Turbidity", "TSS", "VSS", "DSi", "TN", "DIN", "NOx", "NH4", "TP", "PO4", "SRP",
+# "DOC", "TOC", "alkalinity", "ANC", "pH", "DIC", "Suspended Chl", "Na", "K", "Ca", "Mg", "SO4", "Cl","Comments"  )]
+
+
+
 ```
+
+Merging Solute Tables
+
+
+
 
 Export workbook
 ```{r}
 
 ## setup a workbook with 2 worksheets
 wb <- createWorkbook()
-addWorksheet(wb = wb, sheetName = "Raw Data", gridLines = FALSE)
+addWorksheet(wb = wb, sheetName = "Raw Data", gridLines = TRUE)
 
-writeDataTable(wb = wb, sheet = 1, x = ALL_WATERSHEDS)
+writeDataTable(wb = wb, sheet = 1, x = ALL_WATERSHEDS, keepNA = TRUE)
 
 #addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
 
@@ -100,4 +125,9 @@ saveWorkbook(wb, "ALL_watershed.xlsx", overwrite = TRUE)
 
 ```
 
+```{r}
+
+ALL_watershed <- read_excel(here::here("metajam_example/ALL_watershed.xlsx"))
+
+```
 

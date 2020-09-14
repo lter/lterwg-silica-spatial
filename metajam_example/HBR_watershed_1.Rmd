@@ -191,6 +191,8 @@ solute_units_Template <- solute_units_Template  %>%
   select(Measurement, Unit)
 
 
+
+
 ```
 
 Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
@@ -206,6 +208,7 @@ attributes$attributeName <- gsub("volwt_", "", attributes$attributeName)
 
 attributes$attributeName <- gsub("SpecCond", "Specific Conductance", attributes$attributeName)
 
+
 ```
 
 
@@ -217,6 +220,9 @@ Fuzzy matching template solute units table to attribute table
    mutate(watershed_units_1 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
+
+
+fuzzy_match$watershed_units_1 <- gsub("SiO2", "Si", fuzzy_match$watershed_units_1)
 
 ```
 

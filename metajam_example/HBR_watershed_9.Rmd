@@ -186,9 +186,10 @@ Fuzzy matching template solute units table to attribute table
 ```{r}
 
 (fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
-   mutate(watershed_units_2 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+   mutate(watershed_units_9 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
 )
 
+fuzzy_match$watershed_units_9 <- gsub("SiO2", "Si", fuzzy_match$watershed_units_9)
 
 ```
 
@@ -200,9 +201,9 @@ Fuzzy matching template solute units table to attribute table
 # continue in the same way until you've filled out everything you could.
   # Note: NA_character_ is just NA but of the character type.
 (lookup_table_units <- fuzzy_match %>%
-  mutate(watershed_units_2 = case_when(
+  mutate(watershed_units_9 = case_when(
     solute_units_Template$Measurement %in% c("DO","Q", "DO%","TOC", "TDP","PON", "PP", "TKN","DOP","TN", "TP") ~ NA_character_,
-    TRUE ~ watershed_units_2)))
+    TRUE ~ watershed_units_9)))
 
 #Make a string of the correct names
 correct_names <- lookup_table_units$'solute_units_Template$Measurement'
