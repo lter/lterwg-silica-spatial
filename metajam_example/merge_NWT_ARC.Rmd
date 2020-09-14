@@ -99,7 +99,26 @@ NWT_EDI1_WATERSHEDS <- merge(NWT_Toolik_WATERSHEDS, GD_ARC , all.x =TRUE, no.dup
 
 Total <- merge(NWT_EDI1_WATERSHEDS, GD_NWT , all.x =TRUE, no.dups = TRUE)
 
-unique(Total$`Site/Stream Name`)
+Toolik_stream_names <- as.data.frame(unique(Total$`Site/Stream Name`))
+
+Unique_stream_names <- Toolik_stream_names %>% rename('Stream Names' = 'unique(Total$`Site/Stream Name`)')
+
+## setup a workbook with 1 worksheet
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = Total)
+
+saveWorkbook(wb, "NWT_ARC_merge.xlsx", overwrite = TRUE)
+
+#Export Unique names
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = 'stream_names', gridLines = TRUE)
+
+writeDataTable(wb = wb, sheet = 1, x = Unique_stream_names)
+
+saveWorkbook(wb, "Unique_stream_names.xlsx", overwrite = TRUE)
+
 
 ```
 
