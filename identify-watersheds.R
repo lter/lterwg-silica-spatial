@@ -13,8 +13,7 @@
 # Housekeeping ----------------------------------------------------------
 
 # Read needed libraries
-library(tidyverse); library(sf); library(raster); library(ggmap); library(terrainr)
-library(progressr); library(readr); library(devtools); library(prism)
+library(tidyverse); library(sf)
 
 # Clear environment
 rm(list = ls())
