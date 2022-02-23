@@ -1,0 +1,230 @@
+---
+title: "HBR_watershed_10"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###Step 1: Load packages
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(metajam)
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+library(naniar)
+library(openxlsx)
+
+```
+
+
+####Step 2: Find the link to the dataset
+Go to the web address for the dataset and find the download button for the data. 
+
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.103.12&entityid=413c3eb5a1a52e3ce2f9e52b3565aadd
+
+#### Step 3: Choose where you want the files to be saved
+In our case, we'll just put it into the metajam_example folder.
+
+```{r}
+
+albisolu_NWT_data <- data_from_EDI(my_data_url = "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.103.12&entityid=413c3eb5a1a52e3ce2f9e52b3565aadd", desired_path_to_data = "~/SI_river_data")
+
+
+```
+
+
+###Step 6: data cleanup
+
+```{r}
+
+albisolu_NWT_data <- EDI_river_data_cleanup(my_dataframe = albisolu_NWT_data)
+
+```
+
+
+
+Read in template
+```{r}
+
+template <- import_river_data_template()
+
+```
+
+Fuzzy match
+```{r}
+
+# Start by matching by closest name as a first pass. 
+  # Note that we match the lower case names
+  # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
+
+fuzzymatch_river_data(river_template_name = template, data_name = albisolu_NWT_data)
+
+```
+
+```{r}
+
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table <- fuzzy_match %>%
+  mutate(watershed10 = case_when(
+    template %in% c("DIN", "NOx", "DIC") ~ NA_character_,
+    TRUE ~ watershed10)))
+
+lookup_table <- lookup_table %>%
+  filter(!is.na(watershed10))
+
+correct_colnames <- lookup_table$template
+
+correct_colnames <- as.character(correct_colnames)
+
+
+```
+Once the lookup table is as filled out as possible, we can remove all rows that still had no match.
+
+```{r}
+
+
+new_datatable_NWT_1 <- albisolu_NWT_data %>% 
+        select(all_of(c(correct_colnames)))
+
+
+```
+
+```{r}
+
+
+
+
+#Changing missing value codes for columns for which NP is the missing value code
+
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+ #mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
+
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+#mutate(PO4 = ifelse(PO4 < 0.0387, NA, PO4))
+
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+#mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
+
+#new_datatable_NWT_1 <- new_datatable_NWT_1 %>% 
+# mutate(Cl = ifelse(Cl < 0.28, NA, Cl))
+
+
+```
+
+
+Loading the solute units template
+
+```{r}
+
+solute_units_Template  <- import_solute_units_template()
+
+```
+
+Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
+```{r}
+
+attributes <- data.frame(my_data$attribute_metadata)
+
+attributes <- attributes  %>%
+  select(attributeName, unit)
+
+#Changing some attribute names so that they are easier to match
+
+attributes$attributeName <- gsub("cond", "Conductivity", attributes$attributeName)
+
+attributes$attributeName <- gsub("alkal", "Alkalinity", attributes$attributeName)
+
+#Remove ionic notations
+attributes$attributeName <- gsub("[^0-9A-Za-z///' ]"," ", attributes$attributeName)
+
+```
+
+
+
+Fuzzy matching template solute units table to attribute table
+```{r}
+
+(fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
+   mutate(watershed_units_10 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+```
+
+
+```{r}
+
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table_units <- fuzzy_match %>%
+  mutate(watershed_units_10 = case_when(
+    solute_units_Template$Measurement %in% c("DIC","DO", "DO%", "TKN", "PON") ~ NA_character_,
+    TRUE ~ watershed_units_10)))
+
+#Make a string of the correct names
+correct_names <- lookup_table_units$'solute_units_Template$Measurement'
+
+
+```
+
+```{r}
+
+#Make a table that matches the template
+solute_units_table_new <- attributes %>% 
+        filter(attributeName %in% c(correct_names))
+
+solute_units_table_new  %>% 
+  rename(Measurement = attributeName, Unit = unit)
+
+```
+
+Export an excel workbook with two sheets
+
+```{r}
+
+
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = new_datatable_NWT_1)
+
+addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "NWT_albisolu_watershed.xlsx", overwrite = TRUE)
+
+```
+
+What proportion of cells in the new data table are NA?
+
+```{r}
+
+sum(is.na(new_datatable_NWT_1))/prod(dim(new_datatable_NWT_1))
+
+#for columns
+colMeans(is.na(new_datatable_NWT_1))
+
+```

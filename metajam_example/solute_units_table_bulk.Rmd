@@ -1,0 +1,144 @@
+---
+title: "solute_units_bulk"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+ADC_Toolik_ALL_watershed <- read_excel(here::here("metajam_example/ADC_Toolik_ALL_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+     add_column(Site = 'ADC-Toolik-All', .before = "Measurement")
+  
+
+
+HBR_1_watershed <- read_excel("metajam_example/HBR_1_watershed.xlsx", 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-1', .before = "Measurement")
+
+HBR_2_watershed <- read_excel(here::here("metajam_example/HBR_2_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-2', .before = "Measurement")
+
+
+HBR_3_watershed <- read_excel(here::here("metajam_example/HBR_3_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-3', .before = "Measurement")
+
+HBR_4_watershed <- read_excel(here::here("metajam_example/HBR_4_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-4', .before = "Measurement")
+
+HBR_5_watershed <- read_excel(here::here("metajam_example/HBR_5_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-5', .before = "Measurement")
+
+HBR_6_watershed <- read_excel(here::here("metajam_example/HBR_6_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-6', .before = "Measurement")
+
+HBR_7_watershed <- read_excel(here::here("metajam_example/HBR_7_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-7', .before = "Measurement")
+
+HBR_8_watershed <- read_excel(here::here("metajam_example/HBR_8_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-8', .before = "Measurement")
+
+HBR_9_watershed <- read_excel(here::here("metajam_example/HBR_9_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+  rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'HBR-9', .before = "Measurement")
+
+NWT_albisolu_watershed <- read_excel(here::here("metajam_example/NWT_albisolu_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+    rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'NWT-albisolu', .before = "Measurement")
+
+NWT_arikaree_watershed <- read_excel(here::here("metajam_example/NWT_arikaree_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+    rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'NWT-arikaree', .before = "Measurement")
+
+NWT_flume_watershed <- read_excel(here::here("metajam_example/NWT_flume_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+    rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'NWT-flume', .before = "Measurement")
+
+NWT_martinelli_watershed <- read_excel(here::here("metajam_example/NWT_martinelli_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+    rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'NWT-martinelli', .before = "Measurement")
+
+NWT_saddle_watershed <- read_excel(here::here("metajam_example/NWT_saddle_watershed.xlsx"), 
+    sheet = "Solute Units (Sheet 2)") %>% 
+    rename('Measurement' = 'attributeName') %>% 
+     add_column(Site = 'NWT-saddle', .before = "Measurement")
+
+```
+
+```{r}
+
+HBR1 <- merge(HBR_1_watershed, HBR_2_watershed , all = TRUE)
+
+HBR2 <- merge(HBR1, HBR_3_watershed , all = TRUE)
+
+HBR3 <- merge(HBR2, HBR_4_watershed , all = TRUE)
+
+HBR4 <- merge(HBR3, HBR_5_watershed , all = TRUE)
+
+HBR5 <- merge(HBR4, HBR_6_watershed , all = TRUE)
+
+HBR6 <- merge(HBR5, HBR_7_watershed , all = TRUE)
+
+HBR7 <- merge(HBR6, HBR_8_watershed , all = TRUE)
+
+HBR8 <- merge(HBR7, HBR_9_watershed , all = TRUE)
+
+```
+
+```{r}
+
+NWT1 <- merge(NWT_albisolu_watershed, NWT_arikaree_watershed , all = TRUE)
+
+NWT2 <- merge(NWT1, NWT_flume_watershed , all = TRUE)
+
+NWT3 <- merge(NWT2, NWT_martinelli_watershed , all = TRUE)
+
+NWT4 <- merge(NWT3, NWT_saddle_watershed  , all = TRUE)
+
+
+
+```
+
+```{r}
+
+NWT_HBR <- merge(NWT4, HBR8, all = TRUE)
+
+ALL_solute_units <- merge(NWT_HBR, ADC_Toolik_ALL_watershed, all = TRUE)
+
+```
+
+```{r}
+
+
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Solute Units", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = ALL_solute_units)
+
+saveWorkbook(wb, "ALL_solute_units.xlsx", overwrite = TRUE)
+
+```
+

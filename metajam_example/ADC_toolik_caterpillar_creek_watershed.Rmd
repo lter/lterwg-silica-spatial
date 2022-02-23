@@ -1,0 +1,293 @@
+---
+title: "ADC_toolik_caterpilar_creek_watershed"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Step 1: Load packages
+
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(metajam)
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+library(openxlsx) #for writing the excel file
+
+```
+
+####Step 2: Find the link to the dataset
+Go to the web address for the dataset and find the download button for the data. 
+
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-arc.10303.6&entityid=bbc1cb59633df57380d997726916180a
+
+#### Step 3: Choose where you want the files to be saved
+In our case, we'll just put it into the metajam_example folder.
+
+```{r}
+
+#eg desired_path_to_data <- "~/Desktop"
+desired_path_to_data <- "~/SI_river_data"
+
+# create the folder if it does not exist yet
+dir.create(desired_path_to_data, showWarnings = FALSE)
+
+
+```
+
+#### Step 4: Download the data by pasting the link you just copied
+```{r}
+
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-arc.10303.6&entityid=bbc1cb59633df57380d997726916180a"
+
+# this will download the data into a folder and save the path to that folder
+downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
+
+
+```
+
+#### Step 5: Now read in the data (with all the metadata)
+
+```{r}
+
+
+my_data <- read_d1_files(downloaded_data, na = c("-888.88", "-888.888", "-888", "-999", "-9999"))
+
+Toolik_watershed_data <- my_data$data
+
+#remove 2nd and 3rd rows which were empty
+Toolik_watershed_data <-  Toolik_watershed_data[-c(1, 2, 3),]
+
+```
+
+#Data Cleanup
+
+
+```{r}
+
+Toolik_watershed_data$Type <- gsub("[^0-9A-Za-z///' ]","", Toolik_watershed_data$Type)
+
+#removing cation preface
+Toolik_watershed_data$Type <- gsub("Cations", "", Toolik_watershed_data$Type)
+
+#strip white space
+
+Toolik_watershed_data$Type  <- trimws(Toolik_watershed_data$Type, which = c("left"))
+
+
+#Create a list of unique watershed names 
+Toolik_stream_names <- unique(Toolik_watershed_data$River)
+
+Toolik_stream_names 
+#Adding a column to identify the LTER site - ARC
+
+Toolik_watershed_data <- Toolik_watershed_data %>% 
+  add_column(LTER = 'ARC', .before = "River")
+
+
+Toolik_caterpillar_creek_watershed <- Toolik_watershed_data %>% 
+  filter(River == "Caterpillar Creek")
+
+```
+
+
+
+```{r}
+
+#Changing from long format to wide format like template
+Toolik_caterpillar_creek_watershed <- spread(Toolik_caterpillar_creek_watershed, key = 'Type', value = 'Value')
+
+#Unsure what the 'Site/Stream Name' should be so combining river name and station
+Toolik_caterpillar_creek_watershed <- Toolik_caterpillar_creek_watershed  %>% 
+add_column('Site/Stream Name' = paste(Toolik_caterpillar_creek_watershed$River, Toolik_caterpillar_creek_watershed$Station), .before = 'River')
+
+
+#Removing columns we don't need
+Toolik_caterpillar_creek_watershed <- Toolik_caterpillar_creek_watershed %>% 
+  select(-'Site Code', -'Station', -'Reach', -'Method / Instrument', -'Units', -'Comments', -'River')  %>% 
+  rename('Sampling Date' = 'Date')
+
+
+#extracting 'time' from sampling date column and making it it's own column
+Toolik_caterpillar_creek_watershed <- Toolik_caterpillar_creek_watershed %>% 
+  add_column('Time' = substr(Toolik_caterpillar_creek_watershed$`Sampling Date`, 11, 16), .after = 'Sampling Date')
+
+#removing time from sampling date column
+Toolik_caterpillar_creek_watershed <- Toolik_caterpillar_creek_watershed %>% 
+  mutate('Sampling Date' = substr(Toolik_caterpillar_creek_watershed$`Sampling Date`, 1, 10))
+
+#Renaming columns to match template abbreviations
+Toolik_caterpillar_creek_watershed  <- Toolik_caterpillar_creek_watershed %>% 
+  rename('Ca' = 'Calcium', 'Spec Cond' = 'Specific Conductivity', 'Na' = 'Sodium', 'K' = 'Potassium', 'Mg' = 'Magnesium', 'TDP' = 'Total Dissolved Phosphorus', 'DOC' = 'Dissolved Organic Carbon', 'NH4' = 'Ammonium', 'TDN' = 'Total Dissolved Nitrogen', 'Suspended Chl' = 'Sestonic Total Chlorophyll', 'Temp C' = 'Temp when sample collected', 'SRP' = 'Soluble Reactive Phosphorus', 'Cl' = 'Chloride', 'alkalinity' = 'Alkalinity', 'Pb' = 'Lead', 'Fe' = 'Iron', 'SO4' = 'Sulfate', 'Cu' = 'Copper')
+
+```
+
+
+
+Read in template. Doulbe check the template is correct!
+```{r}
+
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
+                               col_types = "text"
+                               ) %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`))
+
+```
+
+Fuzzy Match
+```{r}
+
+
+# Start by matching by closest name as a first pass. 
+  # Note that we match the lower case names
+  # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
+(fuzzy_match <- tibble(template = names(template)) %>%
+   mutate(watershed_toolik_3 = names(Toolik_caterpillar_creek_watershed)[amatch(tolower(template), tolower(names(Toolik_caterpillar_creek_watershed)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+```
+
+```{r}
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table <- fuzzy_match %>%
+  mutate(watershed_toolik_3 = case_when(
+    template %in% c("TN", "TP", "TOC", "DIC", "PO4") ~ NA_character_,
+    TRUE ~ watershed_toolik_3)))
+
+lookup_table <- lookup_table %>%
+  filter(!is.na(watershed_toolik_3))
+
+correct_colnames <- lookup_table$template
+
+```
+New data table with only the columns that match the template
+
+```{r}
+
+
+new_datatable_toolik_3 <- Toolik_caterpillar_creek_watershed %>% 
+        select(all_of(c(correct_colnames)))
+
+```
+
+
+Loading the solute units template
+
+```{r}
+
+
+solute_units_Template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), sheet = "Solute Units" )
+
+solute_units_Template <- solute_units_Template  %>%
+  select(Measurement, Unit)
+
+
+```
+Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
+
+
+```{r}
+
+attributes <- Toolik_watershed_data %>%
+  select(Type, Units) %>%
+  unique() %>%
+  rename('Measurement' = 'Type')
+
+
+#strip white space
+
+attributes$Measurement <- trimws(attributes$Measurement, which = c("left"))
+
+attributes$Measurement <- gsub("Calcium", "Ca", attributes$Measurement)
+attributes$Measurement <- gsub('Silica', 'Si',attributes$Measurement)
+attributes$Measurement <- gsub('Sodium', 'Na', attributes$Measurement)
+attributes$Measurement <- gsub('Potassium', 'K', attributes$Measurement)
+attributes$Measurement <- gsub('Magnesium', 'Mg', attributes$Measurement)
+attributes$Measurement <- gsub('Carbon Dioxide', 'CO2', attributes$Measurement)
+attributes$Measurement <- gsub('Total Dissolved Phosphorus', 'TDP', attributes$Measurement)
+attributes$Measurement <- gsub('Dissolved Organic Carbon', 'DOC', attributes$Measurement)
+attributes$Measurement <- gsub('Methane', 'CH4', attributes$Measurement)
+attributes$Measurement <- gsub('Ammonium', 'NH4', attributes$Measurement)
+attributes$Measurement <- gsub('Total Dissolved Nitrogen', 'TDN', attributes$Measurement)
+attributes$Measurement <- gsub("Sestonic Total Chlorophyll", 'Suspended Chl', attributes$Measurement)
+attributes$Measurement <- gsub("Temp when sample collected", 'Temp', attributes$Measurement)
+attributes$Measurement <- gsub("Specific Conductivity", 'Specific Conductance', attributes$Measurement)
+attributes$Measurement <- gsub("Nickel", 'Ni', attributes$Measurement)
+attributes$Measurement <- gsub("Chloride", 'Cl', attributes$Measurement)
+attributes$Measurement <- gsub("Copper", 'Cu', attributes$Measurement)
+attributes$Measurement <- gsub("Sulfate", 'SO4', attributes$Measurement)
+attributes$Measurement <- gsub('Soluble Reactive Phosphorus', 'SRP', attributes$Measurement)
+
+
+
+
+```
+
+Fuzzy matching template solute units table to attribute table
+```{r}
+
+(fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
+   mutate(watershed_units = attributes$Measurement[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$Measurement), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+```
+
+Fuzzy matching template solute units table to attribute table
+```{r}
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table_units <- fuzzy_match %>%
+  mutate(attributes = case_when(
+    solute_units_Template$Measurement %in% c("Q", "DIC","DO", "DO%", "TKN", "PON", "TOC", "TN", "DON", "TP", "DOP", "PP", "PO4") ~ NA_character_, TRUE ~ watershed_units)))
+
+#Make a string of the correct names
+correct_names <- lookup_table_units$'solute_units_Template$Measurement'
+
+```
+
+```{r}
+
+
+#Make a table that matches the template
+solute_units_table_new <- attributes %>% 
+        filter(Measurement %in% c(correct_names))
+
+```
+
+Export an excel workbook with two sheets
+
+```{r}
+
+
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = new_datatable_toolik_3)
+
+addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "ADC_Toolik_caterpillar_creek_watershed.xlsx", overwrite = TRUE)
+
+```

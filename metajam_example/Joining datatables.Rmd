@@ -1,0 +1,261 @@
+---
+title: "Joining_watershed_datatables"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Import data
+```{r}
+
+library(readr)
+library(readxl)
+library(here)
+library(tidyverse)
+library(knitr)
+library(lubridate)
+library(openxlsx)
+
+ADC_Toolik_ALL_watershed <- ADC_Toolik_ALL_watershed <- read_excel(here::here("metajam_example/ADC_Toolik_ALL_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_1_watershed <- read_excel(here::here("metajam_example/HBR_1_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL)) 
+
+HBR_2_watershed <- read_excel(here::here("metajam_example/HBR_2_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_3_watershed <- read_excel(here::here("metajam_example/HBR_3_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_4_watershed <- read_excel(here::here("metajam_example/HBR_4_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_5_watershed <- read_excel(here::here("metajam_example/HBR_5_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_6_watershed <- read_excel(here::here("metajam_example/HBR_6_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_7_watershed <- read_excel(here::here("metajam_example/HBR_7_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_8_watershed <- read_excel(here::here("metajam_example/HBR_8_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+HBR_9_watershed <- read_excel(here::here("metajam_example/HBR_9_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_albisolu_watershed <- read_excel(here::here("metajam_example/NWT_albisolu_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_arikaree_watershed <- read_excel(here::here("metajam_example/NWT_arikaree_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_flume_watershed <- read_excel(here::here("metajam_example/NWT_flume_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_martinelli_watershed <- read_excel(here::here("metajam_example/NWT_martinelli_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_saddle_watershed <- read_excel(here::here("metajam_example/NWT_saddle_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+
+GD_ARC <- read_csv(here::here("metajam_example/20200911_GD_ARC.csv"))
+
+GD_NWT <- read_csv(here::here("metajam_example/20200911_GD_NWT.csv"))
+
+```
+For the HBR sites the sampling date was just the month and the year. So we decided to just add a day (the 15th) to all the sampling dates from HBR sites so the dates would be homogenous with the other sites. 
+
+```{r}
+
+HBR_1_watershed <- HBR_1_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_1_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_2_watershed <- HBR_2_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_2_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_3_watershed <- HBR_3_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_3_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_4_watershed <- HBR_4_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_4_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_5_watershed <- HBR_5_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_5_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_6_watershed <- HBR_6_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_6_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_7_watershed <- HBR_7_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_7_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_8_watershed <- HBR_8_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_8_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_9_watershed <- HBR_9_watershed  %>% 
+mutate('Sampling Date' = paste0(HBR_9_watershed$`Sampling Date`, '-15')) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+```
+
+Making sure the Toolik sampling dates are recognized as a date 
+
+```{r}
+
+ADC_Toolik_ALL_watershed <- ADC_Toolik_ALL_watershed %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+```
+
+
+```{r}
+
+GD_NWT <- GD_NWT %>% 
+  rename('Site/Stream Name' = 'Site/Stream.Name', 'Sampling Date' = 'Sampling.Date', 'Temp C' = 'Temp.C', 'Spec Cond' = 'Spec.Cond', 'Suspended Chl' = 'Suspended.Chl') %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+GD_ARC <- GD_ARC %>% 
+  rename('Site/Stream Name' = 'Site/Stream.Name', 'Sampling Date' = 'Sampling.Date', 'Temp C' = 'Temp.C', 'Spec Cond' = 'Spec.Cond', 'Suspended Chl' = 'Suspended.Chl') %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+#Unique_ARC <- unique(GD_ARC$`Site/Stream Name`)
+
+#View(Unique_ARC)
+
+```
+
+```{r}
+
+GD_ARC$`Site/Stream Name` <- gsub("Toolik Inlet", "Toolik Inlet Main", GD_ARC$`Site/Stream Name`)
+
+GD_ARC$`Site/Stream Name` <- gsub("BirthdayCr", "Birthday Creek Main", GD_ARC$`Site/Stream Name`)
+
+GD_ARC$`Site/Stream Name` <- gsub("SouthRTrib", "South River Trib Lower", GD_ARC$`Site/Stream Name`)
+
+GD_ARC$`Site/Stream Name` <- gsub("SouthR", "South River Main", GD_ARC$`Site/Stream Name`)
+
+GD_ARC$`Site/Stream Name` <- gsub("ShrewR", "Shrew River Main", GD_ARC$`Site/Stream Name`)
+
+GD_ARC$`Site/Stream Name` <- gsub("DimpleInlet", "Dimple Inlet Main", GD_ARC$`Site/Stream Name`)
+
+GD_ARC$`Site/Stream Name` <- gsub("DimpleOutlet", "Dimple Outlet Main", GD_ARC$`Site/Stream Name`)
+
+
+
+```
+
+
+
+
+```{r}
+
+#Niwot Ridge Watersheds
+
+NWT_1 <- merge(NWT_saddle_watershed, NWT_martinelli_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+NWT_2 <- merge(NWT_1, NWT_flume_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+NWT_3 <- merge(NWT_2, NWT_arikaree_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+NWT_WATERSHEDS <- merge(NWT_3, NWT_albisolu_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+#Hubbard Brook datasets
+
+HBR_1 <- merge(HBR_1_watershed, HBR_2_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_2 <- merge(HBR_1, HBR_3_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_3 <- merge(HBR_2, HBR_4_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_4 <- merge(HBR_3, HBR_5_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_5 <- merge(HBR_4, HBR_6_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_6 <- merge(HBR_5, HBR_7_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_7 <- merge(HBR_6, HBR_8_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+HBR_WATERSHEDS <- merge(HBR_7, HBR_9_watershed, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+```
+
+
+
+
+
+```{r}
+
+
+HBR_ADC <- merge(ADC_Toolik_ALL_watershed, HBR_WATERSHEDS, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+#Inspect HBR_ADC to make sure Sampling Date still looks like a date for both sites
+
+test <- HBR_ADC %>% filter(LTER == 'HBR')
+
+#Making sure the EDI sampling dates are recognized as dates
+
+EDI_WATERSHEDS <- merge(HBR_ADC, NWT_WATERSHEDS, all =TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+EDI_ARC <- merge(EDI_WATERSHEDS, GD_ARC, all = TRUE ) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+ALL_WATERSHEDS <- merge(EDI_ARC, GD_NWT, all = TRUE) %>% 
+  mutate(`Sampling Date` = as.Date(`Sampling Date`)) 
+
+
+```
+
+```{r}
+
+
+test_2 <- ALL_WATERSHEDS  %>% filter(LTER == 'HBR')
+
+
+```
+
+
+
+Merging Solute Tables
+
+
+
+
+Export workbook
+```{r}
+
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data", gridLines = TRUE)
+
+writeDataTable(wb = wb, sheet = 1, x = ALL_WATERSHEDS, keepNA = TRUE)
+
+#addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+#writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "ALL_watershed.xlsx", overwrite = TRUE)
+
+```
+
+```{r}
+
+ALL_watershed <- read_excel(here::here("metajam_example/ALL_watershed.xlsx"))
+
+#Making sure HBR date is def correct
+
+test_3 <- ALL_watershed  %>% filter(LTER == 'HBR')
+
+```
+

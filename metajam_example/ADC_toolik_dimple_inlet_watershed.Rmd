@@ -1,0 +1,125 @@
+---
+title: "ADC_toolik_dimple_inlet_watershed"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Step 1: Load packages
+
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(metajam)
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+library(openxlsx) #for writing the excel file
+
+```
+
+####Step 2: Find the link to the dataset
+Go to the web address for the dataset and find the download button for the data. 
+
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-arc.10303.6&entityid=bbc1cb59633df57380d997726916180a
+
+#### Step 3: Choose where you want the files to be saved
+In our case, we'll just put it into the metajam_example folder.
+
+```{r}
+
+#eg desired_path_to_data <- "~/Desktop"
+desired_path_to_data <- "~/SI_river_data"
+
+# create the folder if it does not exist yet
+dir.create(desired_path_to_data, showWarnings = FALSE)
+
+
+```
+
+#### Step 4: Download the data by pasting the link you just copied
+```{r}
+
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-arc.10303.6&entityid=bbc1cb59633df57380d997726916180a"
+
+# this will download the data into a folder and save the path to that folder
+downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
+
+
+```
+
+#### Step 5: Now read in the data (with all the metadata)
+
+```{r}
+
+
+my_data <- read_d1_files(downloaded_data, na = c("-888.88", "-888.888", "-888", "-999", "-9999"))
+
+Toolik_watershed_data <- my_data$data
+
+#remove 2nd and 3rd rows which were empty
+Toolik_watershed_data <-  Toolik_watershed_data[-c(1, 2, 3),]
+
+```
+
+#Data Cleanup
+
+
+```{r}
+
+Toolik_watershed_data$Type <- gsub("[^0-9A-Za-z///' ]","", Toolik_watershed_data$Type)
+
+#removing cation preface
+Toolik_watershed_data$Type <- gsub("Cations", "", Toolik_watershed_data$Type)
+
+#strip white space
+
+Toolik_watershed_data$Type  <- trimws(Toolik_watershed_data$Type, which = c("left"))
+
+
+#Create a list of unique watershed names 
+Toolik_stream_names <- unique(Toolik_watershed_data$River)
+
+Toolik_stream_names 
+#Adding a column to identify the LTER site - ARC
+
+Toolik_watershed_data <- Toolik_watershed_data %>% 
+  add_column(LTER = 'ARC', .before = "River")
+
+
+Toolik_dimple_inlet_watershed <- Toolik_watershed_data %>% 
+  filter(River == "Dimple Inlet")
+
+```
+
+
+
+```{r}
+
+
+#in this data set there are duplicate measurements for the same attribute on the same day at the same time
+
+
+
+
+#Changing from long format to wide format like template
+Toolik_dimple_inlet_watershed  <- spread(Toolik_dimple_inlet_watershed, key = 'Type', value = 'Value')
+
+
+
+
+
+
+```
+

@@ -1,0 +1,21 @@
+name,value
+File_Name,ws8_stream_monthly_volwt_conc
+Date_Downloaded,2020-05-20 13:20:17
+Data_ID,https://pasta.lternet.edu/package/data/eml/knb-lter-hbr/10/16/0b6199379b8a1fd8d696312916120066
+Data_URL,https://gmn.lternet.edu/mn/v2/object/https:%2F%2Fpasta.lternet.edu%2Fpackage%2Fdata%2Feml%2Fknb-lter-hbr%2F10%2F16%2F0b6199379b8a1fd8d696312916120066
+Metadata_ID,https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/10/16
+Metadata_URL,https://cn.dataone.org/cn/v2/object/https:%2F%2Fpasta.lternet.edu%2Fpackage%2Fmetadata%2Feml%2Fknb-lter-hbr%2F10%2F16
+Metadata_EML_Version,2.1.1
+File_Description,Watershed 8 monthly volume weighted concentrations stream water
+Dataset_URL,https://search.dataone.org/#view/https://pasta.lternet.edu/package/metadata/eml/knb-lter-hbr/10/16
+Dataset_Title,"Hubbard Brook Experimental Forest: Chemistry of Streamwater – Monthly Volume Weighted Concentrations, Watershed 8, 1995 - present; Hubbard Brook Stream and Precipitation Chemistry"
+Dataset_StartDate,1995-06-01
+Dataset_EndDate,2017-09-30
+Dataset_Location,Hubbard Brook Experimental Forest Watershed 8
+Dataset_WestBoundingCoordinate,-71.76255
+Dataset_EastBoundingCoordinate,-71.687683
+Dataset_NorthBoundingCoordinate,43.948246
+Dataset_SouthBoundingCoordinate,43.917942
+Dataset_Abstract,"These data include volume-weighted, average, monthly concentrations of  cations, anions, and pH measured in Watershed 8.; HBWatER is a long-term record of stream and precipitation chemistry  and volume. Currently this record is supported by NSF LTREB funding  (for sample collection and processing), USDA Forest Service (USFS)  funding (for maintenance of stream gauges, analytical chemistry and  sample archiving), and LTER (for disposable supplies). The HBWatER  supervisory team currently includes Emma Rosi (Cary Institute of  Ecosystem Studies), Emily Bernhardt (Duke University), John Campbell  (USFS), Charley Driscoll (Syracuse University.), Mark Green (Case  Western Reserve University), Bill McDowell (University of NH ), and  Lindsey Rustad (USFS).; The long-term hydrologic record and calculation of fluxes are  currently supervised by John Campbell (USFS). The collection and  management of the long-term chemistry record is currently supervised  by Emma Rosi (Cary Institute of Ecosystem Studies) and Emily Bernhardt  (Duke University). At present field samples are collected by Tammy  Wooster (Cary Institute of Ecosystem Studies), Chemical analyses are  performed by Jeff Merriam (USFS). Data management and archiving is  performed by Mary Martin (University of NH); HBWatER was initiated in 1963 by G.E. Likens, F. H. Bormann, R.  Pierce, and N. Johnson. The record has been funded over its lifetime  by the Mary Flagler Cary Charitable Trust, The Andrew W. Mellon  Foundation, HBR LTER grants (#8702331, #9211768, #9810221, #0423259,  #1114804, #1637685) and NSF LTREB (# 1256696). A full list of  contributors to the HBWatER over its lifetime is provided at:  Bernhardt E., G. Likens, E. Rosi. 2019. <emphasis>Continuous  precipitation and stream chemistry data, Hubbard Brook Ecosystem  Study, 1963 – present..</emphasis> Environmental Data Initiative.  https://doi.org/10.6073/pasta/4022d829f3a1fa4057b63b5db8b1a172.; These data were gathered as part of the Hubbard Brook Ecosystem Study  (HBES). The HBES is a collaborative effort at the Hubbard Brook  Experimental Forest, which is operated and maintained by the USDA  Forest Service, Northern Research Station."
+Dataset_Methods,"Solute flux calculations for precipitation and streams are based on  the following data packages, which contain detailed methods on  sampling and analytical chemistry.; Daily watershed precipitation:  https://portal.lternet.edu/nis/mapbrowse?scope=knb-lter-hbr&amp;identifier=14; Daily streamflow:  https://portal.lternet.edu/nis/mapbrowse?scope=knb-lter-hbr&amp;identifier=2; Stream and precipitation chemistry:  https://portal.lternet.edu/nis/mapbrowse?scope=knb-lter-hbr&amp;identifier=208"
+Dataset_People,Gene; Likens; Emily; Bernhardt; John L; Campbell; Charles T; Driscoll; Mark B; Green; Gene E; William H; McDowell; Emma; Rosi; Lindsey E; Rustad
