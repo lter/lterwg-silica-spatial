@@ -13,7 +13,7 @@
 # Housekeeping ----------------------------------------------------------
 
 # Read needed libraries
-library(tidyverse); library(sf)
+library(tidyverse); library(sf); library(nngeo)
 
 # Clear environment
 rm(list = ls())
@@ -98,6 +98,9 @@ head(sites)
 sites.spatial <- sf::st_as_sf(sites, coords = c("long", "lat"), crs = 4326)
 str(sites.spatial)
 
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
+
 # Andrews Forest LTER (AND) ----------------------------------------------
 
 # Check what sites are within this LTER
@@ -157,15 +160,29 @@ and.spatial <- sites %>%
 str(and.spatial)
 and.spatial$geometry
 
+# Turn off s2 processing to avoid 'invalid spherical geometry' error
+sf::sf_use_s2(use_s2 = F)
+
+# Preemptively fix any holes inside of polygons (more of an issue for bigger polygons)
+and.shapes <- and.all.watersheds %>%
+  # Group by uniqueID
+  group_by(uniqueID) %>%
+  # Close holes
+  nngeo::st_remove_holes() %>%
+  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
+  dplyr::rename(geometry = geom) %>%
+  # Ungroup
+  ungroup()
+
 # Make an exploratory graph to see if everything looks okay
-plot(and.all.watersheds["uniqueID"], main = "Andrews Forest Sites", axes = T, reset = F, lab = c(2, 2, 3))
+plot(and.shapes["uniqueID"], main = "Andrews Forest Sites", axes = T, reset = F, lab = c(2, 2, 3))
 plot(and.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T, las = 2)
 
 # Check relevant shapefile geometry
-and.all.watersheds$geometry
+and.shapes$geometry
 
 # Save out shapefile
-st_write(obj = and.all.watersheds, dsn = "watershed-shapefiles/AND_watersheds.shp", delete_layer = T)
+st_write(obj = and.shapes, dsn = "watershed-shapefiles/AND_watersheds.shp", delete_layer = T)
 # The 'delete_layer' argument allows the code to automatically overwrite old versions
 
 # Clean up environment
@@ -237,12 +254,26 @@ hbr.spatial <- sites %>%
 str(hbr.spatial)
 hbr.spatial$geometry
 
+# Turn off s2 processing to avoid 'invalid spherical geometry' error
+sf::sf_use_s2(use_s2 = F)
+
+# Preemptively fix any holes inside of polygons (more of an issue for bigger polygons)
+hbr.shapes <- hbr.all.watersheds %>%
+  # Group by uniqueID
+  group_by(uniqueID) %>%
+  # Close holes
+  nngeo::st_remove_holes() %>%
+  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
+  dplyr::rename(geometry = geom) %>%
+  # Ungroup
+  ungroup()
+
 # Make an exploratory graph to see if everything looks okay
-plot(hbr.all.watersheds["uniqueID"], main = "Hubbard Brook Sites", axes = T, reset = F)
+plot(hbr.shapes["uniqueID"], main = "Hubbard Brook Sites", axes = T, reset = F, lab = c(2, 2, 2))
 plot(hbr.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # Check relevant shapefile geometry
-hbr.all.watersheds$geometry
+hbr.shapes$geometry
 
 # Save out shapefile
 st_write(obj = hbr.all.watersheds, dsn = "watershed-shapefiles/HBR_watersheds.shp", delete_layer = T)
@@ -347,16 +378,32 @@ umr.spatial <- sites %>%
 str(umr.spatial)
 umr.spatial$geometry
 
+# Turn off s2 processing to avoid 'invalid spherical geometry' error
+sf::sf_use_s2(use_s2 = F)
+
+# Preemptively fix any holes inside of polygons (more of an issue for bigger polygons)
+umr.shapes <- umr.all.watersheds %>%
+  # Group by uniqueID
+  group_by(uniqueID) %>%
+  # Close holes
+  nngeo::st_remove_holes() %>%
+  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
+  dplyr::rename(geometry = geom) %>%
+  # Ungroup
+  ungroup()
+
 # Make an exploratory graph to see if everything looks okay
 ## Takes a little longer to run because of the size of some of them
-plot(umr.all.watersheds["uniqueID"], main = "Upper Mississippi River Sites", axes = T, reset = F)
+plot(umr.shapes["uniqueID"], main = "Upper Mississippi River", axes = T, reset = F, lab = c(3, 3, 3))
 plot(umr.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # Check relevant shapefile geometry
-umr.all.watersheds$geometry
+umr.shapes$geometry
+## geometry is GEOMETRY instead of POLYGON...
+## We'll fix that later
 
 # Save out shapefile
-st_write(obj = umr.all.watersheds, dsn = "watershed-shapefiles/UMR_watersheds.shp", delete_layer = T)
+st_write(obj = umr.shapes, dsn = "watershed-shapefiles/UMR_watersheds.shp", delete_layer = T)
 # The 'delete_layer' argument allows the code to automatically overwrite old versions
 
 # Clean up environment
@@ -375,12 +422,15 @@ sites %>%
 lmp.73 <- sf::st_read('watershed-shapefiles/LMP_raw-shapefiles/LMP_LMP73/globalwatershed.shp')
 
 # Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
-lmp.73 <- lmp.73 %>%
+lmp.73.v2 <- lmp.73 %>%
   mutate(uniqueID = "LMP_LMP73") %>%
   dplyr::select(-Name)
 
+# For consistency, make this a new object with a different name
+lmp.all.watersheds <- lmp.73.v2
+
 # Check it
-str(lmp.73)
+str(lmp.all.watersheds)
 
 # LMP Final Checks & Export --------------------------------------------------
 
@@ -393,15 +443,29 @@ lmp.spatial <- sites %>%
 str(lmp.spatial)
 lmp.spatial$geometry
 
+# Turn off s2 processing to avoid 'invalid spherical geometry' error
+sf::sf_use_s2(use_s2 = F)
+
+# Preemptively fix any holes inside of polygons (more of an issue for bigger polygons)
+lmp.shapes <- lmp.all.watersheds %>%
+  # Group by uniqueID
+  group_by(uniqueID) %>%
+  # Close holes
+  nngeo::st_remove_holes() %>%
+  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
+  dplyr::rename(geometry = geom) %>%
+  # Ungroup
+  ungroup()
+
 # Make an exploratory graph to see if everything looks okay
-plot(lmp.73["uniqueID"], main = "Lamprey River Sites", axes = T, reset = F)
+plot(lmp.shapes["uniqueID"], main = "Lamprey River Sites", axes = T, reset = F, lab = c(3, 3, 3))
 plot(lmp.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # Check relevant shapefile geometry
-lmp.73$geometry
+lmp.shapes$geometry
 
 # Save out shapefile
-st_write(obj = lmp.73, dsn = "watershed-shapefiles/LMP_watersheds.shp", delete_layer = T)
+st_write(obj = lmp.shapes, dsn = "watershed-shapefiles/LMP_watersheds.shp", delete_layer = T)
 # The 'delete_layer' argument allows the code to automatically overwrite old versions
 
 # Clean up environment
@@ -453,16 +517,30 @@ nwt.spatial <- sites %>%
 str(nwt.spatial)
 nwt.spatial$geometry
 
+# Turn off s2 processing to avoid 'invalid spherical geometry' error
+sf::sf_use_s2(use_s2 = F)
+
+# Preemptively fix any holes inside of polygons (more of an issue for bigger polygons)
+nwt.shapes <- nwt.all.watersheds %>%
+  # Group by uniqueID
+  group_by(uniqueID) %>%
+  # Close holes
+  nngeo::st_remove_holes() %>%
+  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
+  dplyr::rename(geometry = geom) %>%
+  # Ungroup
+  ungroup()
+
 # Make an exploratory graph to see if everything looks okay
-plot(nwt.all.watersheds["uniqueID"], main = "Niwot Ridge LTER Sites", axes = T, reset = F)
+plot(nwt.shapes["uniqueID"], main = "Niwot Ridge LTER Sites", axes = T, reset = F, lab = c(3, 1, 3))
 plot(nwt.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 ## Little jagged ones may be an issue down the line but they look prima facie reasonable
 
 # Check relevant shapefile geometry
-nwt.all.watersheds$geometry
+nwt.shapes$geometry
 
 # Save out shapefile
-st_write(obj = nwt.all.watersheds, dsn = "watershed-shapefiles/NWT_watersheds.shp", delete_layer = T)
+st_write(obj = nwt.shapes, dsn = "watershed-shapefiles/NWT_watersheds.shp", delete_layer = T)
 # The 'delete_layer' argument allows the code to automatically overwrite old versions
 
 # Clean up environment
@@ -485,8 +563,11 @@ sagehen.v2 <- sagehen %>%
   mutate(uniqueID = "Sagehen") %>%
   dplyr::select(-Name)
 
+# For consistency, call it a new name
+sagehen.all.watersheds <- sagehen.v2
+
 # Examine
-str(sagehen.v2)
+str(sagehen.all.watersheds)
 
 # Sagehen Final Checks & Export ----------------------------------------------
 
@@ -499,16 +580,30 @@ sagehen.spatial <- sites %>%
 str(sagehen.spatial)
 sagehen.spatial$geometry
 
+# Turn off s2 processing to avoid 'invalid spherical geometry' error
+sf::sf_use_s2(use_s2 = F)
+
+# Preemptively fix any holes inside of polygons (more of an issue for bigger polygons)
+sagehen.shapes <- sagehen.all.watersheds %>%
+  # Group by uniqueID
+  group_by(uniqueID) %>%
+  # Close holes
+  nngeo::st_remove_holes() %>%
+  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
+  dplyr::rename(geometry = geom) %>%
+  # Ungroup
+  ungroup()
+
 # Make an exploratory graph to see if everything looks okay
 ## Takes a little longer to run because of the size of some of them
-plot(sagehen.v2["uniqueID"], main = "Sagehen Sites", axes = T, reset = F)
+plot(sagehen.shapes["uniqueID"], main = "Sagehen Sites", axes = T, reset = F, lab = c(3, 3, 3))
 plot(sagehen.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # Check relevant shapefile geometry
-sagehen.v2$geometry
+sagehen.shapes$geometry
 
 # Save out shapefile
-st_write(obj = sagehen.v2, dsn = "watershed-shapefiles/Sagehen_watersheds.shp", delete_layer = T)
+st_write(obj = sagehen.shapes, dsn = "watershed-shapefiles/Sagehen_watersheds.shp", delete_layer = T)
 # The 'delete_layer' argument allows the code to automatically overwrite old versions
 
 # Clean up environment
@@ -559,7 +654,7 @@ gro.site.ids <- gro.spatial %>%
                       no = '') )
 
 # Check that it worked
-gro.site.ids
+dplyr::select(gro.site.ids, uniqueID, intersection, name, geometry)
 
 # Make an exploratory plot
 plot(gro.actual["name"], main = "Great Rivers Observatory Sites", axes = T, reset = F)
@@ -664,10 +759,10 @@ arc.site.ids <- arc.spatial %>%
                   no = '') )
 
 # Check that it worked
-arc.site.ids
+dplyr::select(arc.site.ids, uniqueID, intersection, Name, geometry)
 
 # Make an exploratory plot
-plot(arc.actual["Name"], main = "Arctic LTER Sites", axes = T, reset = F)
+plot(arc.actual["Name"], main = "Arctic LTER Sites", axes = T, reset = F, lab = c(3, 3, 3))
 plot(arc.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # ARC Export Shapefiles ----------------------------------------------------
@@ -753,15 +848,29 @@ luq.spatial <- sites %>%
 str(luq.spatial)
 luq.spatial$geometry
 
+# Turn off s2 processing to avoid 'invalid spherical geometry' error
+sf::sf_use_s2(use_s2 = F)
+
+# Preemptively fix any holes inside of polygons (more of an issue for bigger polygons)
+luq.shapes <- luq.all.watersheds %>%
+  # Group by uniqueID
+  group_by(uniqueID) %>%
+  # Close holes
+  nngeo::st_remove_holes() %>%
+  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
+  dplyr::rename(geometry = geom) %>%
+  # Ungroup
+  ungroup()
+
 # Make an exploratory graph to see if everything looks okay
-plot(luq.all.watersheds["uniqueID"], main = "Luquillo Sites", axes = T, reset = F)
+plot(luq.shapes["uniqueID"], main = "Luquillo Sites", axes = T, reset = F)
 plot(luq.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # Check relevant shapefile geometry
-luq.all.watersheds$geometry
+luq.shapes$geometry
 
 # Save out shapefile
-st_write(obj = luq.all.watersheds, dsn = "watershed-shapefiles/LUQ_watersheds.shp", delete_layer = T)
+st_write(obj = luq.shapes, dsn = "watershed-shapefiles/LUQ_watersheds.shp", delete_layer = T)
 # The 'delete_layer' argument allows the code to automatically overwrite old versions
 
 # Clean up environment
@@ -857,7 +966,7 @@ krr.site.ids <- krr.spatial %>%
   dplyr::select(-intersection.list)
 
 # Check that it worked
-krr.site.ids
+dplyr::select(krr.site.ids, uniqueID, intersection, FID)
 
 # Finalize the shapefile
 krr.final <- krr.simp %>%
@@ -872,7 +981,7 @@ krr.final <- krr.simp %>%
 str(krr.final)
 
 # Do a final plot
-plot(krr.final["uniqueID"], main = "Kissimmee Sites", axes = T, reset = F)
+plot(krr.final["uniqueID"], main = "Kissimmee Sites", axes = T, reset = F, lab = c(3, 2, 3))
 plot(krr.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # KRR Export Shapefiles ----------------------------------------------------
@@ -880,8 +989,16 @@ plot(krr.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 # Check relevant shapefile geometry
 krr.final$geometry
 
+# Make it a polygon (rather than multipolygon)
+krr.actual <- krr.final %>%
+  st_cast("POLYGON")
+
+# Check structure again
+str(krr.actual)
+plot(krr.actual["uniqueID"], main = "Kissimmee Sites", axes = T, lab = c(3, 2, 3))
+
 # Save out shapefile
-st_write(obj = krr.final, dsn = "watershed-shapefiles/KRR_watersheds.shp", delete_layer = T)
+st_write(obj = krr.actual, dsn = "watershed-shapefiles/KRR_watersheds.shp", delete_layer = T)
 # The 'delete_layer' argument allows the code to automatically overwrite old versions
 
 # Clean up environment
@@ -997,7 +1114,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 
 
 
-# If we need a .csv later, let's save this version so we don't need to re-make it
+# Let's save this version so we don't need to re-make it in future scripts
 write.csv(sites, 'tidy_SilicaSites.csv', row.names = F)
 
 
