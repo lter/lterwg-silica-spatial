@@ -52,37 +52,51 @@ sites <- sites.raw %>%
     # And simplify Sagehen's unique ID
     uniqueID = as.factor(ifelse(uniqueID == "Sagehen_Sagehen",
                                 yes = gsub("Sagehen\\_Sagehen", "Sagehen", uniqueID),
-                                no = as.character(uniqueID)))
-  ) %>%
+                                no = as.character(uniqueID))) ) %>%
   # Simplify column naming
-  dplyr::rename(
-    LTER = LTER.x,
-    stream = SITE,
-    long = Longitude,
-    lat = Latitude)
+  dplyr::rename(LTER = LTER.x,
+                stream = SITE,
+                long = Longitude,
+                lat = Latitude,
+                drainSqKm_original = drainSqKm) %>%
+  dplyr::mutate(
+    # Add data source name to sites object
+    dataSource = case_when(
+      LTER == "AND" ~ "USGS StreamStats App",
+      LTER == "ARC" ~ "Univ of Alaska Fairbanks",
+      LTER == "GRO" ~ "Great Rivers Observatory",
+      LTER == "HBR" ~ "USGS StreamStats App",
+      LTER == "KRR" ~ "Florida Geospatial Open Data Portal",
+      LTER == "LMP" ~ "USGS StreamStats App",
+      LTER == "LUQ" ~ "USGS StreamStats App",
+      LTER == "MCM" ~ "McMurdo Information Manager",
+      LTER == "NWT" ~ "USGS StreamStats App",
+      LTER == "Sagehen" ~ "USGS StreamStats App",
+      LTER == "UMR" ~ "USGS StreamStats App",
+      T ~ as.character(LTER) ),
+    # Also add the link to the source
+    dataSourceLink = case_when(
+      LTER == "AND" ~ "https://streamstats.usgs.gov/ss/",
+      LTER == "ARC" ~ "https://www.uaf.edu/toolik/gis/data/index.php#",
+      LTER == "GRO" ~ "https://drive.google.com/drive/folders/1S-MAqA9ahewFhOb8yHEmMc-JC9jX6rwC?usp=sharing",
+      LTER == "HBR" ~ "https://streamstats.usgs.gov/ss/",
+      LTER == "KRR" ~ "https://geodata.floridagio.gov/datasets/sfwmd::north-south-everglades-and-neepp-boundaries/about",
+      LTER == "LMP" ~ "https://streamstats.usgs.gov/ss/",
+      LTER == "LUQ" ~ "https://streamstats.usgs.gov/ss/",
+      LTER == "MCM" ~ "[Shared via email]",
+      LTER == "NWT" ~ "https://streamstats.usgs.gov/ss/",
+      LTER == "Sagehen" ~ "https://streamstats.usgs.gov/ss/",
+      LTER == "UMR" ~ "https://streamstats.usgs.gov/ss/",
+      T ~ as.character(LTER) ) ) %>%
+  # Move some columns to be more intuitive
+  dplyr::select(LTER, stream, uniqueID, Biome1, Biome2, dataSource, dataSourceLink, drainSqKm_original, lat, long)
 
 # Examine output
 head(sites)
 
-# If we need a .csv later, let's save this version so we don't need to re-make it
-write.csv(sites, 'tidy_SilicaSites.csv', row.names = F)
-
 # Get an explicitly spatial version of the sites dataframe
 sites.spatial <- sf::st_as_sf(sites, coords = c("long", "lat"), crs = 4326)
 str(sites.spatial)
-
-# Data Sources for each LTER
-## AND - https://streamstats.usgs.gov/ss/
-## HBR - https://streamstats.usgs.gov/ss/
-## UMR - https://streamstats.usgs.gov/ss/
-## LMP - https://streamstats.usgs.gov/ss/
-## NWT - https://streamstats.usgs.gov/ss/
-## Sagehen - https://streamstats.usgs.gov/ss/
-## ARC - https://www.uaf.edu/toolik/gis/data/index.php#
-## LUQ - https://streamstats.usgs.gov/ss/
-## KRR - https://geodata.floridagio.gov/datasets/sfwmd::north-south-everglades-and-neepp-boundaries/about
-## GRO - https://drive.google.com/drive/folders/1S-MAqA9ahewFhOb8yHEmMc-JC9jX6rwC?usp=sharing
-## MCM - waiting for LTER Information Manager to send shapefiles to me
 
 # Andrews Forest LTER (AND) ----------------------------------------------
 
@@ -977,6 +991,15 @@ st_write(obj = silica.final, dsn = "watershed-shapefiles/SilicaSynthesis_allWate
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
+
+# Silica Synthesis - Save Tidy 'Sites' Object -------------------------------
+
+
+
+
+# If we need a .csv later, let's save this version so we don't need to re-make it
+write.csv(sites, 'tidy_SilicaSites.csv', row.names = F)
+
 
 
 # End --------------------------------------------------------------------
