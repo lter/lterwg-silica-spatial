@@ -1,0 +1,256 @@
+---
+title: "HBR_watershed_5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Step 1: Load packages
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(metajam)
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+library(openxlsx) #for writing the excel file
+
+```
+
+####Step 2: Find the link to the dataset
+Go to the web address for the dataset and find the download button for the data. 
+
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.7.15&entityid=255fa6b525fed95cdc1931a355277b21
+
+#### Step 3: Choose where you want the files to be saved
+In our case, we'll just put it into the metajam_example folder.
+
+```{r}
+
+#eg desired_path_to_data <- "~/Desktop"
+desired_path_to_data <- "~/SI_river_data"
+
+# create the folder if it does not exist yet
+dir.create(desired_path_to_data, showWarnings = FALSE)
+
+```
+
+#### Step 4: Download the data by pasting the link you just copied
+
+```{r}
+
+
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.7.15&entityid=255fa6b525fed95cdc1931a355277b21"
+
+# this will download the data into a folder and save the path to that folder
+downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
+
+
+```
+
+#### Step 5: Now read in the data (with all the metadata)
+
+```{r}
+
+my_data <- read_d1_files(downloaded_data, na = c("-888.88", "-888.888", "-888"))
+
+HBR_watershed_5_data <- my_data$data
+
+```
+
+
+
+###Step 6: data cleanup
+
+```{r}
+
+#Adding a column to identify the LTER site - Hubbar Brook HBR
+
+# the tidy way
+HBR_watershed_5_data <- HBR_watershed_5_data %>% 
+  add_column(LTER = 'HBR', .before = "Year")
+
+#There is no site name in the csv file so I pulled this site identifier from the data portal
+
+
+HBR_watershed_5_data <- HBR_watershed_5_data %>% 
+  add_column('Site/Stream Name' = 'knb-lter-hbr.7.15', .before = "Year")
+
+# I can see that the column Year_Month includes the info from the column in the template 'Sampling Date' so I want to rename that column 
+
+HBR_watershed_5_data <- HBR_watershed_5_data %>% 
+  rename('Sampling Date' = 'Year_Month')
+
+```
+
+
+```{r}
+
+#Removing the volwt_ preface from many of the column names. That preface was preventing me from identifying which columns were a match to the template 
+
+names(HBR_watershed_5_data)[7:31] <- substring(names(HBR_watershed_5_data)[7:31],7,15)
+
+#SpecCond is an exact match I just want to make the column names an exact match
+HBR_watershed_5_data <- HBR_watershed_5_data %>% 
+  rename('Spec Cond' = 'SpecCond')
+
+HBR_watershed_5_data <- HBR_watershed_5_data %>% 
+  rename('DSi' = 'SiO2')
+
+
+```
+
+Read in template
+```{r}
+
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
+                               col_types = "text"
+                               ) %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`))
+
+```
+
+Fuzzy match
+```{r}
+
+# Start by matching by closest name as a first pass. 
+  # Note that we match the lower case names
+  # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
+(fuzzy_match <- tibble(template = names(template)) %>%
+   mutate(watershed5 = names(HBR_watershed_5_data)[amatch(tolower(template), tolower(names(HBR_watershed_5_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+(lookup_table <- fuzzy_match %>%
+  mutate(watershed5 = case_when(
+    template %in% c("DIN", "TN", "NOx",  "TOC") ~ NA_character_,
+    TRUE ~ watershed5)))
+
+correct_colnames <- lookup_table$template
+
+```
+
+```{r}
+
+lookup_table <- lookup_table %>%
+  filter(!is.na(watershed5))
+
+correct_colnames <- lookup_table$template
+
+new_datatable5 <- HBR_watershed_5_data %>% 
+        select(one_of(c(correct_colnames)))
+
+
+```
+
+Loading the solute units template
+
+```{r}
+
+
+solute_units_Template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), sheet = "Solute Units" )
+
+solute_units_Template <- solute_units_Template  %>%
+  select(Measurement, Unit)
+
+
+```
+
+Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (aatributeName and units)
+```{r}
+
+attributes <- data.frame(my_data$attribute_metadata)
+
+attributes <- attributes  %>%
+  select(attributeName, unit)
+
+#Removing the "volwt_" preface from the attribute names so that I can match them
+attributes$attributeName <- gsub("volwt_", "", attributes$attributeName)
+
+#Changing the attribute names so that I can match them
+attributes$attributeName <- gsub("SpecCond", "Specific Conductance", attributes$attributeName)
+
+```
+
+
+
+Fuzzy matching template solute units table to attribute table
+```{r}
+
+(fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
+   mutate(watershed_units_5 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+fuzzy_match$watershed_units_5 <- gsub("SiO2", "Si", fuzzy_match$watershed_units_5)
+
+```
+
+
+```{r}
+
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table_units <- fuzzy_match %>%
+  mutate(watershed_units_5 = case_when(
+    solute_units_Template$Measurement %in% c("DO","Q", "DO%","TOC", "TDP","PON", "PP", "TKN","DOP","TN", "TP") ~ NA_character_,
+    TRUE ~ watershed_units_5)))
+
+#Make a string of the correct names
+correct_names <- lookup_table_units$'solute_units_Template$Measurement'
+
+
+```
+
+```{r}
+
+#Make a table that matches the template
+solute_units_table_new <- attributes %>% 
+        filter(attributeName %in% c(correct_names))
+
+solute_units_table_new  %>% 
+  rename(Measurement = attributeName, Unit = unit)
+
+```
+
+Export an excel workbook with two sheets
+
+```{r}
+
+
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = new_datatable5)
+
+addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "HBR_5_watershed.xlsx", overwrite = TRUE)
+
+```
+
+What proportion of cells in the new data table are NA?
+
+```{r}
+
+sum(is.na(new_datatable5))/prod(dim(new_datatable5))
+
+#for columns
+colMeans(is.na(new_datatable5))
+
+```

@@ -1,0 +1,42 @@
+---
+title: "Merge_NWT_ARC_watersheds"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading Packages
+
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+library(openxlsx) #for writing the excel file
+library(expss)
+
+```
+Import csv
+
+```{r}
+
+library(readr)
+GD_NWT <- read_csv("metajam_example/20200911_GD_NWT.csv")
+
+GD_ARC <- read_csv("metajam_example/20200911_GD_ARC.csv")
+
+```
+

@@ -1,0 +1,46 @@
+attributeName,attributeLabel,attributeDefinition,storageType,definition,measurementScale,domain,formatString,minimum,maximum,missingValueCode,missingValueCodeExplanation,unit,numberType,metadata_pid
+LTER_site,LTER_site,Niwot Ridge LTER site,string,any text,nominal,textDomain,NA,NA,NA,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+local_site,local_site,sample location,string,any text,nominal,textDomain,NA,NA,NA,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+year,year,year (yyyy),dateTime,NA,dateTime,dateTimeDomain,YYYY,1982,NA,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+date,date,date (yyyy-mm-dd),dateTime,NA,dateTime,dateTimeDomain,YYYY-MM-DD,1982-02-11,NA,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+time,time,time collected (hhmm(MST)); DNS-data not submitted,dateTime,NA,dateTime,dateTimeDomain,hhmm,0000,2400,DNS,data not submitted,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+pH,pH,pH; NP-not performed,float,NA,interval,numericDomain,NA,NA,NA,NP,not performed,pH,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+cond,cond,conductance,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microsiemensPerCentimeter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+ANC,ANC,acid neutralizing capacity; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+acid,acid,acidity; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+alkal,alkal,alkalinity; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+H+,H+,H+; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+NH4+,NH4+,NH4+; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,<0.1428,less than 0.1428,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+Ca++,Ca++,Ca++; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+Mg++,Mg++,Mg++; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+Na+,Na+,Na+; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+K+,K+,K+; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+Cl-,Cl-,Cl-; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,<0.28,less than 0.28,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+NO3-,NO3-,NO3-; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,u,under method detection limit,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+SO4--,SO4--,SO4—; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+PO4---,PO4---,NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,<0.0387,less than 0.0387,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+Si,Si,Si; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+cat_sum,cat_sum,cation sum; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+an_sum,an_sum,anion sum; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+chg_bal,chg_bal,charge balance; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+TN,TN,total N; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+TDN,TDN,total dissolved N; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+PN,PN,particulate N; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,u,under method detection limit,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+DON,DON,dissolved organic N; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,EQCL,Exceeds Quality Control Limits,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+IN,IN,inorganic N; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,u,under method detection limit,microequivalentPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+TP,TP,total P; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,u,under method detection limit,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+TDP,TDP,total dissolved P; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,<0.0258,less than 0.0258,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+PP,PP,particulate P; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,u,under method detection limit,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+DOP,DOP,dissolved organic P; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,EQCL,Exceeds Quality Control Limits,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+IP,IP,inorganic P; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,u,under method detection limit,micromolePerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+d18O,d18O,delta 18O; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,partsPerThousand,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+d18O_sdev,d18O_sdev,standard deviation delta 18O; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,partsPerThousand,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+dDeut,dDeut,delta Deuterium; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,partsPerThousand,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+dD_sdev,dD_sdev,standard deviation delta Deuterium; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,partsPerThousand,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+D_excess,D_excess,Deuterium excess; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,partsPerThousand,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+Trit,Trit,tritium; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,tritiumUnit,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+T_sdev,T_sdev,standard deviation tritium; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,tritiumUnit,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+TOC,TOC,total organic C; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,milligramPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+DOC,DOC,dissolved organic C; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,milligramPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+POC,POC,particulate organic C; NP-not performed,float,NA,ratio,numericDomain,NA,NA,NA,NP,not performed,milligramPerLiter,real,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12
+comments,comments,comments on testing,string,any text,nominal,textDomain,NA,NA,NA,NA,NA,NA,NA,https://pasta.lternet.edu/package/metadata/eml/knb-lter-nwt/103/12

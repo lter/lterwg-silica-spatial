@@ -1,0 +1,1249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eml:eml xmlns:eml="https://eml.ecoinformatics.org/eml-2.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:stmml="http://www.xml-cml.org/schema/stmml-1.2" packageId="knb-lter-nwt.103.12" xsi:schemaLocation="eml://ecoinformatics.org/eml-2.1.1 http://nis.lternet.edu/schemas/EML/eml-2.1.1/eml.xsd" system="https://pasta.edirepository.org">
+  <access authSystem="https://pasta.edirepository.org/authentication" order="allowFirst" scope="document" system="https://pasta.edirepository.org">
+    <allow>
+      <principal>uid=nwt,o=LTER,dc=ecoinformatics,dc=org</principal>
+      <permission>read</permission>
+      <permission>write</permission>
+    </allow>
+    <allow>
+      <principal>public</principal>
+      <permission>read</permission>
+    </allow>
+  </access>
+  <dataset>
+    <alternateIdentifier system="https://doi.org">doi:10.6073/pasta/192ad66378d9afe5336fa41609ba8b1a</alternateIdentifier>
+    <title>Stream water chemistry data for Albion site, 1982 - ongoing.</title>
+    <creator>
+      <individualName>
+        <givenName>T. Nelson (Nel)</givenName>
+        <surName>Caine</surName>
+      </individualName>
+      <electronicMailAddress>cainen@colorado.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/orcid.org/0000-0001-7979-2335</userId>
+    </creator>
+    <associatedParty>
+      <individualName>
+        <givenName>T. Nelson (Nel)</givenName>
+        <surName>Caine</surName>
+      </individualName>
+      <electronicMailAddress>cainen@colorado.edu</electronicMailAddress>
+      <userId directory="https://orcid.org">https://orcid.org/orcid.org/0000-0001-7979-2335</userId>
+      <role>principalInvestigator</role>
+    </associatedParty>
+    <pubDate>2018-10-23</pubDate>
+    <language>English</language>
+    <abstract>ABSTRACT.This is a summary of major ion concentrations for stream water samples collected at the Albion site, at the lower end of Green Lakes Valley at the road crossing (culvert) at the Albion camp.</abstract>
+    <keywordSet>
+      <keyword>solute concentrations</keyword>
+      <keyword>stream water quality</keyword>
+      <keyword>surface water quality</keyword>
+      <keyword>inorganic_nutrients</keyword>
+      <keyword>pH</keyword>
+      <keyword>specific conductance</keyword>
+      <keyword>cation sum</keyword>
+      <keyword>anion sum</keyword>
+      <keyword>charge balance</keyword>
+      <keyword>particulate nitrogen</keyword>
+      <keyword>total dissolved phosphorus</keyword>
+      <keyword>particulate phosphorus</keyword>
+      <keyword>dissolved organic phosphorus</keyword>
+      <keyword>inorganic phosphorus</keyword>
+      <keyword>delta oxygen-18</keyword>
+      <keyword>delta deuterium</keyword>
+      <keyword>deuterium excess</keyword>
+      <keyword>Green Lakes Valley</keyword>
+      <keyword>Albion camp</keyword>
+      <keyword>Niwot Ridge LTER</keyword>
+      <keyword>NWT</keyword>
+      <keyword>NWT signature dataset</keyword>
+    </keywordSet>
+    <keywordSet>
+      <keyword>hydrology</keyword>
+      <keyword>water chemistry</keyword>
+      <keyword>biogeochemistry</keyword>
+      <keyword>hydrogen ions</keyword>
+      <keyword>ammonium</keyword>
+      <keyword>calcium</keyword>
+      <keyword>magnesium</keyword>
+      <keyword>sodium</keyword>
+      <keyword>potassium</keyword>
+      <keyword>chloride</keyword>
+      <keyword>nitrate</keyword>
+      <keyword>sulfate</keyword>
+      <keyword>phosphate</keyword>
+      <keyword>silicon</keyword>
+      <keyword>total nitrogen</keyword>
+      <keyword>total dissolved nitrogen</keyword>
+      <keyword>dissolved organic nitrogen</keyword>
+      <keyword>inorganic nitrogen</keyword>
+      <keyword>total phosphorus</keyword>
+      <keyword>dissolved organic carbon</keyword>
+      <keyword>long term</keyword>
+      <keywordThesaurus>LTER controlled vocabulary</keywordThesaurus>
+    </keywordSet>
+    <intellectualRights>
+      <para>
+  This information is released under the Creative Commons license -
+  Attribution - CC BY (https://creativecommons.org/licenses/by/4.0/).
+  The consumer of these data (“Data User” herein) is required to cite it
+  appropriately in any publication that results from its use. The Data
+  User should realize that these data may be actively used by others for
+  ongoing research and that coordination may be necessary to prevent
+  duplicate publication. The Data User is urged to contact the authors
+  of these data if any questions about methodology or results occur.
+  Where appropriate, the Data User is encouraged to consider
+  collaboration or co-authorship with the authors. The Data User should
+  realize that misinterpretation of data may occur if used out of
+  context of the original study. While substantial efforts are made to
+  ensure the accuracy of data and associated documentation, complete
+  accuracy of data sets cannot be guaranteed. All data are made
+  available "as is." The Data User should be aware, however,
+  that data are updated periodically and it is the responsibility of the
+  Data User to check for new versions of the data. The data authors and
+  the repository where these data were obtained shall not be liable for
+  damages resulting from any use or misinterpretation of the data. Thank
+  you.
+</para>
+    </intellectualRights>
+    <coverage>
+      <geographicCoverage>
+        <geographicDescription>Sampling location was the Albion site in the Green Lakes Valley. Original data are stored in with the NWT LTER data manager.</geographicDescription>
+        <boundingCoordinates>
+          <westBoundingCoordinate>-105.59229602595</westBoundingCoordinate>
+          <eastBoundingCoordinate>-105.59229602595</eastBoundingCoordinate>
+          <northBoundingCoordinate>40.0428746797462</northBoundingCoordinate>
+          <southBoundingCoordinate>40.0428746797462</southBoundingCoordinate>
+        </boundingCoordinates>
+      </geographicCoverage>
+      <temporalCoverage>
+        <rangeOfDates>
+          <beginDate>
+            <calendarDate>1982-02-11</calendarDate>
+          </beginDate>
+          <endDate>
+            <calendarDate>2018-10-03</calendarDate>
+          </endDate>
+        </rangeOfDates>
+      </temporalCoverage>
+    </coverage>
+    <maintenance>
+      <description>The documentation section of this file was developed from the NWT LTER Data Directory (Symphony files DDABSTRA.WR1, DDDOCUME.WR1, DDMASTER.WR1, DDVARIAB.WR1; last updated 16 December 1991) by Susan Kindig and Rick Ingersoll in early November 1992. Additional information for the documentation section, as well as the header and data sections were supplied by Nel Caine on 12 February 1993. Data were compiled in January 1993 by Nel Caine from earlier files for individual years.[RCI, 12 February 1993] This file was put under sccs control on 30 March 1993. See the appropriate history file for additional log information.[RCI 30 March 1993] Data for 1982-1991 were reformatted in order to be consistent with post-1991 data formats on 2 May 1994. The variables, comments, and header sections were modified accordingly.[RCI 2 May 1994] Data for 1993 were appended to the data section on 4 May 1994.[RCI 4 May 1994] Comments were added to the documentation section with regard to late April/early May 1994 repeated analyses on 1993 samples.[RCI 17 May 1994] On 11 July 1994, it was discovered that the spring 1994 conversions from mg NO3/L to ueq NO3/L for 1982-1991 data had been incorrectly done (mg/L values were multiplied by 61.3 instead of 16.39). The 1982-1991 data were extracted from this file, a script to correct the error was run on the extracted data, and the corrected data were used to replace the erroneous data on 12 July 1994. [RCI 12 July 1994] The 1992, as well as 2 records from 1993, data were provided by Chris Seibold on 16 November 1994. These data were processed and inserted into the data section on 17 November 1994.[RCI 17 November 1994] All data for 920709 were converted to missing because all values were deemed to be too low (presumably because the sample was inadvertently diluted) by Mark Williams and Nel Caine.[RCI 30 January 1995] Data for 1994 were appended to the data section on 12 February 1996. Columns for total and dissolved N and P were also added to the data section on 12 February 1996.[MAH 12 February 1996] Data for 1995 were appended to the data section on 26 September 1996.[MAH 26 September 1996] Data for 1996 were appended to the data section on 3 September 1997. Columns for particulate, inorganic, dissolved organic N and P as well as for PO4--- were also added to the data section on that date.[MAH 3 September 1997] The investigator contact information was updated on 9 June 1999.[MAH 9 June 1999] Added stream water quality to keywords section on 21 July 1999.[MAH 21 July 1999] Data for 1997 and 1998 were appended to the data section on 31 August 2000.[MAH 31 Aug 2000] Data for 1999 were appended to the data section on 23 April 2001.[TMA 23 April 2001] Data for 2000 were appended to the data section on 05 November 2001.[TMA 05 November 2001] The values for total P, dissolved P, dissolved organic N, particulate N, and inorganic N were determined to be incorrect for 1997, 1998, and 1999. The values were corrected on 10 June 2003.[TMA 10 June 2003] Data for 2001 were appended to the data section on 03 November 2003.[TMA 03 November 2003] Data for 2002 were appended to the data section.[TMA 05 November 2003] Data for 2003 were appended to the data section.[TMA 22 March 2005] Four new columns were added to the data file, 31-O18, 32-TOC, 33-DOC, 34-POC. Data for 2004 were appended to the data section.[TMA 25 May 2005] Data for 2005 were appended to the data section.[TMA 26 October 2006] Data for 1991 through 2005 were reimported into the data section. Data for 2006 were appended to the data section.[TMA 23 May 2007] Data for 2007 to 2009 were appended to the data section. Edited title and keywords for inclusion in inorganic nutrients data sets.[HCH 21 April 2010] Data for 2010 and 2011 were appended to the data section. Dates were reformatted to yyyy-mm-dd; absence of value changed to NP (not performed); variables, keywords, and cols updated to reflect all variables in the data.[HCH 29 June 2013] Data for 2012 to 2014 were appended to the data file. Labels, units, and definitions were edited. [HCH 22 December 2015] Minor text editing was conducted.[HCH 22 April 2016]LTER_site and comments columns were added.[HCH 25 April 2018][2014 data updated and 2015 data appended; unit definitions changed to standards; contents quoted to accommodate commas in comments SCE 23 October 2018]Niwot metadata converted via script to EML[SCE 2018-10-23] Data for 2016, 2017, and 2018 appended [ATW 1 April 2019]. Leading 0's added to 3 digit times, negative values for DOP, IN and DON replaced with 'u' in all years; negative value for specific analytes in 2013-2018 replaced with lab-reported mdl for that year.[ATW 22 April 2019]</description>
+    </maintenance>
+    <contact>
+      <organizationName>Niwot Ridge LTER</organizationName>
+      <positionName>Information Manager</positionName>
+      <address>
+        <deliveryPoint>4001 Discovery Drive, UCB 450</deliveryPoint>
+        <deliveryPoint>University of Colorado</deliveryPoint>
+        <city>Boulder</city>
+        <administrativeArea>CO</administrativeArea>
+        <postalCode>80303</postalCode>
+        <country>United States</country>
+      </address>
+      <electronicMailAddress>lternwt@colorado.edu</electronicMailAddress>
+      <onlineUrl>http://niwot.colorado.edu/</onlineUrl>
+    </contact>
+    <methods>
+      <methodStep>
+        <description>
+          <para>Data for 1982-1991 were originally provided by Nel Caine as space-delimited ASCII files saved from a 1-2-3 spreadsheet and the later data sets were provided by the Kiowa Lab manager in space-delimited ASCII files saved from a 1-2-3 spreadsheet. The 2 formats differed in terms of units, number of columns, and column order.</para>
+          <para>The times at which samples were collected were not provided in the data for 1982-1991, although some of this information could be retrieved from the original field notebooks of Nel Caine. Similarly, charge balances were not provided with the earlier data but could be calculated from the other data.</para>
+          <para>The charge balance was calculated as (cation sum - anion sum)/(cation sum + anion sum).</para>
+          <para>Concentrations below the detection limit are shown as zero.</para>
+          <para>A 24 April 1994 memorandum from Nel Caine to Chris Seibold indicated that the Cl concentration for 911226 "seems unusually low."</para>
+          <para>The following 2 records were included in the file containing the 1992 data and represent redetermination of 2 1991 samples. A portion or all of these data may or may not ultimately be used to replace the original determinations. Column formats are identical to those described in the header section below:</para>
+          <para>ALBION,911031,1220,6.99,27.00,127.99,0.10,,190.62,19.74,37.84,8.95,5.75,17.22,91.82,35.68,257.26,242.78,0.03</para>
+          <para>ALBION,911226,1415,7.33,47.20,284.49,0.05,,322.60,54.79,77.43,11.76,6.80,16.93,121.07,115.08,466.63,429.29,0.04</para>
+          <para>A 24 April 1994 memorandum from Nel Caine to Chris Seibold indicated that the "ANC seems very low and Cl extremely low" for the 930805 sample. The analyses were repeated in late April/early May 1994 and provided an ANC of 47.70 uS/cm and a Cl concentration of 69.92 ueq/L.</para>
+          <para>A 24 April 1994 memorandum from Nel Caine to Chris Seibold indicated that "Cl is high here" and "contaminated?" for the 931111 sample. The analysis was repeated in late April/early May 1994 and provided a Cl concentration of 27.81 ueq/L.</para>
+          <para>Total and dissolved N and P were measured beginning in 1994. "Empty" columns were added to data from previous years in order to maintain a cosistent format.</para>
+          <para>Particulate, inorganic, and dissolved organic N and P as well as PO4--- were measured beginning in 1996. Some of these parameters had been measured on several of the 1995 samples, so all the data for 1995 were reprocessed to include these measurements and "empty" columns were added to data from previous years in order to maintain a cosistent format.</para>
+          <para>The the sample bottles for the first records for 941013, 941027, 941124, 941222, and 941229 were soaked in 10% HCL solution, while the sample bottles for the second records for these dates were soaked in Deionized water.</para>
+          <para>A note on the laboratory print out indicated that the sample for the first record for 941124 was contaminated with K+ and CL-.</para>
+          <para>A note on the laboratory print out corresponding to the 960306 record said "High concentrations in this sample are probably good. Very low flow volume with ground water".</para>
+          <para>The sampling site is at 3250 m elevation and represents a drainage area of 709.7 ha.</para>
+          <para>Dissolved organic C was measured starting in 1998. Total organic C and particulate organic C were measured starting in 2002.</para>
+          <para>Delta 18O was measured starting in 1998. Units were originally reported as "ppm", but the correct units are "per mill" as confirmed by Chris Seibold (17 November 2011). Delta deuterium, the standard deviations of delta 18O and delta deuterium values, and deuterium excess were measured starting in 2007.</para>
+          <para>The missing value indicator is one of the following codes:</para>
+          <para>DNS=Data Not Submitted</para>
+          <para>EQCL=Exceeds Quality Control Limits</para>
+          <para>N/A=Not Applicable</para>
+          <para>NP=Not Performed</para>
+          <para>NSS=No Sample Submitted</para>
+          <para>NV=Not Valid</para>
+          <para>QNS=Quantity Not Sufficient</para>
+          <para>Concentrations below the detection limit are shown as zero prior to 2007 and "u" subsequently.</para>
+          <para>Note: Columns for acidity, alkalinity, tritium, total organic C, and particulate organic C are present in the data set for consistency with other stream water chemistry data sets. Measurements for these variables were not performed for this data set.</para>
+          <para>CITATIONS:</para>
+          <para>[1]Caine, N., E.M. Thurman, D.J. Furbish, and T.A. Moses. 1983. Water quality data from the Green Lakes Valley, 1981-1982. University of Colorado Long-Term Ecological Research Data Report 83/7. 47 pp.</para>
+          <para>[2]Hoffman, K., J. Caine, and N. Caine. 1985. Surface water quality in the Green Lakes Valley prior to peak flow in 1985. University of Colorado Long-Term Ecological Research Data Report 85/7. 18 pp.</para>
+          <para>[3]Caine, N., J. Caine, and E.M. Thurman. 1987. Water quality data from the Green Lakes Valley, 1982-1986. University of Colorado Long-Term Ecological Research Data Report 87/5. 46 pp.</para>
+          <para>[4]Caine, N. 1989. Water quality data from the Green Lakes Valley, 1987-1988. University of Colorado Long-Term Ecological Research Data Report 89/1. 29 pp.</para>
+          <para>[5]Caine, N., and E.M. Thurman. 1990. Temporal and spatial variations in the solute content of an alpine stream, Colorado Front Range. Geomorphology 4:55-72.</para>
+        </description>
+      </methodStep>
+    </methods>
+    <project>
+      <title>LTER: Long-term research on the dynamics of high-elevation ecosystems -- a framework for understanding ecological responsiveness to climate change</title>
+      <personnel>
+        <organizationName>Niwot Ridge LTER</organizationName>
+        <role>pointOfContact</role>
+      </personnel>
+      <funding>National Science Foundation:1637686</funding>
+    </project>
+    <dataTable>
+      <entityName>albisolu.nc.data.csv</entityName>
+      <entityDescription>Stream water chemistry data for Albion site, 1982 - ongoing.</entityDescription>
+      <physical>
+        <objectName>albisolu.nc.data.csv</objectName>
+        <size unit="byte">304318</size>
+        <authentication method="MD5">00716c134a1194f2f5a86100e541ab09</authentication>
+        <dataFormat>
+          <textFormat>
+            <numHeaderLines>1</numHeaderLines>
+            <recordDelimiter>\r\n</recordDelimiter>
+            <attributeOrientation>column</attributeOrientation>
+            <simpleDelimited>
+              <fieldDelimiter>,</fieldDelimiter>
+              <quoteCharacter>"</quoteCharacter>
+            </simpleDelimited>
+          </textFormat>
+        </dataFormat>
+        <distribution>
+          <online>
+            <url function="download">https://pasta.lternet.edu/package/data/eml/knb-lter-nwt/103/12/413c3eb5a1a52e3ce2f9e52b3565aadd</url>
+          </online>
+        </distribution>
+      </physical>
+      <attributeList>
+        <attribute>
+          <attributeName>LTER_site</attributeName>
+          <attributeLabel>LTER_site</attributeLabel>
+          <attributeDefinition>Niwot Ridge LTER site</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>any text</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>local_site</attributeName>
+          <attributeLabel>local_site</attributeLabel>
+          <attributeDefinition>sample location</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>any text</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>year</attributeName>
+          <attributeLabel>year</attributeLabel>
+          <attributeDefinition>year (yyyy)</attributeDefinition>
+          <storageType>dateTime</storageType>
+          <measurementScale>
+            <dateTime>
+              <formatString>YYYY</formatString>
+              <dateTimeDomain>
+                <bounds>
+                  <minimum exclusive="false">1982</minimum>
+                </bounds>
+              </dateTimeDomain>
+            </dateTime>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>date</attributeName>
+          <attributeLabel>date</attributeLabel>
+          <attributeDefinition>date (yyyy-mm-dd)</attributeDefinition>
+          <storageType>dateTime</storageType>
+          <measurementScale>
+            <dateTime>
+              <formatString>YYYY-MM-DD</formatString>
+              <dateTimeDomain>
+                <bounds>
+                  <minimum exclusive="false">1982-02-11</minimum>
+                </bounds>
+              </dateTimeDomain>
+            </dateTime>
+          </measurementScale>
+        </attribute>
+        <attribute>
+          <attributeName>time</attributeName>
+          <attributeLabel>time</attributeLabel>
+          <attributeDefinition>time collected (hhmm(MST)); DNS-data not submitted</attributeDefinition>
+          <storageType>dateTime</storageType>
+          <measurementScale>
+            <dateTime>
+              <formatString>hhmm</formatString>
+              <dateTimeDomain>
+                <bounds>
+                  <minimum exclusive="false">0000</minimum>
+                  <maximum exclusive="false">2400</maximum>
+                </bounds>
+              </dateTimeDomain>
+            </dateTime>
+          </measurementScale>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>data not submitted</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>DNS</code>
+            <codeExplanation>data not submitted</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>pH</attributeName>
+          <attributeLabel>pH</attributeLabel>
+          <attributeDefinition>pH; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <interval>
+              <unit>
+                <customUnit>pH</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </interval>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>cond</attributeName>
+          <attributeLabel>cond</attributeLabel>
+          <attributeDefinition>conductance</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microsiemensPerCentimeter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>ANC</attributeName>
+          <attributeLabel>ANC</attributeLabel>
+          <attributeDefinition>acid neutralizing capacity; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>acid</attributeName>
+          <attributeLabel>acid</attributeLabel>
+          <attributeDefinition>acidity; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>alkal</attributeName>
+          <attributeLabel>alkal</attributeLabel>
+          <attributeDefinition>alkalinity; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>H+</attributeName>
+          <attributeLabel>H+</attributeLabel>
+          <attributeDefinition>H+; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>NH4+</attributeName>
+          <attributeLabel>NH4+</attributeLabel>
+          <attributeDefinition>NH4+; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.71</code>
+            <codeExplanation>less than 0.71</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.38</code>
+            <codeExplanation>less than 0.38</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.22</code>
+            <codeExplanation>less than 0.22</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.1428</code>
+            <codeExplanation>less than 0.1428</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Ca++</attributeName>
+          <attributeLabel>Ca++</attributeLabel>
+          <attributeDefinition>Ca++; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Mg++</attributeName>
+          <attributeLabel>Mg++</attributeLabel>
+          <attributeDefinition>Mg++; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Na+</attributeName>
+          <attributeLabel>Na+</attributeLabel>
+          <attributeDefinition>Na+; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>K+</attributeName>
+          <attributeLabel>K+</attributeLabel>
+          <attributeDefinition>K+; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Cl-</attributeName>
+          <attributeLabel>Cl-</attributeLabel>
+          <attributeDefinition>Cl-; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.28</code>
+            <codeExplanation>less than 0.28</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>NO3-</attributeName>
+          <attributeLabel>NO3-</attributeLabel>
+          <attributeDefinition>NO3-; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.16</code>
+            <codeExplanation>less than 0.16</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>SO4--</attributeName>
+          <attributeLabel>SO4--</attributeLabel>
+          <attributeDefinition>SO4—; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>PO4---</attributeName>
+          <attributeLabel>PO4---</attributeLabel>
+          <attributeDefinition>NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.063</code>
+            <codeExplanation>less than 0.063</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.03</code>
+            <codeExplanation>less than 0.03</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.08</code>
+            <codeExplanation>less than 0.08</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.0387</code>
+            <codeExplanation>less than 0.0387</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Si</attributeName>
+          <attributeLabel>Si</attributeLabel>
+          <attributeDefinition>Si; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>cat_sum</attributeName>
+          <attributeLabel>cat_sum</attributeLabel>
+          <attributeDefinition>cation sum; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>an_sum</attributeName>
+          <attributeLabel>an_sum</attributeLabel>
+          <attributeDefinition>anion sum; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>chg_bal</attributeName>
+          <attributeLabel>chg_bal</attributeLabel>
+          <attributeDefinition>charge balance; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TN</attributeName>
+          <attributeLabel>TN</attributeLabel>
+          <attributeDefinition>total N; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TDN</attributeName>
+          <attributeLabel>TDN</attributeLabel>
+          <attributeDefinition>total dissolved N; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>PN</attributeName>
+          <attributeLabel>PN</attributeLabel>
+          <attributeDefinition>particulate N; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>DON</attributeName>
+          <attributeLabel>DON</attributeLabel>
+          <attributeDefinition>dissolved organic N; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>IN</attributeName>
+          <attributeLabel>IN</attributeLabel>
+          <attributeDefinition>inorganic N; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>microequivalentPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TP</attributeName>
+          <attributeLabel>TP</attributeLabel>
+          <attributeDefinition>total P; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TDP</attributeName>
+          <attributeLabel>TDP</attributeLabel>
+          <attributeDefinition>total dissolved P; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.04</code>
+            <codeExplanation>less than 0.04</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.01</code>
+            <codeExplanation>less than 0.01</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.0258</code>
+            <codeExplanation>less than 0.0258</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>PP</attributeName>
+          <attributeLabel>PP</attributeLabel>
+          <attributeDefinition>particulate P; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>DOP</attributeName>
+          <attributeLabel>DOP</attributeLabel>
+          <attributeDefinition>dissolved organic P; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>EQCL</code>
+            <codeExplanation>Exceeds Quality Control Limits</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>IP</attributeName>
+          <attributeLabel>IP</attributeLabel>
+          <attributeDefinition>inorganic P; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>micromolePerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.03</code>
+            <codeExplanation>less than 0.03</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>&lt;0.01</code>
+            <codeExplanation>less than 0.01</codeExplanation>
+          </missingValueCode>
+          <missingValueCode>
+            <code>u</code>
+            <codeExplanation>under method detection limit</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>d18O</attributeName>
+          <attributeLabel>d18O</attributeLabel>
+          <attributeDefinition>delta 18O; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partsPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>d18O_sdev</attributeName>
+          <attributeLabel>d18O_sdev</attributeLabel>
+          <attributeDefinition>standard deviation delta 18O; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partsPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>dDeut</attributeName>
+          <attributeLabel>dDeut</attributeLabel>
+          <attributeDefinition>delta Deuterium; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partsPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>dD_sdev</attributeName>
+          <attributeLabel>dD_sdev</attributeLabel>
+          <attributeDefinition>standard deviation delta Deuterium; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partsPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>D_excess</attributeName>
+          <attributeLabel>D_excess</attributeLabel>
+          <attributeDefinition>Deuterium excess; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>partsPerThousand</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>Trit</attributeName>
+          <attributeLabel>Trit</attributeLabel>
+          <attributeDefinition>tritium; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>tritiumUnit</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>T_sdev</attributeName>
+          <attributeLabel>T_sdev</attributeLabel>
+          <attributeDefinition>standard deviation tritium; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>tritiumUnit</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>TOC</attributeName>
+          <attributeLabel>TOC</attributeLabel>
+          <attributeDefinition>total organic C; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>DOC</attributeName>
+          <attributeLabel>DOC</attributeLabel>
+          <attributeDefinition>dissolved organic C; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>POC</attributeName>
+          <attributeLabel>POC</attributeLabel>
+          <attributeDefinition>particulate organic C; NP-not performed</attributeDefinition>
+          <storageType>float</storageType>
+          <measurementScale>
+            <ratio>
+              <unit>
+                <customUnit>milligramPerLiter</customUnit>
+              </unit>
+              <numericDomain>
+                <numberType>real</numberType>
+              </numericDomain>
+            </ratio>
+          </measurementScale>
+          <missingValueCode>
+            <code>NP</code>
+            <codeExplanation>not performed</codeExplanation>
+          </missingValueCode>
+        </attribute>
+        <attribute>
+          <attributeName>comments</attributeName>
+          <attributeLabel>comments</attributeLabel>
+          <attributeDefinition>comments on testing</attributeDefinition>
+          <storageType>string</storageType>
+          <measurementScale>
+            <nominal>
+              <nonNumericDomain>
+                <textDomain>
+                  <definition>any text</definition>
+                </textDomain>
+              </nonNumericDomain>
+            </nominal>
+          </measurementScale>
+        </attribute>
+      </attributeList>
+      <numberOfRecords>1000</numberOfRecords>
+    </dataTable>
+  </dataset>
+  <additionalMetadata>
+    <metadata>
+      <unitList>
+        <unit id="pH" abbreviation="pH" name="pH" unitType="amountOfSubstanceConcentration">
+          <description>measure of hydrogen ion concentration</description>
+        </unit>
+        <unit id="microsiemensPerCentimeter" abbreviation="uS/cm" name="microsiemensPerCentimeter">
+          <description>microsiemens per centimeter; used for concentration of ionized dissoved solids</description>
+        </unit>
+        <unit id="microequivalentPerLiter" constantToSI="0" name="microequivalentPerLiter" parentSI="molesPerMeterCubed" unitType="amountOfSubstanceConcentration">
+          <description>concentration of charge (on dissolved ions). A single ultiplier to SI is not possible; since conversion includes valence of ion; which can vary</description>
+        </unit>
+        <unit id="micromolePerLiter" abbreviation="umol/L" constantToSI="0" name="micromolePerLiter" parentSI="molePerMeterCubed" unitType="amountOfSubstanceConcentration">
+          <description>commonly used for concentration of some chemical constituents of natural water bodies; e.g.; nutrients. It has the same magnitude as micromolar; but micromolar can only be used for a dissolved constituent</description>
+        </unit>
+        <unit id="partsPerThousand" abbreviation="ppt" multiplierToSI="1" name="partsPerThousand" unitType="dimensionless">
+          <description>ratio of two quantities as parts per thousand (1:1000)</description>
+        </unit>
+        <unit id="tritiumUnit" abbreviation="TU" name="tritiumUnit" unitType="radionucleotideActivity">
+          <description>Tritium unit; 1 tritium unit= 3.22 picocuries per liter</description>
+        </unit>
+        <unit id="milligramPerLiter" constantToSI="0" name="milligramPerLiter" parentSI="kilogramPerCubicMeter" unitType="volumetricMassDensity">
+          <description>concentration unit; sometimes used for pigments in natural waters</description>
+        </unit>
+      </unitList>
+    </metadata>
+  </additionalMetadata>
+</eml:eml>

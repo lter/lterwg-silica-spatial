@@ -1,0 +1,124 @@
+---
+title: "Merge_NWT_ARC_watersheds"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading Packages
+
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+library(openxlsx) #for writing the excel file
+library(expss)
+library(here)
+
+```
+Import csv files from Paul
+
+```{r}
+
+library(readr)
+GD_NWT <- read_csv(here::here("metajam_example/20200911_GD_NWT.csv"))
+
+GD_ARC <- read_csv(here::here("metajam_example/20200911_GD_ARC.csv"))
+
+```
+
+Import tables from EDI
+
+```{r}
+
+
+ADC_Toolik_ALL_watershed <- read_excel(here::here("/metajam_example/ADC_Toolik_ALL_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_albisolu_watershed <- read_excel(here::here("metajam_example/NWT_albisolu_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_arikaree_watershed <- read_excel(here::here("metajam_example/NWT_arikaree_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_flume_watershed <- read_excel(here::here("metajam_example/NWT_flume_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_martinelli_watershed <- read_excel(here::here("metajam_example/NWT_martinelli_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+NWT_saddle_watershed <- read_excel(here::here("metajam_example/NWT_saddle_watershed.xlsx"), na = c("-888.88", "-888.888", "-888", "u", "NP", NULL))
+
+#Combining all Niwot Ridge tables
+
+#Niwot Ridge Watersheds
+
+NWT_1 <- merge(NWT_saddle_watershed, NWT_martinelli_watershed, all = TRUE)
+
+NWT_2 <- merge(NWT_1, NWT_flume_watershed, all = TRUE)
+
+NWT_3 <- merge(NWT_2, NWT_arikaree_watershed, all = TRUE)
+
+NWT_WATERSHEDS <- merge(NWT_3, NWT_albisolu_watershed, all = TRUE)
+
+```
+
+Adding a 'Time' Column to csv files from Paul to make them consistent with tables generated from EDI 
+
+```{r}
+
+
+#Renaming columns to match template abbreviations
+GD_ARC  <- GD_ARC   %>% 
+  rename('Site/Stream Name' = 'Site/Stream.Name', 'Sampling Date' = 'Sampling.Date', 'Spec Cond' = 'Spec.Cond', 'Suspended Chl' = 'Suspended.Chl', 'Temp C' = 'Temp.C')
+
+#Renaming columns to match template abbreviations
+GD_NWT  <- GD_NWT   %>% 
+  rename('Site/Stream Name' = 'Site/Stream.Name', 'Sampling Date' = 'Sampling.Date', 'Spec Cond' = 'Spec.Cond', 'Suspended Chl' = 'Suspended.Chl', 'Temp C' = 'Temp.C')
+
+  
+
+
+```
+
+```{r}
+
+
+NWT_Toolik_WATERSHEDS <- merge(ADC_Toolik_ALL_watershed, NWT_WATERSHEDS, all =TRUE)
+
+NWT_EDI1_WATERSHEDS <- merge(NWT_Toolik_WATERSHEDS, GD_ARC , all.x =TRUE, no.dups = TRUE)
+
+Total <- merge(NWT_EDI1_WATERSHEDS, GD_NWT , all.x =TRUE, no.dups = TRUE)
+
+Toolik_stream_names <- as.data.frame(unique(Total$`Site/Stream Name`))
+
+Unique_stream_names <- Toolik_stream_names %>% rename('Stream Names' = 'unique(Total$`Site/Stream Name`)')
+
+## setup a workbook with 1 worksheet
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = Total)
+
+saveWorkbook(wb, "NWT_ARC_merge.xlsx", overwrite = TRUE)
+
+#Export Unique names
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = 'stream_names', gridLines = TRUE)
+
+writeDataTable(wb = wb, sheet = 1, x = Unique_stream_names)
+
+saveWorkbook(wb, "Unique_stream_names.xlsx", overwrite = TRUE)
+
+
+```
+

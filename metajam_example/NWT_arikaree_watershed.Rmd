@@ -1,0 +1,286 @@
+---
+title: "arikaree_NWT_watershed"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Step 1: Load packages
+
+```{r}
+
+library(metajam)  
+library(udunits2)
+# For wrangling the data
+library(readr)
+library(tidyr)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(metajam)
+library(tidyverse) # for convenience
+library(here) # for file path management
+library(stringdist) # for first pass of naming-matching
+library(vctrs) # for joining tables
+library(readxl) # for reading the template excel sheet
+library(naniar)
+library(openxlsx)
+
+```
+
+
+####Step 2: Find the link to the dataset
+Go to the web address for the dataset and find the download button for the data. 
+
+In our case the link is: https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.104.11&entityid=1f6d60d3f8fb0b902358b3b6da579f67
+
+#### Step 3: Choose where you want the files to be saved
+In our case, we'll just put it into the metajam_example folder.
+
+```{r}
+
+
+#eg desired_path_to_data <- "~/Desktop"
+desired_path_to_data <- "~/SI_river_data"
+
+# create the folder if it does not exist yet
+dir.create(desired_path_to_data, showWarnings = FALSE)
+
+
+```
+
+#### Step 4: Download the data by pasting the link you just copied
+
+```{r}
+
+my_data_url <- "https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-nwt.104.11&entityid=1f6d60d3f8fb0b902358b3b6da579f67"
+
+# this will download the data into a folder and save the path to that folder
+downloaded_data <- download_d1_data(data_url = my_data_url, path = desired_path_to_data)
+
+
+```
+
+
+#### Step 5: Now read in the data (with all the metadata)
+
+```{r}
+
+
+my_data <- read_d1_files(downloaded_data, na = c("u", "NP", "DNS", "EQCL"))
+
+arikaree_NWT_data <- my_data$data
+
+
+
+```
+
+Data cleanup
+
+```{r}
+
+#these columns already have the info we want but we need to change the column names to match the template
+arikaree_NWT_data <- arikaree_NWT_data %>% 
+  rename('Sampling Date' = 'date')
+
+arikaree_NWT_data <- arikaree_NWT_data %>% 
+  rename('Site/Stream Name' = 'local_site')
+
+arikaree_NWT_data <- arikaree_NWT_data %>% 
+  rename('LTER' = 'LTER_site')
+
+arikaree_NWT_data <- arikaree_NWT_data %>% 
+  rename('Time' = 'time')
+
+arikaree_NWT_data <- arikaree_NWT_data %>% 
+  rename('Conductivity' = 'cond')
+
+arikaree_NWT_data <- arikaree_NWT_data %>% 
+  rename('alkalinity' = 'alkal')
+
+arikaree_NWT_data <- arikaree_NWT_data %>% 
+  rename('DSi' = 'Si')
+
+names(arikaree_NWT_data) <- gsub("[^0-9A-Za-z///' ]","", names(arikaree_NWT_data))
+
+```
+
+Read in template
+```{r}
+
+template <- read_excel(here("metajam_example", "Raw stream data template.xlsx"), 
+                               col_types = "text"
+                               ) %>%
+  mutate(`Sampling Date` = as.Date(`Sampling Date`))
+
+```
+
+Fuzzy Match
+
+```{r}
+
+# Start by matching by closest name as a first pass. 
+  # Note that we match the lower case names
+  # Note that the weight i= 0.1 says that we will be more likely to match if watershed 1 = template + extra
+(fuzzy_match <- tibble(template = names(template)) %>%
+   mutate(watershed11 = names(arikaree_NWT_data)[amatch(tolower(template), tolower(names(arikaree_NWT_data)), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+```
+
+```{r}
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table <- fuzzy_match %>%
+  mutate(watershed11 = case_when(
+    template %in% c("DIN", "NOx", "DIC") ~ NA_character_,
+    TRUE ~ watershed11)))
+
+lookup_table <- lookup_table %>%
+  filter(!is.na(watershed11))
+
+correct_colnames <- lookup_table$template
+
+correct_colnames <- as.character(correct_colnames)
+
+
+
+```
+
+
+
+```{r}
+
+
+
+new_datatable_NWT_2 <- arikaree_NWT_data %>% 
+        select(all_of(c(correct_colnames)))
+
+
+my_data$attribute_metadata
+
+```
+
+```{r}
+
+#Changing missing value codes for columns for which NP is the missing value code
+
+#new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
+# mutate(NH4 = ifelse(NH4 < 0.1428, NA, NH4))
+
+
+#new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
+# mutate(PO4 = ifelse(PO4 < 0.038, NA, PO4))
+
+
+#new_datatable_NWT_2 <- new_datatable_NWT_2 %>% 
+ #mutate(TDP = ifelse(TDP < 0.0258, NA, TDP))
+
+
+```
+
+Loading the solute units template
+
+```{r}
+
+
+solute_units_Template <- read_excel(here("metajam_example", "Stream_Data_Template.xlsx"), sheet = "Solute Units" )
+
+solute_units_Template <- solute_units_Template  %>%
+  select(Measurement, Unit)
+
+
+```
+
+Making a dataframe from the attribute metadata that only inlcudes the columns I need to match the template (attributeName and units)
+```{r}
+
+attributes <- data.frame(my_data$attribute_metadata)
+
+attributes <- attributes  %>%
+  select(attributeName, unit)
+
+#Changing some attribute names so that they are easier to match
+
+attributes$attributeName <- gsub("cond", "Conductivity", attributes$attributeName)
+
+attributes$attributeName <- gsub("alkal", "Alkalinity", attributes$attributeName)
+
+#Remove ionic notations
+attributes$attributeName <- gsub("[^0-9A-Za-z///' ]"," ", attributes$attributeName)
+
+```
+
+
+
+Fuzzy matching template solute units table to attribute table
+```{r}
+
+(fuzzy_match <- tibble(solute_units_Template$Measurement) %>%
+   mutate(watershed_units_11 = attributes$attributeName[amatch(tolower(solute_units_Template$Measurement), tolower(attributes$attributeName), maxDist = 1, weight = c(d=1,i=0.1,s=1,t=1))])
+)
+
+
+```
+
+```{r}
+
+
+# Fill in the columns that didn't match, and correct the wrongly corrected matches
+# continue in the same way until you've filled out everything you could.
+  # Note: NA_character_ is just NA but of the character type.
+(lookup_table_units <- fuzzy_match %>%
+  mutate(watershed_units_11 = case_when(
+    solute_units_Template$Measurement %in% c("DIC","DO", "DO%", "TKN", "PON") ~ NA_character_, TRUE ~ watershed_units_11)))
+
+#Make a string of the correct names
+correct_names <- lookup_table_units$'solute_units_Template$Measurement'
+
+
+```
+
+```{r}
+
+#Make a table that matches the template
+solute_units_table_new <- attributes %>% 
+        filter(attributeName %in% c(correct_names))
+
+solute_units_table_new  %>% 
+  rename(Measurement = attributeName, Unit = unit)
+
+```
+
+Export an excel workbook with two sheets
+
+```{r}
+
+
+## setup a workbook with 2 worksheets
+wb <- createWorkbook()
+addWorksheet(wb = wb, sheetName = "Raw Data (Sheet 1)", gridLines = FALSE)
+
+writeDataTable(wb = wb, sheet = 1, x = new_datatable_NWT_2)
+
+addWorksheet(wb = wb, sheetName = "Solute Units (Sheet 2)", gridLines = FALSE)
+
+writeData(wb = wb, sheet = 2, x = solute_units_table_new)
+
+saveWorkbook(wb, "NWT_arikaree_watershed.xlsx", overwrite = TRUE)
+
+```
+
+What proportion of cells in the new data table are NA?
+
+```{r}
+
+sum(is.na(new_datatable_NWT_2))/prod(dim(new_datatable_NWT_2))
+
+#for columns
+colMeans(is.na(new_datatable_NWT_2))
+
+```
