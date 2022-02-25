@@ -129,7 +129,7 @@ head(rock.index)
 sort(unique(rock.index$rock.type))
   
 # Process the extracted lithology information into a dataframe
-rock.data <- rocky.sheds %>%
+rock.data.v1 <- rocky.sheds %>%
   # Remove the truly spatial part of the data to make it easier to work with
   st_drop_geometry() %>%
   # Bring over the rock names from the index
@@ -144,7 +144,7 @@ rock.data <- rocky.sheds %>%
   ## 0.5° degree pixels within the watershed that contain this rock type
   summarise(rock.totals = n()) %>%
   # Make it a dataframe (to avoid a list of tibbles)
-  as.data.frame %>%
+  as.data.frame() %>%
   # Remove the 'no_data' cells
   filter(rock.type != "no_data") %>%
   # # Group by LTER and uniqueID
@@ -158,25 +158,49 @@ rock.data <- rocky.sheds %>%
   # And calculate the percent of total for each row
   dplyr::mutate( perc.total = ((rock.totals / total.shed.pixels) * 100) ) %>%
   # Remove the two pixel count columns
-  dplyr::select(-rock.totals, -total.shed.pixels) %>%
+  dplyr::select(-rock.totals, -total.shed.pixels)
+
+# Now we want to split into two directions
+## First: get a version where each rock type is its own column
+rock.data.wide <- rock.data.v1 %>%
   # Pivot to wide format
   pivot_wider(id_cols = c(LTER, uniqueID),
               names_from = rock.type,
               values_from = perc.total)
 
+## Second: get the *majority* rock for each watershed
+rock.data.major <- rock.data.v1 %>%
+  # Filter to only max of each rock type per uniqueID & LTER
+  group_by(LTER, uniqueID) %>%
+  filter(perc.total == max(perc.total)) %>%
+  # Remove the percent total
+  dplyr::select(-perc.total) %>%
+  # Get the columns into wide format where the column name and value are both whatever the dominant rock was
+  pivot_wider(id_cols = c(LTER, uniqueID),
+              names_from = rock.type,
+              values_from = rock.type) %>%
+  # Paste all the non-NAs (i.e., the dominant rocks) into a single column
+  unite(col = major_rock, -LTER:-uniqueID, na.rm = T, sep = "; ")
+
+# Now attach the major rocks to the wide format one
+rock.data.actual <- rock.data.wide %>%
+  left_join(rock.data.major, by = c("LTER", "uniqueID")) %>%
+  relocate(major_rock, .after = uniqueID)
+
 # Examine
-str(rock.data)
-head(rock.data)
-names(rock.data)
+str(rock.data.actual)
+head(rock.data.actual)
+names(rock.data.actual)
 
 # Lithology Export -----------------------------------------------------------
 
 # Let's get ready to export
 rock.export <- sites %>%
-  left_join(rock.data, by = c("LTER", "uniqueID"))
+  left_join(rock.data.actual, by = c("LTER", "uniqueID"))
 
 # Check it out
 head(rock.export)
+names(rock.export)
 
 # Export both this and the shapefile that contains the cropped rock data
 write.csv(x = rock.export,
