@@ -103,7 +103,7 @@ str(sites.spatial)
 # Check what sites are within this LTER
 sites %>%
   filter(LTER == "AND") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # AND Process Raw Shapefiles ----------------------------------------------
 
@@ -158,8 +158,8 @@ str(and.spatial)
 and.spatial$geometry
 
 # Make an exploratory graph to see if everything looks okay
-plot(and.all.watersheds["uniqueID"], main = "Andrews Forest Sites", axes = T, reset = F)
-plot(and.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
+plot(and.all.watersheds["uniqueID"], main = "Andrews Forest Sites", axes = T, reset = F, lab = c(2, 2, 3))
+plot(and.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T, las = 2)
 
 # Check relevant shapefile geometry
 and.all.watersheds$geometry
@@ -175,7 +175,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check what sites are within this LTER
 sites %>%
   filter(LTER == "HBR") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # HBR Process Raw Shapefiles ----------------------------------------------
 
@@ -255,7 +255,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check what sites are within this LTER
 sites %>%
   filter(LTER == "UMR") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # UMR Process Raw Shapefiles ----------------------------------------------
 
@@ -366,7 +366,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check what sites are within this location (technically not an LTER)
 sites %>%
   filter(LTER == "LMP") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # LMP Process Raw Shapefiles -------------------------------------------------
 
@@ -411,7 +411,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check what sites are within this LTER
 sites %>%
   filter(LTER == "NWT") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # NWT Process Raw Shapefiles ----------------------------------------------
 
@@ -472,7 +472,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check what sites are within this LTER
 sites %>%
   filter(LTER == "Sagehen") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # Sagehen Process Raw Shapefiles ----------------------------------------------
 
@@ -520,7 +520,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check sites within this 'LTER'
 sites %>%
   filter(LTER == "GRO") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # GRO Load Raw Watershed Shapefiles ----------------------------------------
 
@@ -593,7 +593,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check which stream sites are in this LTER
 sites %>%
   filter(LTER == "ARC") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # ARC Load Raw Shapefiles --------------------------------------------------
 
@@ -702,7 +702,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check which stream sites are in this LTER
 sites %>%
   filter(LTER == "LUQ") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # LUQ Process Raw Shapefiles ----------------------------------------------
 
@@ -773,7 +773,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check which stream sites are in this LTER
 sites %>%
   filter(LTER == "KRR") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 # KRR Load Raw Shapefiles --------------------------------------------------
 
@@ -893,7 +893,7 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 # Check which stream sites are in this LTER
 sites %>%
   filter(LTER == "MCM") %>%
-  dplyr::select(uniqueID)
+  dplyr::select(uniqueID, lat, long)
 
 
 
