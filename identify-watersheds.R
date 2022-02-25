@@ -144,9 +144,9 @@ and.gsws10.v2 <- and.gsws10 %>%
   dplyr::select(-Name)
 
 # Combine them
-and.all.watersheds <- rbind(and.gsmack.v2, and.gsws02.v2, and.gsws02.v2,
-                            and.gsws06.v2, and.gsws07.v2, and.gsws08.v2,
-                            and.gsws09.v2, and.gsws10.v2)
+and.all.watersheds <- rbind(and.gsmack.v2, and.gsws02.v2, and.gsws06.v2,
+                            and.gsws07.v2, and.gsws08.v2, and.gsws09.v2,
+                            and.gsws10.v2)
 str(and.all.watersheds)
 
 # AND Final Checks & Export ----------------------------------------------
@@ -399,8 +399,6 @@ plot(umr.spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 
 # Check relevant shapefile geometry
 umr.shapes$geometry
-## geometry is GEOMETRY instead of POLYGON...
-## We'll fix that later
 
 # Save out shapefile
 st_write(obj = umr.shapes, dsn = "watershed-shapefiles/UMR_watersheds.shp", delete_layer = T)
@@ -485,11 +483,18 @@ nwt.albion <- sf::st_read('watershed-shapefiles/NWT_raw-shapefiles/NWT_ALBION/gl
 nwt.martin <- sf::st_read('watershed-shapefiles/NWT_raw-shapefiles/NWT_MARTINELLI/globalwatershed.shp')
 nwt.saddle <- sf::st_read('watershed-shapefiles/NWT_raw-shapefiles/NWT_SADDLE-STREAM-007/globalwatershed.shp')
 
-# For some reason the Saddle polygon is reading as a multipolygon
+# Saddle polygon is reading as a multipolygon because of pixels touching each other only on the corners (see bottom of shape)
 str(nwt.saddle)
-nwt.saddle.fix <- nwt.saddle %>%
-  sf::st_cast("POLYGON")
-str(nwt.saddle.fix)
+nwt.explore <- nwt.saddle %>%
+  # Note in the warning that st_cast() creates duplicate geometries
+  sf::st_cast("POLYGON") %>%
+  # Add a column for row to account for these diffs
+  dplyr::mutate(rowId = seq_along(Name))
+
+# Plot for exploratory purposes
+plot(nwt.explore["rowId"], axes = T, lab = c(2, 2, 3))
+nwt.explore
+## Not clear if we *need* it to be a polygon so let's leave that alone for now
 
 # Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
 nwt.albion.v2 <- nwt.albion %>%
@@ -498,7 +503,7 @@ nwt.albion.v2 <- nwt.albion %>%
 nwt.martin.v2 <- nwt.martin %>%
   mutate(uniqueID = "NWT_MARTINELLI") %>%
   dplyr::select(-Name)
-nwt.saddle.v2 <- nwt.saddle.fix %>%
+nwt.saddle.v2 <- nwt.saddle %>%
   mutate(uniqueID = "NWT_SADDLE-STREAM-007") %>%
   dplyr::select(-Name)
 
@@ -673,6 +678,15 @@ gro.watersheds <- gro.actual %>%
 
 # Check structure
 str(gro.watersheds)
+## All of them reads as a multipolygon..
+
+# Let's make one to explort
+gro.explore <- gro.watersheds %>%
+  filter(uniqueID == "GRO_Yukon") %>%
+  st_cast("POLYGON") %>%
+  dplyr::mutate(rowId = seq_along(uniqueID))
+gro.explore
+plot(gro.explore["rowId"])
 
 # Save out shapefile
 st_write(obj = gro.watersheds, dsn = "watershed-shapefiles/GRO_watersheds.shp", delete_layer = T)
@@ -759,7 +773,7 @@ arc.site.ids <- arc.spatial %>%
                   no = '') )
 
 # Check that it worked
-dplyr::select(arc.site.ids, uniqueID, intersection, Name, geometry)
+dplyr::select(arc.site.ids, uniqueID, intersection, Name)
 
 # Make an exploratory plot
 plot(arc.actual["Name"], main = "Arctic LTER Sites", axes = T, reset = F, lab = c(3, 3, 3))
@@ -992,6 +1006,7 @@ krr.final$geometry
 # Make it a polygon (rather than multipolygon)
 krr.actual <- krr.final %>%
   st_cast("POLYGON")
+## This one doesn't duplicate the shapes so the conversion is okay
 
 # Check structure again
 str(krr.actual)
@@ -1049,7 +1064,7 @@ nwt.sheds <- sf::st_read('watershed-shapefiles/NWT_watersheds.shp')
 sagehen.sheds <- sf::st_read('watershed-shapefiles/Sagehen_watersheds.shp')
 umr.sheds <- sf::st_read('watershed-shapefiles/UMR_watersheds.shp')
 
-# Check what kind of geometry each of them has (they should all be "POLYGON")
+# Check what kind of geometry each of them has (it may not matter but good to know)
 str(and.sheds)
 str(arc.sheds)
 str(gro.sheds) # multipolygon
@@ -1058,28 +1073,28 @@ str(krr.sheds)
 str(lmp.sheds)
 str(luq.sheds)
 # str(mcm.sheds)
-str(nwt.sheds)
+str(nwt.sheds) # multipolygon
 str(sagehen.sheds)
 str(umr.sheds) # multipolygon
 
-# Simplify all non-polygons into simple polygons
-gro.sheds.fix <- gro.sheds %>%
-  sf::st_cast("POLYGON")
-umr.sheds.fix <- umr.sheds %>%
-  sf::st_cast("POLYGON")
-
 # Combine them into a single shapefile
 ## Same process as combining separate watersheds within LTER as shown earlier
-silica.sheds <- rbind(and.sheds, arc.sheds, gro.sheds.fix, hbr.sheds,
+silica.sheds <- rbind(and.sheds, arc.sheds, gro.sheds, hbr.sheds,
                       krr.sheds, lmp.sheds, luq.sheds, #mcm.sheds,
-                      nwt.sheds, sagehen.sheds, umr.sheds.fix)
+                      nwt.sheds, sagehen.sheds, umr.sheds)
 
 # Check the structure
 str(silica.sheds)
 
+# Check that no duplication of features occurred
+length(silica.sheds$uniqueID) == length(unique(silica.sheds$uniqueID))
+plyr::count(silica.sheds$uniqueID) %>%
+  filter(freq > 1)
+
 # It should include all uniqueIDs
 setdiff(unique(sites$uniqueID), unique(silica.sheds$uniqueID))
   ## "character(0)" means all are included
+
 # And should not include any uniqueIDs that aren't in the 'sites' data object
 setdiff(unique(silica.sheds$uniqueID), unique(sites$uniqueID))
   ## "character(0)" means no unexpected values/typos
@@ -1111,12 +1126,38 @@ rm(list = setdiff(ls(), c('path', 'sites.raw', 'sites', 'sites.spatial')))
 
 # Silica Synthesis - Save Tidy 'Sites' Object -------------------------------
 
+# Read in final silica shapefile to do some final manipulations
+silica.final <- sf::st_read("watershed-shapefiles/SilicaSynthesis_allWatersheds.shp")
 
+# Before we are done, let's compute the area of the watersheds
+## We can then compare that to the original area (provided by PIs in the raw csv)
+area_obj <- silica.final %>%
+  # Calculate area (automatically does this within each polygon)
+  dplyr::mutate(area_m2 = units::drop_units(st_area(silica.final))) %>%
+  #dplyr::mutate(area_m2 = st_area(silica.final)) %>%
+  # Convert it to km2
+  dplyr::mutate(area_km2 = (area_m2 * 1e-6))
 
+# Check it
+head(area_obj)
+
+# Attach it to the site object
+sites.final <- sites %>%
+  dplyr::mutate(
+    drainSqKm_calculated = area_obj$area_km2[match(sites$uniqueID, area_obj$uniqueID)],
+    # and calculate the difference
+    drainSqKm_diff = round((drainSqKm_original - drainSqKm_calculated), digits = 2),
+    # and express that as a percent
+    drainSqKm_percDiff = round(((drainSqKm_diff / drainSqKm_original) * 100), digits = 1)
+  ) %>%
+  # Relocate it to its proper place
+  dplyr::relocate(drainSqKm_calculated:drainSqKm_percDiff,
+                  .after = drainSqKm_original)
+
+# Check that worked
+head(sites.final)
 
 # Let's save this version so we don't need to re-make it in future scripts
-write.csv(sites, 'tidy_SilicaSites.csv', row.names = F)
-
-
+write.csv(sites.final, 'tidy_SilicaSites.csv', row.names = F)
 
 # End --------------------------------------------------------------------
