@@ -41,12 +41,11 @@ sites <- sites_raw %>%
     # Make lat/long numeric
     Latitude = as.numeric(Latitude),
     Longitude = as.numeric(Longitude),
-    # Fix a typo with Sagehen's longitude
-    Longitude = ifelse(LTER.x == "Sagehen",
-                       yes = (Longitude * -1),
-                       no = Longitude),
-    # Fix a typo with two sites within the Great Rivers Observatory's longitude
-    Longitude = ifelse(uniqueID == "GRO_Mackenzie" | uniqueID == "GRO_Yukon",
+    # Fix a missing negative for three sites
+    ## We have determined elsewhere that these sites are __ degrees longitude WEST
+    ## Meaning they should be negative for use as coordinates in R
+    Longitude = ifelse(LTER.x == "Sagehen" |
+                         uniqueID == "GRO_Mackenzie" | uniqueID == "GRO_Yukon",
                        yes = (Longitude * -1),
                        no = Longitude),
     # And simplify Sagehen's unique ID
@@ -90,6 +89,9 @@ sites <- sites_raw %>%
       T ~ as.character(LTER) ) ) %>%
   # Move some columns to be more intuitive
   dplyr::select(LTER, stream, uniqueID, Biome1, Biome2, dataSource, dataSourceLink, drainSqKm_original, lat, long)
+
+
+filter(sites, LTER == "Sagehen" | uniqueID == "GRO_Mackenzie" | uniqueID == "GRO_Yukon")
 
 # Examine output
 head(sites)
