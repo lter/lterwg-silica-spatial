@@ -103,56 +103,49 @@ rm(list = setdiff(ls(), c('path', 'sites_raw', 'sites', 'sites_spatial')))
 # Andrews Forest LTER (AND) ----------------------------------------------
 
 # Check what sites are within this LTER
-sites %>%
+and_pts <- sites %>%
   filter(LTER == "AND") %>%
   dplyr::select(uniqueID, lat, long)
 
+and_pts
+
 # AND Process Raw Shapefiles ----------------------------------------------
 
-# Read in each raw shapefile
-## All downloaded from: https://streamstats.usgs.gov/ss/
-and_gsmack <- sf::st_read('watershed-shapefiles/AND_raw-shapefiles/AND_GSMACK/globalwatershed.shp')
-and_gsws02 <- sf::st_read('watershed-shapefiles/AND_raw-shapefiles/AND_GSWS02/globalwatershed.shp')
-and_gsws06 <- sf::st_read('watershed-shapefiles/AND_raw-shapefiles/AND_GSWS06/globalwatershed.shp')
-and_gsws07 <- sf::st_read('watershed-shapefiles/AND_raw-shapefiles/AND_GSWS07/globalwatershed.shp')
-and_gsws08 <- sf::st_read('watershed-shapefiles/AND_raw-shapefiles/AND_GSWS08/globalwatershed.shp')
-and_gsws09 <- sf::st_read('watershed-shapefiles/AND_raw-shapefiles/AND_GSWS09/globalwatershed.shp')
-and_gsws10 <- sf::st_read('watershed-shapefiles/AND_raw-shapefiles/AND_GSWS10/globalwatershed.shp')
+# Create an empty list to store the raw shapefiles in
+shed_list <- list()
 
-# Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
-and_gsmack_v2 <- and_gsmack %>%
-  mutate(uniqueID = "AND_GSMACK") %>%
-  dplyr::select(-Name)
-and_gsws02_v2 <- and_gsws02 %>%
-  mutate(uniqueID = "AND_GSWS02") %>%
-  dplyr::select(-Name)
-and_gsws06_v2 <- and_gsws06 %>%
-  mutate(uniqueID = "AND_GSWS06") %>%
-  dplyr::select(-Name)
-and_gsws07_v2 <- and_gsws07 %>%
-  mutate(uniqueID = "AND_GSWS07") %>%
-  dplyr::select(-Name)
-and_gsws08_v2 <- and_gsws08 %>%
-  mutate(uniqueID = "AND_GSWS08") %>%
-  dplyr::select(-Name)
-and_gsws09_v2 <- and_gsws09 %>%
-  mutate(uniqueID = "AND_GSWS09") %>%
-  dplyr::select(-Name)
-and_gsws10_v2 <- and_gsws10 %>%
-  mutate(uniqueID = "AND_GSWS10") %>%
-  dplyr::select(-Name)
+# And create a counter (we'll need it in the for loop for reading data)
+j <- 1
 
-# Combine them
-and_all_watersheds <- rbind(and_gsmack_v2, and_gsws02_v2, and_gsws06_v2,
-                            and_gsws07_v2, and_gsws08_v2, and_gsws09_v2,
-                            and_gsws10_v2)
+# Read in the shapefiles via for loop
+for (stream in and_pts$uniqueID) {
+  
+  # Grab each shapefile (the `str_sub` bit slices out the LTER's name)
+  shed <- sf::st_read(paste0('watershed-shapefiles/', str_sub(stream, 1, 3), '_raw-shapefiles/', stream, '/globalwatershed.shp'))
+  
+  # For the files from StreamStats this is all the processing that we need to do
+  shed_v2 <- shed %>%
+    # Add the uniqueID explicitly to its watershed
+    mutate(uniqueID = stream) %>%
+    # Strip out the default name
+    dplyr::select(-Name)
+  
+  # Add the fixed file into a list at the jth position
+  shed_list[[j]] <- shed_v2
+  
+  # Advance the counter by 1
+  j <- j + 1 }
+
+# Collapse the list via rbind
+and_all_watersheds = do.call(rbind, shed_list)
+
+# Check it
 str(and_all_watersheds)
 
 # AND Final Checks & Export ----------------------------------------------
 
 # Make the relevant subset of the sites object explicitly spatial
-and_spatial <- sites %>%
-  filter(LTER == "AND") %>%
+and_spatial <- and_pts %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326)
 
 # Check that it looks right
@@ -189,64 +182,43 @@ rm(list = setdiff(ls(), c('path', 'sites_raw', 'sites', 'sites_spatial')))
 
 # Hubbard Brook LTER (HBR) ---------------------------------------------
 # Check what sites are within this LTER
-sites %>%
+hbr_pts <- sites %>%
   filter(LTER == "HBR") %>%
   dplyr::select(uniqueID, lat, long)
 
+hbr_pts
+
 # HBR Process Raw Shapefiles ----------------------------------------------
 
-# Read in each raw shapefile
-## All downloaded from: https://streamstats.usgs.gov/ss/
-hbr_ws1 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws1/globalwatershed.shp')
-hbr_ws2 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws2/globalwatershed.shp')
-hbr_ws3 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws3/globalwatershed.shp')
-hbr_ws4 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws4/globalwatershed.shp')
-hbr_ws5 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws5/globalwatershed.shp')
-hbr_ws6 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws6/globalwatershed.shp')
-hbr_ws7 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws7/globalwatershed.shp')
-hbr_ws8 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws8/globalwatershed.shp')
-hbr_ws9 <- sf::st_read('watershed-shapefiles/HBR_raw-shapefiles/HBR_ws9/globalwatershed.shp')
+# Create an empty list and a counter for the for loop
+shed_list <- list()
+j <- 1
 
-# Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
-hbr_ws1_v2 <- hbr_ws1 %>%
-  mutate(uniqueID = "HBR_ws1") %>%
-  dplyr::select(-Name)
-hbr_ws2_v2 <- hbr_ws2 %>%
-  mutate(uniqueID = "HBR_ws2") %>%
-  dplyr::select(-Name)
-hbr_ws3_v2 <- hbr_ws3 %>%
-  mutate(uniqueID = "HBR_ws3") %>%
-  dplyr::select(-Name)
-hbr_ws4_v2 <- hbr_ws4 %>%
-  mutate(uniqueID = "HBR_ws4") %>%
-  dplyr::select(-Name)
-hbr_ws5_v2 <- hbr_ws5 %>%
-  mutate(uniqueID = "HBR_ws5") %>%
-  dplyr::select(-Name)
-hbr_ws6_v2 <- hbr_ws6 %>%
-  mutate(uniqueID = "HBR_ws6") %>%
-  dplyr::select(-Name)
-hbr_ws7_v2 <- hbr_ws7 %>%
-  mutate(uniqueID = "HBR_ws7") %>%
-  dplyr::select(-Name)
-hbr_ws8_v2 <- hbr_ws8 %>%
-  mutate(uniqueID = "HBR_ws8") %>%
-  dplyr::select(-Name)
-hbr_ws9_v2 <- hbr_ws9 %>%
-  mutate(uniqueID = "HBR_ws9") %>%
-  dplyr::select(-Name)
+# Read in the shapefiles via for loop
+for (stream in hbr_pts$uniqueID) {
+  
+  # Grab each shapefile
+  shed <- sf::st_read(paste0('watershed-shapefiles/', str_sub(stream, 1, 3), '_raw-shapefiles/', stream, '/globalwatershed.shp'))
+  
+  # Ready the raw file for combination
+  shed_v2 <- shed %>%
+    mutate(uniqueID = stream) %>%
+    dplyr::select(-Name)
+  
+  # Add the fixed file into a list at the jth position
+  shed_list[[j]] <- shed_v2
+  
+  # Advance the counter
+  j <- j + 1 }
 
-# Combine them
-hbr_all_watersheds <- rbind(hbr_ws1_v2, hbr_ws2_v2, hbr_ws3_v2,
-                            hbr_ws4_v2, hbr_ws5_v2, hbr_ws6_v2,
-                            hbr_ws7_v2, hbr_ws8_v2, hbr_ws9_v2)
+# Collapse the list
+hbr_all_watersheds = do.call(rbind, shed_list)
 str(hbr_all_watersheds)
 
 # HBR Final Checks & Export ----------------------------------------------
 
 # Make the relevant subset of the sites object explicitly spatial
-hbr_spatial <- sites %>%
-  filter(LTER == "HBR") %>%
+hbr_spatial <- hbr_pts %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326)
 
 # Check that it looks right
@@ -283,94 +255,42 @@ rm(list = setdiff(ls(), c('path', 'sites_raw', 'sites', 'sites_spatial')))
 
 # Upper Mississippi River (UMR) ---------------------------------------------
 # Check what sites are within this LTER
-sites %>%
+umr_pts <- sites %>%
   filter(LTER == "UMR") %>%
   dplyr::select(uniqueID, lat, long)
+umr_pts
 
 # UMR Process Raw Shapefiles ----------------------------------------------
 
-# Read in each raw shapefile
-## All downloaded from: https://streamstats.usgs.gov/ss/
-umr_I080.2M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_I080.2M/globalwatershed.shp')
-umr_SG16.2C <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_SG16.2C/globalwatershed.shp')
-umr_CH00.1M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_CH00.1M/globalwatershed.shp')
-umr_CN00.1M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_CN00.1M/globalwatershed.shp')
-umr_CU11.6M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_CU11.6M/globalwatershed.shp')
+# Create an empty list and a counter for the for loop
+shed_list <- list()
+j <- 1
 
-umr_LM00.5M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_LM00.5M/globalwatershed.shp')
-umr_M078.0B <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_M078.0B/globalwatershed.shp')
-umr_M556.4A <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_M556.4A/globalwatershed.shp')
-umr_M701.1B <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_M701.1B/globalwatershed.shp')
-umr_M764.3A <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_M764.3A/globalwatershed.shp')
+# Read in the shapefiles via for loop
+for (stream in umr_pts$uniqueID) {
+  
+  # Grab each shapefile
+  shed <- sf::st_read(paste0('watershed-shapefiles/', str_sub(stream, 1, 3), '_raw-shapefiles/', stream, '/globalwatershed.shp'))
+  
+  # Ready the raw file for combination
+  shed_v2 <- shed %>%
+    mutate(uniqueID = stream) %>%
+    dplyr::select(-Name)
+  
+  # Add the fixed file into a list at the jth position
+  shed_list[[j]] <- shed_v2
+  
+  # Advance the counter
+  j <- j + 1 }
 
-umr_M786.2C <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_M786.2C/globalwatershed.shp')
-umr_MQ02.1M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_MQ02.1M/globalwatershed.shp')
-umr_WP02.6M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_WP02.6M/globalwatershed.shp')
-umr_BK01.0M <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_BK01.0M/globalwatershed.shp')
-umr_M241.4K <- sf::st_read('watershed-shapefiles/UMR_raw-shapefiles/UMR_M241.4K/globalwatershed.shp')
-
-# Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
-umr_I080.2M_v2 <- umr_I080.2M %>%
-  mutate(uniqueID = "UMR_I080.2M") %>%
-  dplyr::select(-Name)
-umr_SG16.2C_v2 <- umr_SG16.2C %>%
-  mutate(uniqueID = "UMR_SG16.2C") %>%
-  dplyr::select(-Name)
-umr_CH00.1M_v2 <- umr_CH00.1M %>%
-  mutate(uniqueID = "UMR_CH00.1M") %>%
-  dplyr::select(-Name)
-umr_CN00.1M_v2 <- umr_CN00.1M %>%
-  mutate(uniqueID = "UMR_CN00.1M") %>%
-  dplyr::select(-Name)
-umr_CU11.6M_v2 <- umr_CU11.6M %>%
-  mutate(uniqueID = "UMR_CU11.6M") %>%
-  dplyr::select(-Name)
-
-umr_LM00.5M_v2 <- umr_LM00.5M %>%
-  mutate(uniqueID = "UMR_LM00.5M") %>%
-  dplyr::select(-Name)
-umr_M078.0B_v2 <- umr_M078.0B %>%
-  mutate(uniqueID = "UMR_M078.0B") %>%
-  dplyr::select(-Name)
-umr_M556.4A_v2 <- umr_M556.4A %>%
-  mutate(uniqueID = "UMR_M556.4A") %>%
-  dplyr::select(-Name)
-umr_M701.1B_v2 <- umr_M701.1B %>%
-  mutate(uniqueID = "UMR_M701.1B") %>%
-  dplyr::select(-Name)
-umr_M764.3A_v2 <- umr_M764.3A %>%
-  mutate(uniqueID = "UMR_M764.3A") %>%
-  dplyr::select(-Name)
-
-umr_M786.2C_v2 <- umr_M786.2C %>%
-  mutate(uniqueID = "UMR_M786.2C") %>%
-  dplyr::select(-Name)
-umr_MQ02.1M_v2 <- umr_MQ02.1M %>%
-  mutate(uniqueID = "UMR_MQ02.1M") %>%
-  dplyr::select(-Name)
-umr_WP02.6M_v2 <- umr_WP02.6M %>%
-  mutate(uniqueID = "UMR_WP02.6M") %>%
-  dplyr::select(-Name)
-umr_BK01.0M_v2 <- umr_BK01.0M %>%
-  mutate(uniqueID = "UMR_BK01.0M") %>%
-  dplyr::select(-Name)
-umr_M241.4K_v2 <- umr_M241.4K %>%
-  mutate(uniqueID = "UMR_M241.4K") %>%
-  dplyr::select(-Name)
-
-# Combine them
-umr_all_watersheds <- rbind(umr_I080.2M_v2, umr_SG16.2C_v2, umr_CH00.1M_v2,
-                            umr_CN00.1M_v2, umr_CU11.6M_v2, umr_LM00.5M_v2,
-                            umr_M078.0B_v2, umr_M556.4A_v2, umr_M701.1B_v2, 
-                            umr_M764.3A_v2, umr_M786.2C_v2, umr_MQ02.1M_v2,
-                            umr_WP02.6M_v2, umr_BK01.0M_v2, umr_M241.4K_v2)
+# Collapse the list
+umr_all_watersheds = do.call(rbind, shed_list)
 str(umr_all_watersheds)
 
 # UMR Final Checks & Export ----------------------------------------------
 
 # Make the relevant subset of the sites object explicitly spatial
-umr_spatial <- sites %>%
-  filter(LTER == "UMR") %>%
+umr_spatial <- umr_pts %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326)
 
 # Check that it looks right
@@ -408,32 +328,43 @@ rm(list = setdiff(ls(), c('path', 'sites_raw', 'sites', 'sites_spatial')))
 
 # Lamprey River (LMP) --------------------------------------------------------
 # Check what sites are within this location (technically not an LTER)
-sites %>%
+lmp_pts <- sites %>%
   filter(LTER == "LMP") %>%
   dplyr::select(uniqueID, lat, long)
+lmp_pts
 
 # LMP Process Raw Shapefiles -------------------------------------------------
 
-# Read in needed raw shapefile(s)
-## Downloaded from: https://streamstats.usgs.gov/ss/
-lmp_73 <- sf::st_read('watershed-shapefiles/LMP_raw-shapefiles/LMP_LMP73/globalwatershed.shp')
+# Create an empty list and a counter for the for loop
+shed_list <- list()
+j <- 1
 
-# Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
-lmp_73_v2 <- lmp_73 %>%
-  mutate(uniqueID = "LMP_LMP73") %>%
-  dplyr::select(-Name)
+# Read in the shapefiles via for loop
+for (stream in lmp_pts$uniqueID) {
+  
+  # Grab each shapefile
+  shed <- sf::st_read(paste0('watershed-shapefiles/', str_sub(stream, 1, 3), '_raw-shapefiles/', stream, '/globalwatershed.shp'))
+  
+  # Ready the raw file for combination
+  shed_v2 <- shed %>%
+    mutate(uniqueID = stream) %>%
+    dplyr::select(-Name)
+  
+  # Add the fixed file into a list at the jth position
+  shed_list[[j]] <- shed_v2
+  
+  # Advance the counter
+  j <- j + 1 }
 
-# For consistency, make this a new object with a different name
-lmp_all_watersheds <- lmp_73_v2
-
-# Check it
+# Collapse the list
+lmp_all_watersheds = do.call(rbind, shed_list)
 str(lmp_all_watersheds)
+## This LTER has only a single stream so the for loop is maybe overkill but still better to have a standard mode of reading in objects
 
 # LMP Final Checks & Export --------------------------------------------------
 
 # Make the relevant subset of the sites object explicitly spatial
-lmp_spatial <- sites %>%
-  filter(LTER == "LMP") %>%
+lmp_spatial <- lmp_pts %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326)
 
 # Check that it looks right
@@ -470,51 +401,42 @@ rm(list = setdiff(ls(), c('path', 'sites_raw', 'sites', 'sites_spatial')))
 
 # Niwot Ridge LTER (NWT) -----------------------------------------------------
 # Check what sites are within this LTER
-sites %>%
+nwt_pts <- sites %>%
   filter(LTER == "NWT") %>%
   dplyr::select(uniqueID, lat, long)
+nwt_pts
 
 # NWT Process Raw Shapefiles ----------------------------------------------
 
-# Read in needed raw shapefile(s)
-## Downloaded from: https://streamstats.usgs.gov/ss/
-nwt_albion <- sf::st_read('watershed-shapefiles/NWT_raw-shapefiles/NWT_ALBION/globalwatershed.shp')
-nwt_martin <- sf::st_read('watershed-shapefiles/NWT_raw-shapefiles/NWT_MARTINELLI/globalwatershed.shp')
-nwt_saddle <- sf::st_read('watershed-shapefiles/NWT_raw-shapefiles/NWT_SADDLE-STREAM-007/globalwatershed.shp')
+# Create an empty list and a counter for the for loop
+shed_list <- list()
+j <- 1
 
-# Saddle polygon is reading as a multipolygon because of pixels touching each other only on the corners (see bottom of shape)
-str(nwt_saddle)
-nwt_explore <- nwt_saddle %>%
-  # Note in the warning that st_cast() creates duplicate geometries
-  sf::st_cast("POLYGON") %>%
-  # Add a column for row to account for these diffs
-  dplyr::mutate(rowId = seq_along(Name))
+# Read in the shapefiles via for loop
+for (stream in nwt_pts$uniqueID) {
+  
+  # Grab each shapefile
+  shed <- sf::st_read(paste0('watershed-shapefiles/', str_sub(stream, 1, 3), '_raw-shapefiles/', stream, '/globalwatershed.shp'))
+  
+  # Ready the raw file for combination
+  shed_v2 <- shed %>%
+    mutate(uniqueID = stream) %>%
+    dplyr::select(-Name)
+  
+  # Add the fixed file into a list at the jth position
+  shed_list[[j]] <- shed_v2
+  
+  # Advance the counter
+  j <- j + 1 }
 
-# Plot for exploratory purposes
-plot(nwt_explore["rowId"], axes = T, lab = c(2, 2, 3))
-nwt_explore
-## Not clear if we *need* it to be a polygon so let's leave that alone for now
-
-# Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
-nwt_albion_v2 <- nwt_albion %>%
-  mutate(uniqueID = "NWT_ALBION") %>%
-  dplyr::select(-Name)
-nwt_martin_v2 <- nwt_martin %>%
-  mutate(uniqueID = "NWT_MARTINELLI") %>%
-  dplyr::select(-Name)
-nwt_saddle_v2 <- nwt_saddle %>%
-  mutate(uniqueID = "NWT_SADDLE-STREAM-007") %>%
-  dplyr::select(-Name)
-
-# Combine them
-nwt_all_watersheds <- rbind(nwt_albion_v2, nwt_martin_v2, nwt_saddle_v2)
+# Collapse the list
+nwt_all_watersheds = do.call(rbind, shed_list)
 str(nwt_all_watersheds)
 
 # NWT Final Checks & Export ----------------------------------------------
 
 # Make the relevant subset of the sites object explicitly spatial
-nwt_spatial <- sites %>%
-  filter(LTER == "NWT") %>%
+nwt_spatial <- nwt_pts %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326)
 
 # Check that it looks right
@@ -536,7 +458,8 @@ nwt_shapes <- nwt_all_watersheds %>%
   ungroup()
 
 # Make an exploratory graph to see if everything looks okay
-plot(nwt_shapes["uniqueID"], main = "Niwot Ridge LTER Sites", axes = T, reset = F, lab = c(3, 1, 3))
+plot(nwt_shapes["uniqueID"], main = "Niwot Ridge LTER Sites", axes = T, reset = F, lab = c(3, 1, 3), col = rgb(1,0,0, 0.5))
+  ## Had to sacrifice unique colors to get transparency (one of the little sheds printed "beneath" the large one and was invisible)
 plot(nwt_spatial["uniqueID"], axes = T, pch = 18, col = 'black', add = T)
 ## Little jagged ones may be an issue down the line but they look prima facie reasonable
 
@@ -552,32 +475,42 @@ rm(list = setdiff(ls(), c('path', 'sites_raw', 'sites', 'sites_spatial')))
 
 # Sagehen -------------------------------------------------------------------
 # Check what sites are within this LTER
-sites %>%
+sagehen_pts <- sites %>%
   filter(LTER == "Sagehen") %>%
   dplyr::select(uniqueID, lat, long)
+sagehen_pts
 
 # Sagehen Process Raw Shapefiles ----------------------------------------------
 
-# Read in needed raw shapefile(s)
-## Downloaded from: https://streamstats.usgs.gov/ss/
-sagehen <- sf::st_read('watershed-shapefiles/Sagehen_raw-shapefiles/Sagehen/globalwatershed.shp')
+# Create an empty list and a counter for the for loop
+shed_list <- list()
+j <- 1
 
-# Add the uniqueID the shape corresponds to and remove any unneeded layers in the polygon
-sagehen_v2 <- sagehen %>%
-  mutate(uniqueID = "Sagehen") %>%
-  dplyr::select(-Name)
+# Read in the shapefiles via for loop
+for (stream in sagehen_pts$uniqueID) {
+  
+  # Grab each shapefile
+  shed <- sf::st_read(paste0('watershed-shapefiles/', stream, '_raw-shapefiles/', stream, '/globalwatershed.shp'))
+  
+  # Ready the raw file for combination
+  shed_v2 <- shed %>%
+    mutate(uniqueID = stream) %>%
+    dplyr::select(-Name)
+  
+  # Add the fixed file into a list at the jth position
+  shed_list[[j]] <- shed_v2
+  
+  # Advance the counter
+  j <- j + 1 }
 
-# For consistency, call it a new name
-sagehen_all_watersheds <- sagehen_v2
-
-# Examine
+# Collapse the list
+sagehen_all_watersheds = do.call(rbind, shed_list)
 str(sagehen_all_watersheds)
 
 # Sagehen Final Checks & Export ----------------------------------------------
 
 # Make the relevant subset of the sites object explicitly spatial
-sagehen_spatial <- sites %>%
-  filter(LTER == "Sagehen") %>%
+sagehen_spatial <- sagehen_pts %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326)
 
 # Check that it looks right
@@ -808,53 +741,41 @@ rm(list = setdiff(ls(), c('path', 'sites_raw', 'sites', 'sites_spatial')))
 ## Data link: https://data.usgs.gov/datacatalog/data/USGS:596ce15ae4b0d1f9f061686e
 
 # Check which stream sites are in this LTER
-sites %>%
+luq_pts <- sites %>%
   filter(LTER == "LUQ") %>%
   dplyr::select(uniqueID, lat, long)
+luq_pts
 
 # LUQ Process Raw Shapefiles ----------------------------------------------
+# Create an empty list and a counter for the for loop
+shed_list <- list()
+j <- 1
 
-# Read in each raw shapefile
-## All downloaded from: https://streamstats.usgs.gov/ss/
-luq_mpr <- sf::st_read('watershed-shapefiles/LUQ_raw-shapefiles/LUQ_MPR/globalwatershed.shp')
-luq_q1 <- sf::st_read('watershed-shapefiles/LUQ_raw-shapefiles/LUQ_Q1/globalwatershed.shp')
-# Note that Q2 and Q3 have identical lat/longs so use the same shapefile
-# Until clarification can be gotten from PIs anyway
-luq_q2 <- sf::st_read('watershed-shapefiles/LUQ_raw-shapefiles/LUQ_Q2/globalwatershed.shp')
-luq_q3 <- sf::st_read('watershed-shapefiles/LUQ_raw-shapefiles/LUQ_Q3/globalwatershed.shp')
-luq_qs <- sf::st_read('watershed-shapefiles/LUQ_raw-shapefiles/LUQ_QS/globalwatershed.shp')
-luq_ri <- sf::st_read('watershed-shapefiles/LUQ_raw-shapefiles/LUQ_RI/globalwatershed.shp')
+# Read in the shapefiles via for loop
+for (stream in luq_pts$uniqueID) {
+  
+  # Grab each shapefile
+  shed <- sf::st_read(paste0('watershed-shapefiles/', str_sub(stream, 1, 3), '_raw-shapefiles/', stream, '/globalwatershed.shp'))
+  
+  # Ready the raw file for combination
+  shed_v2 <- shed %>%
+    mutate(uniqueID = stream) %>%
+    dplyr::select(-Name)
+  
+  # Add the fixed file into a list at the jth position
+  shed_list[[j]] <- shed_v2
+  
+  # Advance the counter
+  j <- j + 1 }
 
-# Add the uniqueID the shape corresponds to LUQ remove any unneeded layers in the polygon
-luq_mpr_v2 <- luq_mpr %>%
-  mutate(uniqueID = "LUQ_MPR") %>%
-  dplyr::select(-Name)
-luq_q1_v2 <- luq_q1 %>%
-  mutate(uniqueID = "LUQ_Q1") %>%
-  dplyr::select(-Name)
-luq_q2_v2 <- luq_q2 %>%
-  mutate(uniqueID = "LUQ_Q2") %>%
-  dplyr::select(-Name)
-luq_q3_v2 <- luq_q3 %>%
-  mutate(uniqueID = "LUQ_Q3") %>%
-  dplyr::select(-Name)
-luq_qs_v2 <- luq_qs %>%
-  mutate(uniqueID = "LUQ_QS") %>%
-  dplyr::select(-Name)
-luq_ri_v2 <- luq_ri %>%
-  mutate(uniqueID = "LUQ_RI") %>%
-  dplyr::select(-Name)
-
-# Combine them
-luq_all_watersheds <- rbind(luq_mpr_v2, luq_q1_v2, luq_q2_v2,
-                            luq_q3_v2, luq_qs_v2, luq_ri_v2)
+# Collapse the list
+luq_all_watersheds = do.call(rbind, shed_list)
 str(luq_all_watersheds)
 
 # LUQ Final Checks & Export ----------------------------------------------
 
 # Make the relevant subset of the sites object explicitly spatial
-luq_spatial <- sites %>%
-  filter(LTER == "LUQ") %>%
+luq_spatial <- luq_pts %>%
   st_as_sf(coords = c('long', 'lat'), crs = 4326)
 
 # Check that it looks right
