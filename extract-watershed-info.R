@@ -46,31 +46,32 @@ str(sheds)
 # Lithology Pre-Processing ---------------------------------------------------
 
 # Pull in the raw lithology data
-rocks.raw <- stars::read_stars("extracted-data/raw-lithology-data/glim_wgs84_0point5deg.txt.asc")
+rocks_raw <- stars::read_stars("extracted-data/raw-lithology-data/glim_wgs84_0point5deg.txt.asc")
 
 # Convert it to an sf object
-rocks.sf <- sf::st_as_sf(rocks.raw)
+rocks_sf <- sf::st_as_sf(rocks_raw)
 
 # Examine it
-str(rocks.sf)
-rocks.sf$geometry
-st_crs(rocks.sf)
+str(rocks_sf)
+rocks_sf$geometry
+st_crs(rocks_sf)
   ## CRS is missing!
 
 # Prepare the lithology dataset for extraction
-rocks.actual <- rocks.sf %>%
+rocks_actual <- rocks_sf %>%
   # Because the structure call shows that it is WGS84 we can set the NA without fear
   sf::st_set_crs(value = 4326) %>%
   # Name the data column more descriptively
-  dplyr::rename(rock.code = glim_wgs84_0point5deg.txt.asc)
+  dplyr::rename(rock_code = glim_wgs84_0point5deg.txt.asc)
 
 # Check it now
-str(rocks.actual)
-st_crs(rocks.actual)
+str(rocks_actual)
+st_crs(rocks_actual)
   ## Looks good!
 
 # Plot just to make sure they seem to be stacking correctly
-plot(rocks.actual["rock.code"], main = "All Lithology Information", axes = T, reset = F)
+plot(rocks_actual["rock_code"], main = "All Lithology Information", axes = T, reset = F)
+## Note that plotting the global lithology takes a minute
 plot(sheds["LTER"], axes = T, add = T)
   ## Looks about right!
 
@@ -80,133 +81,133 @@ sf::sf_use_s2(use_s2 = F)
 # Lithology Extraction ------------------------------------------------------
 
 # Strip out the lithology data from within our watershed polygons
-rocky.sheds <- sheds %>%
+rocky_sheds <- sheds %>%
   # Identify intersections between watersheds and rocks
   ## Note this line takes a minute
-  st_intersection(rocks.actual)
+  st_intersection(rocks_actual)
 
 # Plot it for exploratory purposes
-plot(rocky.sheds["rock.code"], main = "Lithology Extraction", axes = T)
+plot(rocky_sheds["rock_code"], main = "Lithology Extraction", axes = T)
 ## If you use the "Zoom" button you'll see there are colors in there
 ## In the plotting pane you can only see the edges of all the cells
 
 # Lithology Summarization ---------------------------------------------------
 
 # Bring in the index tying rock code integers with rock abbreviations
-rock.index.raw <- read.table(file = "extracted-data/raw-lithology-data/Classnames.txt",
+rock_index_raw <- read.table(file = "extracted-data/raw-lithology-data/Classnames.txt",
                              header = T, sep = ';')
 
 # Fix this index to make it more usable
-rock.index <- rock.index.raw %>%
+rock_index <- rock_index_raw %>%
   # Rename the most important columns
-  dplyr::rename(rock.code = OBJECTID,
-                rock.abbrev = xx) %>%
+  dplyr::rename(rock_code = OBJECTID,
+                rock_abbrev = xx) %>%
   # And get a more descriptive version of each of the rock types
   dplyr::mutate(
-    rock.type = case_when(
+    rock_type = case_when(
       # Abbreviations found here:
       # https://www.clisap.de/fileadmin/B-Research/IA/IA5/LITHOMAP/
-      rock.abbrev == 'su' ~ 'unconsolidated_sediments',
-      rock.abbrev == 'ss' ~ 'siliciclastic_sedimentary_rocks',
-      rock.abbrev == 'sm' ~ 'mixed_sedimentary_rocks',
-      rock.abbrev == 'py' ~ 'pyroclastic',
-      rock.abbrev == 'sc' ~ 'carbonate_sedimentary_rocks',
-      rock.abbrev == 'ev' ~ 'evaporites',
-      rock.abbrev == 'mt' ~ 'metamorphic_rocks',
-      rock.abbrev == 'pa' ~ 'acid_plutonic_rocks',
-      rock.abbrev == 'pi' ~ 'intermediate_plutonic_rocks',
-      rock.abbrev == 'pb' ~ 'basic_plutonic_rocks',
-      rock.abbrev == 'va' ~ 'acid_volcanic_rocks',
-      rock.abbrev == 'vi' ~ 'intermediate_volcanic_rocks',
-      rock.abbrev == 'vb' ~ 'basic_volcanic_rocks',
-      rock.abbrev == 'ig' ~ 'ice_and_glacers',
-      rock.abbrev == 'wb' ~ 'water_bodies',
-      rock.abbrev == 'nd' ~ 'no_data',
-      TRUE ~ as.character(rock.abbrev) ) )
+      rock_abbrev == 'su' ~ 'unconsolidated_sediments',
+      rock_abbrev == 'ss' ~ 'siliciclastic_sedimentary_rocks',
+      rock_abbrev == 'sm' ~ 'mixed_sedimentary_rocks',
+      rock_abbrev == 'py' ~ 'pyroclastic',
+      rock_abbrev == 'sc' ~ 'carbonate_sedimentary_rocks',
+      rock_abbrev == 'ev' ~ 'evaporites',
+      rock_abbrev == 'mt' ~ 'metamorphic_rocks',
+      rock_abbrev == 'pa' ~ 'acid_plutonic_rocks',
+      rock_abbrev == 'pi' ~ 'intermediate_plutonic_rocks',
+      rock_abbrev == 'pb' ~ 'basic_plutonic_rocks',
+      rock_abbrev == 'va' ~ 'acid_volcanic_rocks',
+      rock_abbrev == 'vi' ~ 'intermediate_volcanic_rocks',
+      rock_abbrev == 'vb' ~ 'basic_volcanic_rocks',
+      rock_abbrev == 'ig' ~ 'ice_and_glacers',
+      rock_abbrev == 'wb' ~ 'water_bodies',
+      rock_abbrev == 'nd' ~ 'no_data',
+      TRUE ~ as.character(rock_abbrev) ) )
 
 # Check that worked
-head(rock.index)  
-sort(unique(rock.index$rock.type))
+head(rock_index)  
+sort(unique(rock_index$rock_type))
   
 # Process the extracted lithology information into a dataframe
-rock.data.v1 <- rocky.sheds %>%
+rock_data_v1 <- rocky_sheds %>%
   # Remove the truly spatial part of the data to make it easier to work with
   st_drop_geometry() %>%
   # Bring over the rock names from the index
   dplyr::mutate(
-    rock.type = rock.index$rock.type[match(rock.code, rock.index$rock.code)]
+    rock_type = rock_index$rock_type[match(rock_code, rock_index$rock_code)]
   ) %>%
   # Remove the now-unneeded code column
-  dplyr::select(-rock.code) %>%
+  dplyr::select(-rock_code) %>%
   # Group by LTER and uniqueID
-  group_by(LTER, uniqueID, rock.type) %>%
+  group_by(LTER, uniqueID, rock_type) %>%
   # Count the instances within each rock type
   ## 0.5° degree pixels within the watershed that contain this rock type
-  summarise(rock.totals = n()) %>%
+  summarise(rock_totals = n()) %>%
   # Make it a dataframe (to avoid a list of tibbles)
   as.data.frame() %>%
   # Remove the 'no_data' cells
-  filter(rock.type != "no_data") %>%
+  filter(rock_type != "no_data") %>%
   # # Group by LTER and uniqueID
   group_by(LTER, uniqueID) %>%
   # We'll want the totals as a percent (total pixels is not very intuitive)
-  dplyr::mutate( total.shed.pixels = sum(rock.totals) ) %>%
+  dplyr::mutate( total_shed_pixels = sum(rock_totals) ) %>%
   # Again, return a dataframe, not a tibble
   as.data.frame() %>%
   # Now ungroup
   ungroup() %>%
   # And calculate the percent of total for each row
-  dplyr::mutate( perc.total = ((rock.totals / total.shed.pixels) * 100) ) %>%
+  dplyr::mutate( perc_total = ((rock_totals / total_shed_pixels) * 100) ) %>%
   # Remove the two pixel count columns
-  dplyr::select(-rock.totals, -total.shed.pixels)
+  dplyr::select(-rock_totals, -total_shed_pixels)
 
 # Now we want to split into two directions
 ## First: get a version where each rock type is its own column
-rock.data.wide <- rock.data.v1 %>%
+rock_data_wide <- rock_data_v1 %>%
   # Pivot to wide format
   pivot_wider(id_cols = c(LTER, uniqueID),
-              names_from = rock.type,
-              values_from = perc.total)
+              names_from = rock_type,
+              values_from = perc_total)
 
 ## Second: get the *majority* rock for each watershed
-rock.data.major <- rock.data.v1 %>%
+rock_data_major <- rock_data_v1 %>%
   # Filter to only max of each rock type per uniqueID & LTER
   group_by(LTER, uniqueID) %>%
-  filter(perc.total == max(perc.total)) %>%
+  filter(perc_total == max(perc_total)) %>%
   # Remove the percent total
-  dplyr::select(-perc.total) %>%
+  dplyr::select(-perc_total) %>%
   # Get the columns into wide format where the column name and value are both whatever the dominant rock was
   pivot_wider(id_cols = c(LTER, uniqueID),
-              names_from = rock.type,
-              values_from = rock.type) %>%
+              names_from = rock_type,
+              values_from = rock_type) %>%
   # Paste all the non-NAs (i.e., the dominant rocks) into a single column
   unite(col = major_rock, -LTER:-uniqueID, na.rm = T, sep = "; ")
 
 # Now attach the major rocks to the wide format one
-rock.data.actual <- rock.data.wide %>%
-  left_join(rock.data.major, by = c("LTER", "uniqueID")) %>%
+rock_data_actual <- rock_data_wide %>%
+  left_join(rock_data_major, by = c("LTER", "uniqueID")) %>%
   relocate(major_rock, .after = uniqueID)
 
 # Examine
-str(rock.data.actual)
-head(rock.data.actual)
-names(rock.data.actual)
+str(rock_data_actual)
+head(rock_data_actual)
+names(rock_data_actual)
 
 # Lithology Export -----------------------------------------------------------
 
 # Let's get ready to export
-rock.export <- sites %>%
-  left_join(rock.data.actual, by = c("LTER", "uniqueID"))
+rock_export <- sites %>%
+  left_join(rock_data_actual, by = c("LTER", "uniqueID"))
 
 # Check it out
-head(rock.export)
-names(rock.export)
+head(rock_export)
+names(rock_export)
 
 # Export both this and the shapefile that contains the cropped rock data
-write.csv(x = rock.export,
+write.csv(x = rock_export,
           file = "extracted-data/SilicaSites_withLithologyData.csv",
           row.names = F)
-st_write(obj = rocky.sheds,
+st_write(obj = rocky_sheds,
          dsn = "extracted-data/SilicaSynthesis_LithologyPolygons.shp",
          delete_layer = T)
 
