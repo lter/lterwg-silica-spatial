@@ -90,9 +90,6 @@ sites <- sites_raw %>%
   # Move some columns to be more intuitive
   dplyr::select(LTER, stream, uniqueID, Biome1, Biome2, dataSource, dataSourceLink, drainSqKm_original, lat, long)
 
-
-filter(sites, LTER == "Sagehen" | uniqueID == "GRO_Mackenzie" | uniqueID == "GRO_Yukon")
-
 # Examine output
 head(sites)
 
