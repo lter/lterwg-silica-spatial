@@ -39,6 +39,9 @@ sheds <- sf::st_read('watershed-shapefiles/SilicaSynthesis_allWatersheds.shp')
 # Check that out
 str(sheds)
 
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
 # Lithology Data ------------------------------------------------------------
 
 # Ultimately want both lithology and land cover but we'll start with rocks
@@ -211,5 +214,81 @@ st_write(obj = rocky_sheds,
          dsn = "extracted-data/SilicaSynthesis_LithologyPolygons.shp",
          delete_layer = T)
 
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+# Land Cover Data ------------------------------------------------------------
+
+# Now it is time for land cover processing
+
+# Land Cover (LC) Pre-Processing ---------------------------------------------
+
+# Read them in (note this takes awhile because they are *big* files)
+pr_raw <- stars::read_stars("extracted-data/raw-landcover-data/NLCD-PuertoRico-2001/pr_landcover_wimperv_10-28-08_se5.img")
+## These files are actually so large that we can't really work with them so we need to subset them before continuing
+
+# We'll create a bounding box from each LTER and cut out the general area we'll want
+luq_bbox <- sites %>%
+  # Take the LTER of interest (PR is where we're starting so that's LUQ)
+  filter(LTER == "LUQ") %>%
+  # Make it spatial but adopt the CRS of the raw land cover data
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
+  # Get a buffer around it for big drainage basins (`dist` in arc degrees)
+  st_buffer(dist = 750) %>%
+  # Transform the data to use the same CRS as the raw land cover data
+  st_transform(crs = st_crs(pr_raw)) %>%
+  # Get the bounding box that contains those points
+  st_bbox()
+
+# Subset the correct chunk
+pr_crop <- pr_raw[luq_bbox]
+
+# Make a plot to test whether the crop worked
+plot(pr_crop, axes = T)
+
+# Make this small subset into an sf object and transform the crs system
+pr_sf <- pr_crop %>%
+  sf::st_as_sf() %>%
+  # Transform into WGS84
+  st_transform(crs = 4326)
+
+# Plot it again
+plot(pr_sf, axes = T, lab = c(3, 3, 3), main = "PR NLCD Data", reset = F)
+plot(filter(sheds, LTER == "LUQ")["LTER"], add = T)
+  ## They overlap!
+
+
+# The 'pr_sf' object is still too large :(
+
+## This attempt nearly crashed R but didn't technically error out
+# luq_lc_shed <- sheds %>%
+#   filter(LTER == "LUQ") %>%
+#   st_intersection(pr_sf)
+  
+## These two are hacky and weird but neither works
+# luq_lc_shed <- pr_sf[filter(sheds, LTER == "LUQ")$geometry]
+# luq_lc_shed <- pr_sf[filter(sheds, LTER == "LUQ")]
+
+
+# And plot it
+plot(luq_lc_shed, axes = T, lab = c(3, 3, 3), main = "LUQ NLCD Data")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 # End ------------------------------------------------------------------------
