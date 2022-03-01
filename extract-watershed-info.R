@@ -221,9 +221,13 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 # Now it is time for land cover processing
 
-# Land Cover (LC) Pre-Processing ---------------------------------------------
+# Luquillo (LUQ) Land Cover (LC) Processing ----------------------------------
 
-# Read them in (note this takes awhile because they are *big* files)
+# Subset our global sheds object to just the LUQ watersheds
+luq_shapes <- sheds %>%
+  filter(LTER == "LUQ")
+
+# Read it in (note this takes awhile [~30 sec] because they are *big* files)
 pr_raw <- stars::read_stars("extracted-data/raw-landcover-data/NLCD-PuertoRico-2001/pr_landcover_wimperv_10-28-08_se5.img")
 ## These files are actually so large that we can't really work with them so we need to subset them before continuing
 
@@ -233,12 +237,12 @@ luq_bbox <- sites %>%
   filter(LTER == "LUQ") %>%
   # Make it spatial but adopt the CRS of the raw land cover data
   sf::st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
-  # Get a buffer around it for big drainage basins (`dist` in arc degrees)
-  st_buffer(dist = 750) %>%
   # Transform the data to use the same CRS as the raw land cover data
-  st_transform(crs = st_crs(pr_raw)) %>%
+  sf::st_transform(crs = st_crs(pr_raw)) %>%
+  # Get a buffer around it for big drainage basins (`dist` in arc degrees)
+  sf::st_buffer(dist = 750) %>%
   # Get the bounding box that contains those points
-  st_bbox()
+  sf::st_bbox()
 
 # Subset the correct chunk
 pr_crop <- pr_raw[luq_bbox]
@@ -246,32 +250,106 @@ pr_crop <- pr_raw[luq_bbox]
 # Make a plot to test whether the crop worked
 plot(pr_crop, axes = T)
 
-# Make this small subset into an sf object and transform the crs system
+# Make this small subset into an sf object and transform the CRS system
 pr_sf <- pr_crop %>%
   sf::st_as_sf() %>%
   # Transform into WGS84
-  st_transform(crs = 4326)
+  st_transform(crs = 4326) %>%
+  # Rename the data object
+  dplyr::rename(landcover = pr_landcover_wimperv_10.28.08_se5.img)
 
 # Plot it again
 plot(pr_sf, axes = T, lab = c(3, 3, 3), main = "PR NLCD Data", reset = F)
 plot(filter(sheds, LTER == "LUQ")["LTER"], add = T)
   ## They overlap!
 
+# Make an empty list and counter set at 1
+lc_list <- list()
+j <- 1
 
-# The 'pr_sf' object is still too large :(
-
-## This attempt nearly crashed R but didn't technically error out
-# luq_lc_shed <- sheds %>%
-#   filter(LTER == "LUQ") %>%
-#   st_intersection(pr_sf)
+# This object is so large that we cannot process it as one thing so we'll need to loop through it
+for(cover in unique(pr_sf$landcover)){
   
-## These two are hacky and weird but neither works
-# luq_lc_shed <- pr_sf[filter(sheds, LTER == "LUQ")$geometry]
-# luq_lc_shed <- pr_sf[filter(sheds, LTER == "LUQ")]
+  # Split out one of the cover categories
+  cover_sub <- pr_sf %>%
+    filter(landcover == cover)
+  
+  # Use our watershed to crop out the pixels of this cover category inside one (or more) watersheds
+  cover_shed <- luq_shapes %>%
+    sf::st_intersection(cover_sub)
+  
+  # Add the cropped information into the list at the jth position
+  lc_list[[j]] <- cover_shed
+  
+  # Advance the counter
+  j <- j + 1
+  
+  # Print a success message
+  print(paste0("Category '", cover, "' successfully cropped to watershed boundary"))
+  }
 
+# Collapse the list back into a single object
+luq_lc_shed <- do.call(rbind, lc_list)
+str(luq_lc_shed)
 
-# And plot it
-plot(luq_lc_shed, axes = T, lab = c(3, 3, 3), main = "LUQ NLCD Data")
+# Plot it
+plot(luq_lc_shed["landcover"], axes = T, lab = c(3, 3, 3), main = "LUQ NLCD Data")
+## It worked!
+
+# Process the extracted land cover information into a dataframe
+luq_lc_data_v1 <- luq_lc_shed %>%
+  # Remove the truly spatial part of the data to make it easier to work with
+  st_drop_geometry() %>%
+  # Count instances of each class within unique ID
+  group_by(LTER, uniqueID, landcover) %>%
+  dplyr::summarise(cover_pixel_ct = n()) %>%
+  # Make it a dataframe (to avoid a list of tibbles)
+  as.data.frame() %>%
+  # Group by LTER and uniqueID
+  group_by(LTER, uniqueID) %>%
+  # We'll want the totals as a percent (total pixels is not very intuitive)
+  dplyr::mutate( total_pixels = sum(cover_pixel_ct) ) %>%
+  # Again, return a dataframe, not a tibble
+  as.data.frame() %>%
+  # Now ungroup
+  ungroup() %>%
+  # And calculate the percent of total for each row
+  dplyr::mutate(
+    perc_total = ((cover_pixel_ct / total_pixels) * 100),
+    # While we're here, fix the typo in "Herbaceous"
+    landcover = gsub("Herbaceuous", "Herbaceous", landcover) ) %>%
+  # Remove the two pixel count columns (implicitly)
+  dplyr::select(LTER, uniqueID, landcover, perc_total)
+
+# Now we want to split into two directions
+## First: get a version where each rock type is its own column
+luq_lc_wide <- luq_lc_data_v1 %>%
+  # Pivot to wide format
+  pivot_wider(id_cols = c(LTER, uniqueID),
+              names_from = landcover,
+              values_from = perc_total)
+
+## Second: get the *majority* land cover for each watershed
+luq_lc_major <- luq_lc_data_v1 %>%
+  # Filter to only max of each LC type per uniqueID & LTER
+  group_by(LTER, uniqueID) %>%
+  filter(perc_total == max(perc_total)) %>%
+  # Remove the percent total
+  dplyr::select(-perc_total) %>%
+  # Get the columns into wide format where the column name and value are both whatever the dominant LC was
+  pivot_wider(id_cols = c(LTER, uniqueID),
+              names_from = landcover,
+              values_from = landcover) %>%
+  # Paste all the non-NAs (i.e., the dominant LCs) into a single column
+  unite(col = major_lc, -LTER:-uniqueID, na.rm = T, sep = "; ")
+
+# Now attach the major rocks to the wide format one
+luq_lc_actual <- luq_lc_wide %>%
+  left_join(luq_lc_major, by = c("LTER", "uniqueID")) %>%
+  relocate(major_lc, .after = uniqueID)
+
+# Examine
+head(luq_lc_actual)
 
 
 
