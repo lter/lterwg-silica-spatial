@@ -137,7 +137,7 @@ for (stream in and_pts$uniqueID) {
   j <- j + 1 }
 
 # Collapse the list via rbind
-and_all_watersheds = do.call(rbind, shed_list)
+and_all_watersheds <- do.call(rbind, shed_list)
 
 # Check it
 str(and_all_watersheds)
@@ -212,7 +212,7 @@ for (stream in hbr_pts$uniqueID) {
   j <- j + 1 }
 
 # Collapse the list
-hbr_all_watersheds = do.call(rbind, shed_list)
+hbr_all_watersheds <- do.call(rbind, shed_list)
 str(hbr_all_watersheds)
 
 # HBR Final Checks & Export ----------------------------------------------
@@ -284,7 +284,7 @@ for (stream in umr_pts$uniqueID) {
   j <- j + 1 }
 
 # Collapse the list
-umr_all_watersheds = do.call(rbind, shed_list)
+umr_all_watersheds <- do.call(rbind, shed_list)
 str(umr_all_watersheds)
 
 # UMR Final Checks & Export ----------------------------------------------
@@ -307,7 +307,7 @@ umr_shapes <- umr_all_watersheds %>%
   # Close holes
   nngeo::st_remove_holes() %>%
   # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  dplyr::rename(geometry = geom) %>%
+  #dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
@@ -357,7 +357,7 @@ for (stream in lmp_pts$uniqueID) {
   j <- j + 1 }
 
 # Collapse the list
-lmp_all_watersheds = do.call(rbind, shed_list)
+lmp_all_watersheds <- do.call(rbind, shed_list)
 str(lmp_all_watersheds)
 ## This LTER has only a single stream so the for loop is maybe overkill but still better to have a standard mode of reading in objects
 
@@ -430,7 +430,7 @@ for (stream in nwt_pts$uniqueID) {
   j <- j + 1 }
 
 # Collapse the list
-nwt_all_watersheds = do.call(rbind, shed_list)
+nwt_all_watersheds <- do.call(rbind, shed_list)
 str(nwt_all_watersheds)
 
 # NWT Final Checks & Export ----------------------------------------------
@@ -504,7 +504,7 @@ for (stream in sagehen_pts$uniqueID) {
   j <- j + 1 }
 
 # Collapse the list
-sagehen_all_watersheds = do.call(rbind, shed_list)
+sagehen_all_watersheds <- do.call(rbind, shed_list)
 str(sagehen_all_watersheds)
 
 # Sagehen Final Checks & Export ----------------------------------------------
@@ -769,7 +769,7 @@ for (stream in luq_pts$uniqueID) {
   j <- j + 1 }
 
 # Collapse the list
-luq_all_watersheds = do.call(rbind, shed_list)
+luq_all_watersheds <- do.call(rbind, shed_list)
 str(luq_all_watersheds)
 
 # LUQ Final Checks & Export ----------------------------------------------
