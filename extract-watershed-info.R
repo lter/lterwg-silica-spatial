@@ -12,7 +12,7 @@
 # Housekeeping ---------------------------------------------------------------
 
 # Read needed libraries
-library(tidyverse); library(sf); library(stars); library(terra)
+library(tidyverse); library(sf); library(stars); library(terra); library(exactextractr)
 
 # Clear environment
 rm(list = ls())
@@ -209,7 +209,7 @@ names(rock_export)
 # Export both this and the shapefile that contains the cropped rock data
 write.csv(x = rock_export,
           file = "extracted-data/SilicaSites_withLithologyData.csv",
-          row.names = F)
+          na = '', row.names = F)
 st_write(obj = rocky_sheds,
          dsn = "extracted-data/SilicaSynthesis_LithologyPolygons.shp",
          delete_layer = T)
@@ -219,198 +219,127 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 # Land Cover Data ------------------------------------------------------------
 
-# Now it is time for land cover processing
+# NLCD Raster CRS Transformation ---------------------------------------------
 
-# Luquillo (LUQ) Land Cover (LC) Processing ----------------------------------
+# The NLCD rasters I downloaded manually do not match the CRS of the watershed shapefiles we want to align them to.
+# Transforming the rasters is straightforward but computationally intensive so we will do all of those here and write out the transformed raster so that our "actual" landcover processing can just read in a raster of landcover data with the correct CRS
+# Rather than needing to slow the code down every time we re-run the script to re-do the same transformation
 
-# Subset our global sheds object to just the LUQ watersheds
-luq_shapes <- sheds %>%
-  filter(LTER == "LUQ")
+# All of the following lines were run once and then commented out but retained for posterity.
 
-# Read it in (note this takes awhile [~30 sec] because it is a *big* file)
-pr_raw <- stars::read_stars("extracted-data/raw-landcover-data/NLCD-PuertoRico-2001/pr_landcover_wimperv_10-28-08_se5.img")
-## These files are actually so large that we can't really work with them so we need to subset them before continuing
+# Process Alaska Data (for ARC)
+## 1) Read in 'raw' (i.e., direct from NLCD) file
+# ak_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-Alaska-2016/NLCD_2016_Land_Cover_AK_20200724.img")
 
-# We'll create a bounding box from each LTER and cut out the general area we'll want
-luq_bbox <- sites %>%
-  # Take the LTER of interest (PR is where we're starting so that's LUQ)
-  filter(LTER == "LUQ") %>%
-  # Make it spatial but adopt the CRS of the raw land cover data
-  sf::st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
-  # Transform the data to use the same CRS as the raw land cover data
-  sf::st_transform(crs = st_crs(pr_raw)) %>%
-  # Get a buffer around it for big drainage basins (`dist` in arc degrees)
-  sf::st_buffer(dist = 750) %>%
-  # Get the bounding box that contains those points
-  sf::st_bbox()
+## 2) Transform that raster to use the same CRS as the sf object
+# ak_fix <- terra::project(x = ak_raw, y = "epsg:4326")
+### Note that this takes 4-5 minutes
 
-# Subset the correct chunk
-pr_crop <- pr_raw[luq_bbox]
+## 3) Save that modified raster for subsequent use
+# terra::writeRaster(x = ak_fix, filename = "extracted-data/raw-landcover-data/NLCD-Alaska-2016/NLCD_Alaska_2016_WGS84.tiff", overwrite = T)
 
-# Make a plot to test whether the crop worked
-plot(pr_crop, axes = T)
+# Process Puerto Rico (LUQ) file
+# pr_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-PuertoRico-2001/pr_landcover_wimperv_10-28-08_se5.img")
+# pr_fix <- terra::project(x = pr_raw, y = "epsg:4326")
+# terra::writeRaster(pr_fix, "extracted-data/raw-landcover-data/NLCD-PuertoRico-2001/NLCD_PuertoRico_2001_WGS84.tiff")
 
-# Make this small subset into an sf object
-pr_sf <- pr_crop %>%
-  sf::st_as_sf() %>%
-  # Transform into WGS84
-  st_transform(crs = 4326) %>%
-  # Rename the data object
-  dplyr::rename(landcover = pr_landcover_wimperv_10.28.08_se5.img)
+# All subsequent watersheds I had to draw a bounding box around the rough area and download the data so they have a different starting format
 
-# Plot it again
-plot(pr_sf, axes = T, lab = c(3, 3, 3), main = "PR NLCD Data", reset = F)
-plot(filter(sheds, LTER == "LUQ")["LTER"], add = T)
-  ## They overlap completely!
+# Process AND bounding box raster
+# and_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-AND-bbox-2019/NLCD_2019_Land_Cover_L48_20210604_x0irNUwuHgiIccFQinR7.tiff")
+# and_fix <- terra::project(x = and_raw, y = "epsg:4326")
+# terra::writeRaster(and_fix, "extracted-data/raw-landcover-data/NLCD-AND-bbox-2019/NLCD_AND_bbox_2019_WGS84.tiff")
 
-# Make an empty list and counter set at 1
-lc_list <- list()
-j <- 1
+# Process HBR bounding box raster
+# hbr_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-HBR-bbox-2019/NLCD_2019_Land_Cover_L48_20210604_S7g5pOegmluHZTosWHHI.tiff")
+# hbr_fix <- terra::project(x = hbr_raw, y = "epsg:4326")
+# terra::writeRaster(hbr_fix, "extracted-data/raw-landcover-data/NLCD-HBR-bbox-2019/NLCD_HBR_bbox_2019_WGS84.tiff")
 
-# This object is so large that we cannot process it as one thing so we'll need to loop through it (note that we need to chop forest out to make the loop run)
-# Note that this loop takes 14 minutes *on NCEAS' server* so DO NOT ATTEMPT TO RUN on a laptop (or do and buckle in for a long wait)
-for(cover in unique(pr_sf$landcover)){
-  
-  # Print a start message
-  print(paste0("Category '", cover, "' processing begun at ", Sys.time()))
-  
-  # Split out one of the cover categories
-  cover_sub <- pr_sf %>%
-    filter(landcover == cover)
-  
-  # Use our watershed to crop out the pixels of this cover category inside one (or more) watersheds
-  cover_shed <- luq_shapes %>%
-    st_intersection(cover_sub)
-  
-  # Add the cropped information into the list at the jth position
-  lc_list[[j]] <- cover_shed
-  
-  # Advance the counter
-  j <- j + 1
-  
-  # Print a success message
-  print(paste0("Category '", cover, "' successfully cropped at ", Sys.time()))
-  }
+# Process LMP bounding box
+# lmp_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-LMP-bbox-2019/NLCD_2019_Land_Cover_L48_20210604_cnpqFMtiv6oDEXEplYtp.tiff")
+# lmp_fix <- terra::project(x = lmp_raw, y = "epsg:4326")
+# terra::writeRaster(lmp_fix, "extracted-data/raw-landcover-data/NLCD-LMP-bbox-2019/NLCD_LMP_bbox_2019_WGS84.tiff")
 
-# Collapse the list back into a single object
-luq_lc_shed <- do.call(rbind, lc_list)
-str(luq_lc_shed)
+# Process KRR bbox
+# krr_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-KRR-bbox-2019/NLCD_2019_Land_Cover_L48_20210604_kpuczfO6eW1kYSWAeVXR.tiff")
+# krr_fix <- terra::project(x = krr_raw, y = "epsg:4326")
+# terra::writeRaster(krr_fix, "extracted-data/raw-landcover-data/NLCD-KRR-bbox-2019/NLCD_KRR_bbox_2019_WGS84.tiff")
 
-# Plot it
-plot(luq_lc_shed["landcover"], axes = T, lab = c(3, 3, 3), main = "LUQ NLCD Data")
-## It worked!
+# Process NWT bbox
+# nwt_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-NWT-bbox-2019/NLCD_2019_Land_Cover_L48_20210604_2JttWZu6aZxdthItgKGn.tiff")
+# nwt_fix <- terra::project(x = nwt_raw, y = "epsg:4326")
+# terra::writeRaster(nwt_fix, "extracted-data/raw-landcover-data/NLCD-NWT-bbox-2019/NLCD_NWT_bbox_2019_WGS84.tiff")
 
-# Process the extracted land cover information into a dataframe
-luq_lc_data_v1 <- luq_lc_shed %>%
-  # Remove the truly spatial part of the data to make it easier to work with
-  st_drop_geometry() %>%
-  # Count instances of each class within unique ID
-  group_by(LTER, uniqueID, landcover) %>%
-  dplyr::summarise(cover_pixel_ct = n()) %>%
-  # Make it a dataframe (to avoid a list of tibbles)
-  as.data.frame() %>%
-  # Group by LTER and uniqueID
-  group_by(LTER, uniqueID) %>%
-  # We'll want the totals as a percent (total pixels is not very intuitive)
-  dplyr::mutate( total_pixels = sum(cover_pixel_ct) ) %>%
-  # Again, return a dataframe, not a tibble
-  as.data.frame() %>%
-  # Now ungroup
-  ungroup() %>%
-  # And calculate the percent of total for each row
-  dplyr::mutate(
-    perc_total = ((cover_pixel_ct / total_pixels) * 100),
-    # While we're here, fix the typo in "Herbaceous"
-    landcover = gsub("Herbaceuous", "Herbaceous", landcover) ) %>%
-  # Remove the two pixel count columns (implicitly)
-  dplyr::select(LTER, uniqueID, landcover, perc_total)
+# Process Sagehen bbox
+# sagehen_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-Sagehen-bbox-2019/NLCD_2019_Land_Cover_L48_20210604_YLhilf2MDvLnp2ilVR3P.tiff")
+# sagehen_fix <- terra::project(x = sagehen_raw, y = "epsg:4326")
+# terra::writeRaster(sagehen_fix, "extracted-data/raw-landcover-data/NLCD-Sagehen-bbox-2019/NLCD_Sagehen_bbox_2019_WGS84.tiff")
 
-# Now we want to split into two directions
-## First: get a version where each rock type is its own column
-luq_lc_wide <- luq_lc_data_v1 %>%
-  # Pivot to wide format
-  pivot_wider(id_cols = c(LTER, uniqueID),
-              names_from = landcover,
-              values_from = perc_total)
-
-## Second: get the *majority* land cover for each watershed
-luq_lc_major <- luq_lc_data_v1 %>%
-  # Filter to only max of each LC type per uniqueID & LTER
-  group_by(LTER, uniqueID) %>%
-  filter(perc_total == max(perc_total)) %>%
-  # Remove the percent total
-  dplyr::select(-perc_total) %>%
-  # Get the columns into wide format where the column name and value are both whatever the dominant LC was
-  pivot_wider(id_cols = c(LTER, uniqueID),
-              names_from = landcover,
-              values_from = landcover) %>%
-  # Paste all the non-NAs (i.e., the dominant LCs) into a single column
-  unite(col = major_lc, -LTER:-uniqueID, na.rm = T, sep = "; ")
-
-# Now attach the major rocks to the wide format one
-luq_lc_actual <- luq_lc_wide %>%
-  left_join(luq_lc_major, by = c("LTER", "uniqueID")) %>%
-  relocate(major_lc, .after = uniqueID)
-
-# Examine
-head(luq_lc_actual)
-# Looks great!
-
-# Export both for later use
-write.csv(x = luq_lc_actual, file = "extracted-data/raw-landcover-data/LUQ-tidy-landcover/LUQ_withLandCover.csv", row.names = F)
-st_write(obj = luq_lc_shed, dsn = "extracted-data/raw-landcover-data/LUQ-tidy-landcover/LUQ_LandcoverPolygons.shp", delete_layer = T)
+# Process UMR bbox
+## This one differs because it was too large to draw a bbox for via the web app so we need to use the whole USA raster
+# usa_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-ContinentalUS-2019/NLCD_ContinentalUS_2019_WGS84.tiff")
+## Crop the US to a bounding box (xmin, xmax, ymin, ymax)
+# usa_crop <- terra::crop(usa_raw, terra::ext(-97.5, -87, 37, 49))
+## Convert it to our preferred CRS
+# umr_fix <- terra::project(x = usa_crop, y = "epsg:4326")
+## Write it
+# terra::writeRaster(umr_fix, "extracted-data/raw-landcover-data/NLCD-UMR-bbox-2019/NLCD_UMR_bbox_2019_WGS84.tiff")
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Arctic LTER (ARC) Land Cover (LC) Processing ----------------------------------
+# Luquillo LTER (LUQ) Land Cover (LC) Processing ----------------------------------
 
-# METHOD VARIANT No. 1 --------
+# Prepare an sf object of just this LTER's watershed shapes
+luq_sf <- sheds %>%
+  filter(LTER == "LUQ")
 
-# Prepare a raster of this LTER's watershed shapes
-arc_sf <- sheds %>%
-  # Filter to just this LTER
-  filter(LTER == "ARC")
-
-# Make it a raster
-arc_rast <- terra::vect(arc_sf)
-
-# Read in the raster of a rough (*manually drawn*) bounding box for this LTER
-# ak_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-ARC-bbox-2016/NLCD_2016_Land_Cover_AK_20200724_1UJcf1tMJdCcymwLngFW.tiff")
-ak_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-Alaska-2016/NLCD_2016_Land_Cover_AK_20200724.img")
-
-# Transform the new raster's CRS to match the land cover file
-arc_actual <- terra::project(x = arc_rast, y = ak_raw)
+# Read in the raster
+pr_fix <- terra::rast("extracted-data/raw-landcover-data/NLCD-PuertoRico-2001/NLCD_PuertoRico_2001_WGS84.tiff")
 
 # Make sure CRS are same
-crs(arc_actual)
-crs(ak_raw)
+crs(pr_fix)
+st_crs(luq_sf)
 
 # Plot that to see how it looks
-plot(ak_raw, axes = T, reset = F)
-plot(arc_actual, add = T)
+plot(pr_fix, axes = T, reset = F)
+plot(luq_sf["uniqueID"], add = T)
 
-# Extract data
-arc_extract <- terra::extract(x = ak_raw, y = arc_actual, fun = sum, na.rm = T)
-plot(arc_extract)
+# Extract data from the raster using the sf object
+luq_lc_v1 <- exactextractr::exact_extract(x = pr_fix, y = luq_sf, include_cols = c("LTER", "uniqueID"))
+str(luq_lc_v1)
 
+# That output a list so let's strip it to a dataframe to make it more manageable
+luq_lc_v2 <- do.call(rbind, luq_lc_v1)
 
-# METHOD VARIANT No. 2 --------
+# Process our landcover information
+luq_lc_actual <- luq_lc_v2 %>%
+  # Rename the landcover column
+  rename(nlcd_code = value) %>%
+  # Group by category
+  group_by(LTER, uniqueID, nlcd_code) %>%
+  # Count pixels per code within the watershed
+  summarise(cover_pixel_ct = n()) %>%
+  # Export as dataframe
+  as.data.frame()
 
-# Prepare a raster of this LTER's watershed shapes
+# Check it out
+head(luq_lc_actual)
+
+# Save this out
+write.csv(luq_lc_actual, "extracted-data/raw-landcover-data/NLCD-LUQ-landcover.csv", row.names = F)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+# Arctic LTER (ARC) LC Processing -------------------------------------------
+
+# Prepare an sf object of just this LTER's watershed shapes
 arc_sf <- sheds %>%
-  # Filter to just this LTER
   filter(LTER == "ARC")
 
-# Make it a raster
-arc_rast <- terra::vect(arc_sf)
-
-# Read in the raster of landcover for all of Alaska
-ak_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-Alaska-2016/NLCD_2016_Land_Cover_AK_20200724.img")
-
-# Transform the landcover raster to use the CRS of our watersheds
-## Note that it takes ~ 4 minutes
-ak_fix <- terra::project(x = ak_raw, y = "epsg:4326")
+# Read in the raster
+ak_fix <- terra::rast("extracted-data/raw-landcover-data/NLCD-Alaska-2016/NLCD_Alaska_2016_WGS84.tiff")
 
 # Make sure CRS are same
 crs(ak_fix)
@@ -418,15 +347,91 @@ st_crs(arc_sf)
 
 # Plot that to see how it looks
 plot(ak_fix, axes = T, reset = F)
+## For some reason the conversion made the whole world of blank no-data show up so just ignore that
 plot(arc_sf["uniqueID"], add = T)
 
-# Extract data
-library(exactextractr)
-?exactextractr::exact_extract
-
-arc_lc_v1 <- exactextractr::exact_extract(x = ak_fix, y = arc_sf)
-
+# Extract data from the raster using the sf object
+arc_lc_v1 <- exactextractr::exact_extract(x = ak_fix, y = arc_sf, include_cols = c("LTER", "uniqueID"))
 str(arc_lc_v1)
+
+# That output a list so let's strip it to a dataframe to make it more manageable
+arc_lc_v2 <- do.call(rbind, arc_lc_v1)
+
+# Process our landcover information
+arc_lc_actual <- arc_lc_v2 %>%
+  # Rename the landcover column
+  rename(nlcd_code = value) %>%
+  # Group by category
+  group_by(LTER, uniqueID, nlcd_code) %>%
+  # Count pixels per code within the watershed
+  summarise(cover_pixel_ct = n()) %>%
+  # Export as dataframe
+  as.data.frame()
+
+# Check it out
+head(arc_lc_actual)
+
+# Save this out
+write.csv(arc_lc_actual, "extracted-data/raw-landcover-data/NLCD-ARC-landcover.csv", row.names = F)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+# Continental US* LC Processing --------------------------------------------
+
+# Read in pre-transformed raster
+hbr_bbox <- rast("extracted-data/raw-landcover-data/NLCD-HBR-bbox-2019/NLCD_HBR_bbox_2019_WGS84.tiff")
+
+# Prepare an sf object of just this LTER's watershed shapes
+hbr_sf <- sheds %>%
+  filter(LTER == "HBR")
+
+# # Make sure CRS are same
+crs(hbr_bbox)
+st_crs(hbr_sf)
+
+# Plot that to see how it looks
+plot(hbr_bbox, axes = T, reset = F)
+plot(hbr_sf["uniqueID"], add = T)
+
+# Extract data from the raster using the sf object
+hbr_lc_v1 <- exactextractr::exact_extract(x = hbr_bbox, y = hbr_sf, include_cols = c("LTER", "uniqueID"))
+str(hbr_lc_v1)
+
+# Create a more manageable dataframe from that list
+hbr_lc_v2 <- do.call(rbind, hbr_lc_v1)
+str(hbr_lc_v2)
+
+# Read in legend connecting codes to 'real' categories
+nlcd_index <- read.csv("extracted-data/raw-landcover-data/NLCD_index.csv")
+str(nlcd_index)
+
+# Process our landcover information
+hbr_lc_actual <- hbr_lc_v2 %>%
+  # Rename the landcover column
+  rename(nlcd_code = value) %>%
+  # Attach the NLCD index
+  left_join(nlcd_index, by = "nlcd_code") %>%
+  # Group by category and LTER/uniqueID
+  group_by(LTER, uniqueID, nlcd_category) %>%
+  # Count pixels per code within the watershed
+  summarise(cover_pixel_ct = n()) %>%
+  # Export as dataframe
+  as.data.frame()
+
+# Check it out
+head(hbr_lc_actual)
+
+# Save this out
+write.csv(hbr_lc_actual, "extracted-data/raw-landcover-data/NLCD-HBR-landcover.csv", row.names = F)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+
+
+
+
 
 
 
@@ -436,6 +441,8 @@ str(arc_lc_v1)
 # Now, we will combine these within data type into two global files (one shape, and one dataframe)
 
 # Re-call which objects we need
+# arc_lc <- read.csv("extracted-data/raw-landcover-data/NLCD-ARC-landcover.csv")
+
 ## LUQ dataframe
 # luq_lc_actual
 ## LUQ shapes
