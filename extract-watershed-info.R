@@ -12,7 +12,7 @@
 # Housekeeping ---------------------------------------------------------------
 
 # Read needed libraries
-library(tidyverse); library(sf); library(stars)
+library(tidyverse); library(sf); library(stars); library(terra)
 
 # Clear environment
 rm(list = ls())
@@ -227,7 +227,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 luq_shapes <- sheds %>%
   filter(LTER == "LUQ")
 
-# Read it in (note this takes awhile [~30 sec] because they are *big* files)
+# Read it in (note this takes awhile [~30 sec] because it is a *big* file)
 pr_raw <- stars::read_stars("extracted-data/raw-landcover-data/NLCD-PuertoRico-2001/pr_landcover_wimperv_10-28-08_se5.img")
 ## These files are actually so large that we can't really work with them so we need to subset them before continuing
 
@@ -250,7 +250,7 @@ pr_crop <- pr_raw[luq_bbox]
 # Make a plot to test whether the crop worked
 plot(pr_crop, axes = T)
 
-# Make this small subset into an sf object and transform the CRS system
+# Make this small subset into an sf object
 pr_sf <- pr_crop %>%
   sf::st_as_sf() %>%
   # Transform into WGS84
@@ -261,14 +261,18 @@ pr_sf <- pr_crop %>%
 # Plot it again
 plot(pr_sf, axes = T, lab = c(3, 3, 3), main = "PR NLCD Data", reset = F)
 plot(filter(sheds, LTER == "LUQ")["LTER"], add = T)
-  ## They overlap!
+  ## They overlap completely!
 
 # Make an empty list and counter set at 1
 lc_list <- list()
 j <- 1
 
-# This object is so large that we cannot process it as one thing so we'll need to loop through it
+# This object is so large that we cannot process it as one thing so we'll need to loop through it (note that we need to chop forest out to make the loop run)
+# Note that this loop takes 14 minutes *on NCEAS' server* so DO NOT ATTEMPT TO RUN on a laptop (or do and buckle in for a long wait)
 for(cover in unique(pr_sf$landcover)){
+  
+  # Print a start message
+  print(paste0("Category '", cover, "' processing begun at ", Sys.time()))
   
   # Split out one of the cover categories
   cover_sub <- pr_sf %>%
@@ -276,7 +280,7 @@ for(cover in unique(pr_sf$landcover)){
   
   # Use our watershed to crop out the pixels of this cover category inside one (or more) watersheds
   cover_shed <- luq_shapes %>%
-    sf::st_intersection(cover_sub)
+    st_intersection(cover_sub)
   
   # Add the cropped information into the list at the jth position
   lc_list[[j]] <- cover_shed
@@ -285,7 +289,7 @@ for(cover in unique(pr_sf$landcover)){
   j <- j + 1
   
   # Print a success message
-  print(paste0("Category '", cover, "' successfully cropped to watershed boundary"))
+  print(paste0("Category '", cover, "' successfully cropped at ", Sys.time()))
   }
 
 # Collapse the list back into a single object
@@ -350,8 +354,92 @@ luq_lc_actual <- luq_lc_wide %>%
 
 # Examine
 head(luq_lc_actual)
+# Looks great!
+
+# Export both for later use
+write.csv(x = luq_lc_actual, file = "extracted-data/raw-landcover-data/LUQ-tidy-landcover/LUQ_withLandCover.csv", row.names = F)
+st_write(obj = luq_lc_shed, dsn = "extracted-data/raw-landcover-data/LUQ-tidy-landcover/LUQ_LandcoverPolygons.shp", delete_layer = T)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+# Arctic LTER (ARC) Land Cover (LC) Processing ----------------------------------
+
+# METHOD VARIANT No. 1 --------
+
+# Prepare a raster of this LTER's watershed shapes
+arc_sf <- sheds %>%
+  # Filter to just this LTER
+  filter(LTER == "ARC")
+
+# Make it a raster
+arc_rast <- terra::vect(arc_sf)
+
+# Read in the raster of a rough (*manually drawn*) bounding box for this LTER
+# ak_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-ARC-bbox-2016/NLCD_2016_Land_Cover_AK_20200724_1UJcf1tMJdCcymwLngFW.tiff")
+ak_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-Alaska-2016/NLCD_2016_Land_Cover_AK_20200724.img")
+
+# Transform the new raster's CRS to match the land cover file
+arc_actual <- terra::project(x = arc_rast, y = ak_raw)
+
+# Make sure CRS are same
+crs(arc_actual)
+crs(ak_raw)
+
+# Plot that to see how it looks
+plot(ak_raw, axes = T, reset = F)
+plot(arc_actual, add = T)
+
+# Extract data
+arc_extract <- terra::extract(x = ak_raw, y = arc_actual, fun = sum, na.rm = T)
+plot(arc_extract)
 
 
+# METHOD VARIANT No. 2 --------
+
+# Prepare a raster of this LTER's watershed shapes
+arc_sf <- sheds %>%
+  # Filter to just this LTER
+  filter(LTER == "ARC")
+
+# Make it a raster
+arc_rast <- terra::vect(arc_sf)
+
+# Read in the raster of landcover for all of Alaska
+ak_raw <- terra::rast("extracted-data/raw-landcover-data/NLCD-Alaska-2016/NLCD_2016_Land_Cover_AK_20200724.img")
+
+# Transform the landcover raster to use the CRS of our watersheds
+## Note that it takes ~ 4 minutes
+ak_fix <- terra::project(x = ak_raw, y = "epsg:4326")
+
+# Make sure CRS are same
+crs(ak_fix)
+st_crs(arc_sf)
+
+# Plot that to see how it looks
+plot(ak_fix, axes = T, reset = F)
+plot(arc_sf["uniqueID"], add = T)
+
+# Extract data
+library(exactextractr)
+?exactextractr::exact_extract
+
+arc_lc_v1 <- exactextractr::exact_extract(x = ak_fix, y = arc_sf)
+
+str(arc_lc_v1)
+
+
+
+# Combine LC Data Across Watersheds ----------------------------------
+
+# We have--at this point--successfully grabbed the shapes and summarized dataframes of land cover data from all of our LTERs
+# Now, we will combine these within data type into two global files (one shape, and one dataframe)
+
+# Re-call which objects we need
+## LUQ dataframe
+# luq_lc_actual
+## LUQ shapes
+# str(luq_lc_shed)
 
 
 
