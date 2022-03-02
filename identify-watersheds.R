@@ -59,6 +59,16 @@ sites <- sites_raw %>%
                 lat = Latitude,
                 drainSqKm_original = drainSqKm) %>%
   dplyr::mutate(
+    # And LUQ's Q1 and Q2 have identical lat/longs so we'll need to update that
+    ## Correct coords from 3/2/22 email from Joanna Carey to Nick Lyon
+    lat = as.numeric(ifelse(uniqueID == "LUQ_Q1",
+                            yes = 18.315717280000001, no = lat)),
+    long = as.numeric(ifelse(uniqueID == "LUQ_Q1",
+                             yes = -65.745437745999993, no = long)),
+    lat = as.numeric(ifelse(uniqueID == "LUQ_Q2",
+                            yes = 18.314636985000000, no = lat)),
+    long = as.numeric(ifelse(uniqueID == "LUQ_Q2",
+                             yes = -65.746289848000004, no = long)),
     # Add data source name to sites object
     dataSource = case_when(
       LTER == "AND" ~ "USGS StreamStats App",
@@ -161,8 +171,6 @@ and_shapes <- and_all_watersheds %>%
   group_by(uniqueID) %>%
   # Close holes
   nngeo::st_remove_holes() %>%
-  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
@@ -234,8 +242,6 @@ hbr_shapes <- hbr_all_watersheds %>%
   group_by(uniqueID) %>%
   # Close holes
   nngeo::st_remove_holes() %>%
-  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
@@ -306,8 +312,6 @@ umr_shapes <- umr_all_watersheds %>%
   group_by(uniqueID) %>%
   # Close holes
   nngeo::st_remove_holes() %>%
-  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  #dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
@@ -380,8 +384,6 @@ lmp_shapes <- lmp_all_watersheds %>%
   group_by(uniqueID) %>%
   # Close holes
   nngeo::st_remove_holes() %>%
-  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
@@ -452,8 +454,6 @@ nwt_shapes <- nwt_all_watersheds %>%
   group_by(uniqueID) %>%
   # Close holes
   nngeo::st_remove_holes() %>%
-  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
@@ -526,8 +526,6 @@ sagehen_shapes <- sagehen_all_watersheds %>%
   group_by(uniqueID) %>%
   # Close holes
   nngeo::st_remove_holes() %>%
-  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
@@ -791,8 +789,6 @@ luq_shapes <- luq_all_watersheds %>%
   group_by(uniqueID) %>%
   # Close holes
   nngeo::st_remove_holes() %>%
-  # Fix geometry naming (st_remove_holes change 'geometry' into 'geom')
-  dplyr::rename(geometry = geom) %>%
   # Ungroup
   ungroup()
 
