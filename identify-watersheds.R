@@ -1050,7 +1050,6 @@ silica_final <- sf::st_read("watershed-shapefiles/SilicaSynthesis_allWatersheds.
 area_obj <- silica_final %>%
   # Calculate area (automatically does this within each polygon)
   dplyr::mutate(area_m2 = units::drop_units(st_area(silica_final))) %>%
-  #dplyr::mutate(area_m2 = st_area(silica_final)) %>%
   # Convert it to km2
   dplyr::mutate(area_km2 = (area_m2 * 1e-6))
 
