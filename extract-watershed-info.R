@@ -377,65 +377,73 @@ write.csv(arc_lc_actual, "extracted-data/raw-landcover-data/NLCD-ARC-landcover.c
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Continental US* LC Processing --------------------------------------------
+# Continental US LC Processing --------------------------------------------
+# This includes AND, HBR, KRR, LMP, LUQ, MCM, NWT, Sagehen, & UMR
 
-# Read in pre-transformed raster
-hbr_bbox <- rast("extracted-data/raw-landcover-data/NLCD-HBR-bbox-2019/NLCD_HBR_bbox_2019_WGS84.tiff")
+# Because the process is the same for extracting data for all of our LTERs, let's do it in a for loop 
 
-# Prepare an sf object of just this LTER's watershed shapes
-hbr_sf <- sheds %>%
-  filter(LTER == "HBR")
+# Also, this for loop has a grouped `dplyr::summarize` call so we'll turn off the annoying dialogue that it returns before going into the loop
+options(dplyr.summarise.inform = F)
 
-# # Make sure CRS are same
-crs(hbr_bbox)
-st_crs(hbr_sf)
-
-# Plot that to see how it looks
-plot(hbr_bbox, axes = T, reset = F)
-plot(hbr_sf["uniqueID"], add = T)
-
-# Extract data from the raster using the sf object
-hbr_lc_v1 <- exactextractr::exact_extract(x = hbr_bbox, y = hbr_sf, include_cols = c("LTER", "uniqueID"))
-str(hbr_lc_v1)
-
-# Create a more manageable dataframe from that list
-hbr_lc_v2 <- do.call(rbind, hbr_lc_v1)
-str(hbr_lc_v2)
-
-# Read in legend connecting codes to 'real' categories
-nlcd_index <- read.csv("extracted-data/raw-landcover-data/NLCD_index.csv")
-str(nlcd_index)
-
-# Process our landcover information
-hbr_lc_actual <- hbr_lc_v2 %>%
-  # Rename the landcover column
-  rename(nlcd_code = value) %>%
-  # Attach the NLCD index
-  left_join(nlcd_index, by = "nlcd_code") %>%
-  # Group by category and LTER/uniqueID
-  group_by(LTER, uniqueID, nlcd_category) %>%
-  # Count pixels per code within the watershed
-  summarise(cover_pixel_ct = n()) %>%
-  # Export as dataframe
-  as.data.frame()
-
-# Check it out
-head(hbr_lc_actual)
-
-# Save this out
-write.csv(hbr_lc_actual, "extracted-data/raw-landcover-data/NLCD-HBR-landcover.csv", row.names = F)
+# Now time for the for loop (the `setdiff` is needed to split off the ones that we either already have or will need to process via a different workflow)
+for(lter in setdiff(unique(sites$LTER), c("ARC", "LUQ", "GRO", "MCM"))){
+  
+  # Print a start message (for diagnostic purposes)
+  print(paste0(lter, " processing begun at ", Sys.time()))
+  
+  # Read in the pre-transformed raster
+  bbox <- terra::rast(paste0("extracted-data/raw-landcover-data/NLCD-", lter ,"-bbox-2019/NLCD_", lter, "_bbox_2019_WGS84.tiff"))
+  
+  # Prepare the relevant subset of the sf object of our watersheds
+  sf <- sheds %>%
+    filter(LTER == lter)
+  
+  # Extract data from the raster using the sf object
+  lc_v1 <- exactextractr::exact_extract(x = bbox, y = sf, include_cols = c("LTER", "uniqueID"))
+  
+  # That created a list with one element per watershed in this LTER and we'll want a dataframe
+  lc_v2 <- do.call(rbind, lc_v1)
+  
+  # Now we have a smidge more processing to do before we should export
+  lc_actual <- lc_v2 %>%
+    # Rename the land cover column
+    rename(nlcd_code = value) %>%
+    # Group by code, LTER, and uniqueID
+    group_by(LTER, uniqueID, nlcd_code) %>%
+    # Count pixels per code within the watershed
+    summarise(cover_pixel_ct = n()) %>%
+    # Export as dataframe
+    as.data.frame()
+  
+  # This object is the one we want so save it to the server as a csv
+  write.csv(lc_actual, paste0("extracted-data/raw-landcover-data/NLCD-", lter, "-landcover.csv"), row.names = F)
+  
+  # End with a conclusion message to mirror the start message
+  print(paste0(lter, " processing completed at ", Sys.time()))
+  
+  }
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
+# Great Rivers Observatory (GRO) LC Processing -----------------------------
+# Need to find a source for these data
+
+
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+# McMurdo LTER (MCM) LC Processing -----------------------------
+# Need to find a source for these data
 
 
 
 
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-
-
-# Combine LC Data Across Watersheds ----------------------------------
+# Combine LC Data Across Watersheds ----------------------------------------
 
 # We have--at this point--successfully grabbed the shapes and summarized dataframes of land cover data from all of our LTERs
 # Now, we will combine these within data type into two global files (one shape, and one dataframe)
