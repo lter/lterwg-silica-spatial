@@ -123,7 +123,7 @@ rock_index <- rock_index_raw %>%
       rock_abbrev == 'va' ~ 'acid_volcanic_rocks',
       rock_abbrev == 'vi' ~ 'intermediate_volcanic_rocks',
       rock_abbrev == 'vb' ~ 'basic_volcanic_rocks',
-      rock_abbrev == 'ig' ~ 'ice_and_glacers',
+      rock_abbrev == 'ig' ~ 'ice_and_glaciers',
       rock_abbrev == 'wb' ~ 'water_bodies',
       rock_abbrev == 'nd' ~ 'no_data',
       TRUE ~ as.character(rock_abbrev) ) )
@@ -482,19 +482,22 @@ nlcd_v2 <- nlcd_v1 %>%
   # Count the total pixels and get percent from that
   mutate(
     total_pixels = sum(cover_pixel_ct),
-    perc_cover = round((cover_pixel_ct / total_pixels) * 100, digits = 2)
+    perc_cover = round((cover_pixel_ct / total_pixels) * 100, digits = 2),
+    # Also make the covers lowercase to match the rocks
+    nlcd_category = tolower(nlcd_category)
   ) %>%
+  # Remove NAs
+  filter(!is.na(nlcd_category)) %>%
   # Slim down to only needed columns (drops unspecified cols implicitly)
   select(LTER, uniqueID, nlcd_category, perc_cover)
   
 # Look
 head(nlcd_v2)
+unique(nlcd_v2$nlcd_category)
 
 # As with lithology, we need to process in two directions
 ## Wide format with all percents
 nlcd_wide <- nlcd_v2 %>%
-  # Remove all NAs before pivoting
-  filter(!is.na(perc_cover)) %>%
   pivot_wider(id_cols = c(LTER, uniqueID),
               names_from = nlcd_category,
               values_from = perc_cover)
@@ -538,9 +541,60 @@ write.csv(x = cover_export,
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
+# Lithology and Land Cover Combination --------------------------------------
 
+# With both lithology and land cover data in hand, let's make a single 'one-stop shop' dataframe containing both
 
+# Read in both
+rocks <- read.csv("extracted-data/SilicaSites_withLithologyData.csv")
+cover <- read.csv("extracted-data/SilicaSites_withCoverData.csv")
 
+# Get a vector of shared column names
+shared_cols <- intersect(names(rocks), names(cover))
+shared_cols
+
+# Combine and process the two
+combo <- cover %>%
+  # Left join by shared columns
+  left_join(rocks, by = shared_cols) %>%
+  # Re-order columns
+  relocate(major_rock, .after = major_cover) %>%
+  # We want to fix some column names but its faster to do this via long format
+  pivot_longer(cols = basic_volcanic_rocks:ice_and_glaciers,
+               names_to = "rock_types", values_to = "rocks_perc") %>%
+  # Fix the column names by:
+  mutate(
+    ## Removing "_rocks" from names
+    rock_types = gsub("\\_rocks", "", rock_types),
+    ## Adding prefix "rocks_" to all columns (this will help differentiate between rock and cover data that might otherwise be ambiguous)
+    rock_types = paste0("rocks_", rock_types)
+  ) %>%
+  # Pivot back to wide format
+  pivot_wider(id_cols = -rock_types:-rocks_perc,
+              names_from = rock_types,
+              values_from = rocks_perc) %>%
+  # Now do the same for the cover categories
+  pivot_longer(cols = deciduous_forest:perennial_ice_snow,
+               names_to = "cover_types", values_to = "cover_perc") %>%
+  mutate(cover_types = paste0("cover_", cover_types)) %>%
+  pivot_wider(id_cols = -cover_types:-cover_perc,
+              names_from = cover_types, values_from = cover_perc) %>%
+  # Finally, McMurdo will use expert knowledge rather than extracted information (for now)
+  mutate(major_rock = ifelse(LTER == "MCM", yes = "glacial_drift", no = major_rock),
+         major_cover = ifelse(LTER == "MCM", yes = "barren_land", no = major_cover))
+
+# Check contents
+names(combo)
+
+# Check McMurdo fix
+combo %>%
+  filter(LTER == "MCM") %>%
+  select(uniqueID, major_cover, major_rock)
+  ## Looks great!
+
+# Export this to share with the working group
+write.csv(combo, file = "extracted-data/SilicaSites_allData.csv",
+          na = '', row.names = F)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
