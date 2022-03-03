@@ -445,25 +445,98 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 # Combine LC Data Across Watersheds ----------------------------------------
 
-# We have--at this point--successfully grabbed the shapes and summarized dataframes of land cover data from all of our LTERs
-# Now, we will combine these within data type into two global files (one shape, and one dataframe)
+# We have--at this point--successfully summarized land cover data from most of our LTERs; now we want to combine our LTER-specific csvs into one 'main' variant
 
-# Re-call which objects we need
-# arc_lc <- read.csv("extracted-data/raw-landcover-data/NLCD-ARC-landcover.csv")
+# Set a counter and empty list
+nlcd_list <- list()
+k <- 1
 
-## LUQ dataframe
-# luq_lc_actual
-## LUQ shapes
-# str(luq_lc_shed)
+# Read in the csvs (not for MCM or GRO because we don't have them yet)
+for(lter in setdiff(unique(sites$LTER), c("GRO", "MCM"))){
+  
+  # Grab a csv
+  nlcd_data <- read.csv(paste0("extracted-data/raw-landcover-data/NLCD-", lter, "-landcover.csv"))
+  
+  # Add it to the kth element of our list
+  nlcd_list[[k]] <- nlcd_data
+  
+  # Advance the counter
+  k <- k + 1 }
 
+# Bind these together
+nlcd_v1 <- do.call(dplyr::bind_rows, nlcd_list)
 
+# Check the structure
+str(nlcd_v1)
 
+# Grab the NLCD index that connects integer codes to meaningful categories
+nlcd_index <- read.csv("extracted-data/raw-landcover-data/NLCD_index.csv")
+head(nlcd_index)
 
+# Process our version 1 into something more usable
+nlcd_v2 <- nlcd_v1 %>%
+  # Grab all of the contents of the index
+  left_join(nlcd_index, by = "nlcd_code") %>%
+  # Group by LTER and uniqueID
+  group_by(LTER, uniqueID) %>%
+  # Count the total pixels and get percent from that
+  mutate(
+    total_pixels = sum(cover_pixel_ct),
+    perc_cover = round((cover_pixel_ct / total_pixels) * 100, digits = 2)
+  ) %>%
+  # Slim down to only needed columns (drops unspecified cols implicitly)
+  select(LTER, uniqueID, nlcd_category, perc_cover)
+  
+# Look
+head(nlcd_v2)
 
+# As with lithology, we need to process in two directions
+## Wide format with all percents
+nlcd_wide <- nlcd_v2 %>%
+  # Remove all NAs before pivoting
+  filter(!is.na(perc_cover)) %>%
+  pivot_wider(id_cols = c(LTER, uniqueID),
+              names_from = nlcd_category,
+              values_from = perc_cover)
 
+## Second: get the *majority* cover for each watershed
+nlcd_major <- nlcd_v2 %>%
+  # Filter to only max of each cover type per uniqueID & LTER
+  group_by(LTER, uniqueID) %>%
+  filter(perc_cover == max(perc_cover)) %>%
+  # Remove the percent total
+  dplyr::select(-perc_cover) %>%
+  # Get the columns into wide format where the column name and value are both whatever the dominant cover was
+  pivot_wider(id_cols = c(LTER, uniqueID),
+              names_from = nlcd_category,
+              values_from = nlcd_category) %>%
+  # Paste all the non-NAs (i.e., the dominant rocks) into a single column
+  unite(col = major_cover, -LTER:-uniqueID, na.rm = T, sep = "; ")
 
+# Now attach the major rocks to the wide format one
+nlcd_actual <- nlcd_wide %>%
+  left_join(nlcd_major, by = c("LTER", "uniqueID")) %>%
+  relocate(major_cover, .after = uniqueID)
 
+# Examine
+head(nlcd_actual)
 
+# LC Export -----------------------------------------------------------------
+
+# Let's get ready to export
+cover_export <- sites %>%
+  left_join(nlcd_actual, by = c("LTER", "uniqueID"))
+
+# Check it out
+head(cover_export)
+
+# Export this csv
+write.csv(x = cover_export,
+          file = "extracted-data/SilicaSites_withCoverData.csv",
+          na = '', row.names = F)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 
 
