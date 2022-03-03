@@ -126,7 +126,9 @@ rock_index <- rock_index_raw %>%
       rock_abbrev == 'ig' ~ 'ice_and_glaciers',
       rock_abbrev == 'wb' ~ 'water_bodies',
       rock_abbrev == 'nd' ~ 'no_data',
-      TRUE ~ as.character(rock_abbrev) ) )
+      TRUE ~ as.character(rock_abbrev) ) ) %>%
+  # Remove unneeded columns
+  select(rock_code, rock_type)
 
 # Check that worked
 head(rock_index)  
@@ -137,9 +139,7 @@ rock_data_v1 <- rocky_sheds %>%
   # Remove the truly spatial part of the data to make it easier to work with
   st_drop_geometry() %>%
   # Bring over the rock names from the index
-  dplyr::mutate(
-    rock_type = rock_index$rock_type[match(rock_code, rock_index$rock_code)]
-  ) %>%
+  left_join(rock_index, by = "rock_code") %>%
   # Remove the now-unneeded code column
   dplyr::select(-rock_code) %>%
   # Group by LTER and uniqueID
@@ -306,20 +306,27 @@ plot(pr_fix, axes = T, reset = F)
 plot(luq_sf["uniqueID"], add = T)
 
 # Extract data from the raster using the sf object
-luq_lc_v1 <- exactextractr::exact_extract(x = pr_fix, y = luq_sf, include_cols = c("LTER", "uniqueID"))
-str(luq_lc_v1)
+luq_lc_list <- exactextractr::exact_extract(x = pr_fix, y = luq_sf, include_cols = c("LTER", "uniqueID"))
+str(luq_lc_list)
 
-# That output a list so let's strip it to a dataframe to make it more manageable
-luq_lc_v2 <- do.call(rbind, luq_lc_v1)
+# Grab the NLCD index that connects integer codes to meaningful categories
+nlcd_index <- read.csv("extracted-data/raw-landcover-data/NLCD_index.csv")
+head(nlcd_index)
 
 # Process our landcover information
-luq_lc_actual <- luq_lc_v2 %>%
-  # Rename the landcover column
+luq_lc_actual <- luq_lc_list %>%
+  # Make a dataframe from the selected list columns
+  map_dfr(select, c(LTER, uniqueID, value)) %>%
+  # Rename the land cover column
   rename(nlcd_code = value) %>%
-  # Group by category
+  # Group by code, LTER, and uniqueID
   group_by(LTER, uniqueID, nlcd_code) %>%
   # Count pixels per code within the watershed
   summarise(cover_pixel_ct = n()) %>%
+  # Grab all of the contents of the index
+  left_join(nlcd_index, by = "nlcd_code") %>%
+  # Keep only columns that we want
+  select(LTER, uniqueID, nlcd_category, cover_pixel_ct) %>%
   # Export as dataframe
   as.data.frame()
 
@@ -351,20 +358,27 @@ plot(ak_fix, axes = T, reset = F)
 plot(arc_sf["uniqueID"], add = T)
 
 # Extract data from the raster using the sf object
-arc_lc_v1 <- exactextractr::exact_extract(x = ak_fix, y = arc_sf, include_cols = c("LTER", "uniqueID"))
-str(arc_lc_v1)
+arc_lc_list <- exactextractr::exact_extract(x = ak_fix, y = arc_sf, include_cols = c("LTER", "uniqueID"))
+str(arc_lc_list)
 
-# That output a list so let's strip it to a dataframe to make it more manageable
-arc_lc_v2 <- do.call(rbind, arc_lc_v1)
+# Grab the NLCD index that connects integer codes to meaningful categories
+nlcd_index <- read.csv("extracted-data/raw-landcover-data/NLCD_index.csv")
+head(nlcd_index)
 
 # Process our landcover information
-arc_lc_actual <- arc_lc_v2 %>%
-  # Rename the landcover column
+arc_lc_actual <- arc_lc_list %>%
+  # Make a dataframe from the selected list columns
+  map_dfr(select, c(LTER, uniqueID, value)) %>%
+  # Rename the land cover column
   rename(nlcd_code = value) %>%
-  # Group by category
+  # Group by code, LTER, and uniqueID
   group_by(LTER, uniqueID, nlcd_code) %>%
   # Count pixels per code within the watershed
   summarise(cover_pixel_ct = n()) %>%
+  # Grab all of the contents of the index
+  left_join(nlcd_index, by = "nlcd_code") %>%
+  # Keep only columns that we want
+  select(LTER, uniqueID, nlcd_category, cover_pixel_ct) %>%
   # Export as dataframe
   as.data.frame()
 
@@ -385,6 +399,10 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # Also, this for loop has a grouped `dplyr::summarize` call so we'll turn off the annoying dialogue that it returns before going into the loop
 options(dplyr.summarise.inform = F)
 
+# Grab the NLCD index that connects integer codes to meaningful categories
+nlcd_index <- read.csv("extracted-data/raw-landcover-data/NLCD_index.csv")
+head(nlcd_index)
+
 # Now time for the for loop (the `setdiff` is needed to split off the ones that we either already have or will need to process via a different workflow)
 for(lter in setdiff(unique(sites$LTER), c("ARC", "LUQ", "GRO", "MCM"))){
   
@@ -399,19 +417,25 @@ for(lter in setdiff(unique(sites$LTER), c("ARC", "LUQ", "GRO", "MCM"))){
     filter(LTER == lter)
   
   # Extract data from the raster using the sf object
-  lc_v1 <- exactextractr::exact_extract(x = bbox, y = sf, include_cols = c("LTER", "uniqueID"))
+  lc_list <- exactextractr::exact_extract(x = bbox, y = sf, include_cols = c("LTER", "uniqueID"))
   
   # That created a list with one element per watershed in this LTER and we'll want a dataframe
-  lc_v2 <- do.call(rbind, lc_v1)
+  lc_df <- do.call(rbind, lc_list)
   
   # Now we have a smidge more processing to do before we should export
-  lc_actual <- lc_v2 %>%
+  lc_actual <- lc_list %>%
+    # Make a dataframe from the selected list columns
+    map_dfr(select, c(LTER, uniqueID, value)) %>%
     # Rename the land cover column
     rename(nlcd_code = value) %>%
     # Group by code, LTER, and uniqueID
     group_by(LTER, uniqueID, nlcd_code) %>%
     # Count pixels per code within the watershed
     summarise(cover_pixel_ct = n()) %>%
+    # Grab all of the contents of the index
+    left_join(nlcd_index, by = "nlcd_code") %>%
+    # Keep only columns that we want
+    select(LTER, uniqueID, nlcd_category, cover_pixel_ct) %>%
     # Export as dataframe
     as.data.frame()
   
@@ -427,9 +451,64 @@ for(lter in setdiff(unique(sites$LTER), c("ARC", "LUQ", "GRO", "MCM"))){
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 # Great Rivers Observatory (GRO) LC Processing -----------------------------
-# Need to find a source for these data
+# Possible source https://earthexplorer.usgs.gov/scene/metadata/full/5e83a1d8eecc8bb5/GLCCGBE20/
 
+## Tried this path 3/3/22
 
+# Get relevant part of watershed polygons
+gro_sf <- sheds %>%
+  filter(LTER == "GRO")
+
+# Read in data
+## gblulcgeo20 = USGS Land Use and Land Cover Classification (LULC)
+globe <- terra::rast("extracted-data/raw-landcover-data/MODIS_GLCC_Global_1992/gblulcgeo20.tif")
+
+# Exploratory plot
+plot(globe)
+
+# Crop to band of interest (all longitudes but only northern-most latitudes)
+ext(globe)
+globe_crop <- terra::crop(globe, terra::ext(-179.999999999967, 179.999985600033,
+                                            60, 89.9999999999667))
+
+# Plot cropped version
+plot(globe_crop)
+
+# Check CRS
+crs(globe_crop)
+st_crs(gro_sf)
+## Looks like they match right out of the box!
+
+# Try to extract information
+gro_lc_list <- exactextractr::exact_extract(x = globe_crop, y = gro_sf, include_cols = c("LTER", "uniqueID"))
+str(gro_lc_list)
+
+# Read in LULC index
+## Created manually from description here
+## www.usgs.gov/media/files/global-land-cover-characteristics-data-base-readme-version2
+lulc_index <- read.csv("extracted-data/raw-landcover-data/LULC_index.csv")
+head(lulc_index)
+
+# Process this out of list form
+gro_lc <- gro_lc_list %>%
+  # Make a dataframe from the selected list columns
+  map_dfr(select, c(LTER, uniqueID, value)) %>%
+  # Group by LTER and uniqueID
+  group_by(LTER, uniqueID, value) %>%
+  # Count instances of each pixel category
+  summarise(cover_pixel_ct = n()) %>%
+  # Bring in category names
+  rename(lulc_code = value) %>%
+  left_join(lulc_index, by = "lulc_code") %>%
+  # Keep only desired columns
+  select(LTER, uniqueID, lulc_category, cover_pixel_ct)
+
+# Check it
+unique(gro_lc$lulc_category)
+head(gro_lc)
+
+# Export this as is so that we can standardize cover categories between different sources of land cover data
+write.csv(gro_lc, "extracted-data/raw-landcover-data/LULC-GRO-landcover.csv", na = '', row.names = F)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
@@ -451,7 +530,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 nlcd_list <- list()
 k <- 1
 
-# Read in the csvs (not for MCM or GRO because we don't have them yet)
+# Read in the csvs (not for MCM or GRO because we don't have them yet and when we do they'll come from different sources)
 for(lter in setdiff(unique(sites$LTER), c("GRO", "MCM"))){
   
   # Grab a csv
@@ -463,47 +542,68 @@ for(lter in setdiff(unique(sites$LTER), c("GRO", "MCM"))){
   # Advance the counter
   k <- k + 1 }
 
-# Bind these together
-nlcd_v1 <- do.call(dplyr::bind_rows, nlcd_list)
+# Switch from list to dataframe
+nlcd_data <- nlcd_list %>%
+  map_dfr(select, c(LTER, uniqueID, nlcd_category, cover_pixel_ct))
+head(nlcd_data)
 
-# Check the structure
-str(nlcd_v1)
+# Read in GRO land cover (from different source!)
+gro_data <- read.csv("extracted-data/raw-landcover-data/LULC-GRO-landcover.csv")
+head(gro_data)
 
-# Grab the NLCD index that connects integer codes to meaningful categories
-nlcd_index <- read.csv("extracted-data/raw-landcover-data/NLCD_index.csv")
-head(nlcd_index)
-
-# Process our version 1 into something more usable
-nlcd_v2 <- nlcd_v1 %>%
-  # Grab all of the contents of the index
-  left_join(nlcd_index, by = "nlcd_code") %>%
-  # Group by LTER and uniqueID
+# Integrate the two dataframes
+lc_data <- nlcd_data %>%
+  # Use bind_rows to account for difference in category names
+  dplyr::bind_rows(gro_data) %>%
+  # Move the GRO's category column to be next to the other one
+  relocate(lulc_category, .before = cover_pixel_ct) %>%
+  # Make a single column for both types of category
+  mutate(cover_category = coalesce(nlcd_category, lulc_category)) %>%
+  # Remove any NAs
+  filter(!is.na(cover_category)) %>%
+  # Standardize casing/special character use in that combined column
+  mutate(cover_category = tolower(gsub("\\/| ", "_", cover_category))) %>%
+  # And collapse (seemingly) synonymous categories into one another
+  mutate(
+    cover_category = case_when(
+      # Some additional combination is possible but these are the "safe" changes in my (Nick's) opinion
+      cover_category == "deciduous_broadleaf_forest" ~ "deciduous_forest",
+      cover_category == "deciduous_needleleaf_forest" ~ "deciduous_forest",
+      cover_category == "evergreen_needleleaf_forest" ~ "evergreen_forest",
+      cover_category == "barren_or_sparsely_vegetated" ~ "barren_land",
+      cover_category == "snow_or_ice" ~ "perennial_ice_snow",
+      cover_category == "dwarf_shrub" ~ "shrubland",
+      cover_category == "shrub_scrub" ~ "shrubland",
+      cover_category == "woody_wetlands" ~ "wooded_wetland",
+      # cover_category == "" ~ "",
+      T ~ as.character(cover_category) ) ) %>%
+  # Re-summarize within our new categories
+  ## Note that this drops the original category columns so you'd need to go back to find those
+  group_by(LTER, uniqueID, cover_category) %>%
+  summarise(cover_pixel_ct = sum(cover_pixel_ct)) %>%
+  
+  # Group by LTER and uniqueID (looking across categories within watersheds)
   group_by(LTER, uniqueID) %>%
   # Count the total pixels and get percent from that
   mutate(
     total_pixels = sum(cover_pixel_ct),
-    perc_cover = round((cover_pixel_ct / total_pixels) * 100, digits = 2),
-    # Also make the covers lowercase to match the rocks
-    nlcd_category = tolower(nlcd_category)
+    perc_cover = round((cover_pixel_ct / total_pixels) * 100, digits = 2)
   ) %>%
-  # Remove NAs
-  filter(!is.na(nlcd_category)) %>%
   # Slim down to only needed columns (drops unspecified cols implicitly)
-  select(LTER, uniqueID, nlcd_category, perc_cover)
-  
-# Look
-head(nlcd_v2)
-unique(nlcd_v2$nlcd_category)
+  select(LTER, uniqueID, cover_category, perc_cover)
+
+# Look at it
+head(lc_data)
 
 # As with lithology, we need to process in two directions
 ## Wide format with all percents
-nlcd_wide <- nlcd_v2 %>%
+lc_wide <- lc_data %>%
   pivot_wider(id_cols = c(LTER, uniqueID),
-              names_from = nlcd_category,
+              names_from = cover_category,
               values_from = perc_cover)
 
 ## Second: get the *majority* cover for each watershed
-nlcd_major <- nlcd_v2 %>%
+lc_major <- lc_data %>%
   # Filter to only max of each cover type per uniqueID & LTER
   group_by(LTER, uniqueID) %>%
   filter(perc_cover == max(perc_cover)) %>%
@@ -511,24 +611,24 @@ nlcd_major <- nlcd_v2 %>%
   dplyr::select(-perc_cover) %>%
   # Get the columns into wide format where the column name and value are both whatever the dominant cover was
   pivot_wider(id_cols = c(LTER, uniqueID),
-              names_from = nlcd_category,
-              values_from = nlcd_category) %>%
+              names_from = cover_category,
+              values_from = cover_category) %>%
   # Paste all the non-NAs (i.e., the dominant rocks) into a single column
   unite(col = major_cover, -LTER:-uniqueID, na.rm = T, sep = "; ")
 
 # Now attach the major rocks to the wide format one
-nlcd_actual <- nlcd_wide %>%
-  left_join(nlcd_major, by = c("LTER", "uniqueID")) %>%
+lc_actual <- lc_wide %>%
+  left_join(lc_major, by = c("LTER", "uniqueID")) %>%
   relocate(major_cover, .after = uniqueID)
 
 # Examine
-head(nlcd_actual)
+head(lc_actual)
 
 # LC Export -----------------------------------------------------------------
 
 # Let's get ready to export
 cover_export <- sites %>%
-  left_join(nlcd_actual, by = c("LTER", "uniqueID"))
+  left_join(lc_actual, by = c("LTER", "uniqueID"))
 
 # Check it out
 head(cover_export)
@@ -549,8 +649,8 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 rocks <- read.csv("extracted-data/SilicaSites_withLithologyData.csv")
 cover <- read.csv("extracted-data/SilicaSites_withCoverData.csv")
 
-# Get a vector of shared column names
-shared_cols <- intersect(names(rocks), names(cover))
+# Get a vector of shared column names (note that both data types have a "water_bodies" category)
+shared_cols <- setdiff(intersect(names(rocks), names(cover)), "water_bodies")
 shared_cols
 
 # Combine and process the two
@@ -567,21 +667,61 @@ combo <- cover %>%
     ## Removing "_rocks" from names
     rock_types = gsub("\\_rocks", "", rock_types),
     ## Adding prefix "rocks_" to all columns (this will help differentiate between rock and cover data that might otherwise be ambiguous)
-    rock_types = paste0("rocks_", rock_types)
-  ) %>%
+    ## Remove '.y' on ambiguous water bodies column
+    rock_types = gsub("water_bodies.y", "water_bodies", rock_types),
+    rock_types = paste0("rocks_", rock_types) ) %>%
   # Pivot back to wide format
   pivot_wider(id_cols = -rock_types:-rocks_perc,
               names_from = rock_types,
               values_from = rocks_perc) %>%
   # Now do the same for the cover categories
-  pivot_longer(cols = deciduous_forest:perennial_ice_snow,
+  pivot_longer(cols = deciduous_forest:pasture_hay,
                names_to = "cover_types", values_to = "cover_perc") %>%
-  mutate(cover_types = paste0("cover_", cover_types)) %>%
+  mutate(cover_types = gsub("water_bodies.x", "water_bodies", cover_types),
+         cover_types = paste0("cover_", cover_types)) %>%
   pivot_wider(id_cols = -cover_types:-cover_perc,
               names_from = cover_types, values_from = cover_perc) %>%
-  # Finally, McMurdo will use expert knowledge rather than extracted information (for now)
+  # McMurdo uses expert knowledge rather than extracted information (for now)
   mutate(major_rock = ifelse(LTER == "MCM", yes = "glacial_drift", no = major_rock),
-         major_cover = ifelse(LTER == "MCM", yes = "barren_land", no = major_cover))
+         major_cover = ifelse(LTER == "MCM", yes = "barren_land", no = major_cover)) %>%
+  # And let's also add some more 'data source' information to this for later use
+  mutate(
+    rockSource = ifelse(LTER == "MCM", yes = "Expert knowledge",
+                        no = "Hartmann & Moosedorf 2012"),
+    rockSourceLink = ifelse(LTER == "MCM", yes = "-",
+                            no = "https://doi.pangaea.de/10.1594/PANGAEA.788537"),
+    coverSource = case_when(
+      LTER == "AND" ~ "2019 NLCD Continental US (manual bounding box via web app)",
+      LTER == "ARC" ~ "2016 NLCD Alaska",
+      LTER == "GRO" ~ "USGS Land Use/Land Cover (LULC) System",
+      LTER == "HBR" ~ "2019 NLCD Continental US (manual bounding box via web app)",
+      LTER == "KRR" ~ "2019 NLCD Continental US (manual bounding box via web app)",
+      LTER == "LMP" ~ "2019 NLCD Continental US (manual bounding box via web app)",
+      LTER == "LUQ" ~ "2001 NLCD Puerto Rico",
+      LTER == "MCM" ~ "Expert knowledge",
+      LTER == "NWT" ~ "2019 NLCD Continental US (manual bounding box via web app)",
+      LTER == "Sagehen" ~ "2019 NLCD Continental US (manual bounding box via web app)",
+      LTER == "UMR" ~ "2019 NLCD Continental US (full)",
+      T ~ as.character(LTER) ),
+    coverSourceLink = case_when(
+      LTER == "AND" ~ "https://www.mrlc.gov/viewer/",
+      LTER == "ARC" ~ "https://www.mrlc.gov/data/nlcd-2016-land-cover-alaska",
+      LTER == "GRO" ~ "https://www.usgs.gov/centers/eros/science/usgs-eros-archive-land-cover-products-global-land-cover-characterization-glcc",
+      LTER == "HBR" ~ "https://www.mrlc.gov/viewer/",
+      LTER == "KRR" ~ "https://www.mrlc.gov/viewer/",
+      LTER == "LMP" ~ "https://www.mrlc.gov/viewer/",
+      LTER == "LUQ" ~ "https://www.mrlc.gov/data/nlcd-2001-land-cover-puerto-rico",
+      LTER == "MCM" ~ "-",
+      LTER == "NWT" ~ "https://www.mrlc.gov/viewer/",
+      LTER == "Sagehen" ~ "https://www.mrlc.gov/viewer/",
+      LTER == "UMR" ~ "https://www.mrlc.gov/data/nlcd-2019-land-cover-conus",
+      T ~ as.character(LTER) ) ) %>%
+  # And clarify the meaning of the original 'dataSource' columns
+  rename(shapeSource = dataSource) %>%
+  rename(shapeSourceLink = dataSourceLink) %>%
+  # And move all of the source columns together
+  relocate(ends_with('Source'), .after = everything()) %>%
+  relocate(ends_with('SourceLink'), .after = everything())
 
 # Check contents
 names(combo)
@@ -589,7 +729,7 @@ names(combo)
 # Check McMurdo fix
 combo %>%
   filter(LTER == "MCM") %>%
-  select(uniqueID, major_cover, major_rock)
+  select(uniqueID, major_cover, major_rock, coverSource, rockSource)
   ## Looks great!
 
 # Export this to share with the working group
