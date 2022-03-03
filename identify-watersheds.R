@@ -1018,7 +1018,9 @@ setdiff(unique(silica_sheds$uniqueID), unique(sites$uniqueID))
 # Do some processing to get this finalized
 silica_final <- silica_sheds %>%
   # Create and reposition an LTER column
-  dplyr::mutate( LTER = str_sub(uniqueID, 1, 3) ) %>%
+  dplyr::mutate( LTER = ifelse(uniqueID == "Sagehen",
+                               yes = "Sagehen",
+                               no = str_sub(uniqueID, 1, 3)) ) %>%
   relocate(LTER, .before = everything())
 
 # Check structure
