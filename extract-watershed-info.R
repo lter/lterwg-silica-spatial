@@ -208,7 +208,7 @@ names(rock_export)
 
 # Export both this and the shapefile that contains the cropped rock data
 write.csv(x = rock_export,
-          file = "extracted-data/SilicaSites_withLithologyData.csv",
+          file = "extracted-data/SilicaSites_litho.csv",
           na = '', row.names = F)
 st_write(obj = rocky_sheds,
          dsn = "extracted-data/SilicaSynthesis_LithologyPolygons.shp",
@@ -608,7 +608,7 @@ head(cover_export)
 
 # Export this csv
 write.csv(x = cover_export,
-          file = "extracted-data/SilicaSites_withCoverData.csv",
+          file = "extracted-data/SilicaSites_landcover.csv",
           na = '', row.names = F)
 
 # Clean up environment
@@ -619,8 +619,8 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # With both lithology and land cover data in hand, let's make a single 'one-stop shop' dataframe containing both
 
 # Read in both
-rocks <- read.csv("extracted-data/SilicaSites_withLithologyData.csv")
-cover <- read.csv("extracted-data/SilicaSites_withCoverData.csv")
+rocks <- read.csv("extracted-data/SilicaSites_litho.csv")
+cover <- read.csv("extracted-data/SilicaSites_landcover.csv")
 
 # Get a vector of shared column names (note that both data types have a "water_bodies" category)
 shared_cols <- setdiff(intersect(names(rocks), names(cover)), "water_bodies")
@@ -705,8 +705,37 @@ combo %>%
   select(uniqueID, major_cover, major_rock, coverSource, rockSource)
   ## Looks great!
 
-# Export this to share with the working group
-write.csv(combo, file = "extracted-data/SilicaSites_allData.csv",
+# Let's actually split the source information into a separate dataframe
+bib <- combo %>%
+  # Get just the desired columns
+  select(LTER, contains('Source', ignore.case = F)) %>%
+  # And move them around
+  relocate(contains('rock'), .after = LTER) %>%
+  relocate(contains('cover'), .after = LTER) %>%
+  relocate(contains('shape'), .after = LTER) %>%
+  # And strip to just one row per LTER
+  unique() %>%
+  # Change the McMurdo shape source info to latest word
+  mutate(
+    shapeSource = ifelse(LTER == "MCM",
+                         yes = "No shapefile because glacial drainage likely more important than topography",
+                         no = shapeSource),
+    shapeSourceLink = ifelse(LTER == "MCM", yes = "-", no = shapeSourceLink) )
+
+# And remove sources from the 'actual' data
+actual <- combo %>%
+  select(-contains('Source', ignore.case = F))
+
+# Check the contents of the bibliography file
+bib
+
+# And make sure only intended columns were dropped from data object
+setdiff(names(combo), names(actual))
+
+# Export both files to share with the working group
+write.csv(actual, file = "extracted-data/SilicaSites_litho_and_landcover.csv",
+          na = '', row.names = F)
+write.csv(bib, file = "extracted-data/SilicaSites_data_source_info.csv",
           na = '', row.names = F)
 
 # Clean up environment
