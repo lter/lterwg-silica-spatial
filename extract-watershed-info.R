@@ -524,7 +524,29 @@ head(nlcd_data)
 gro_data <- read.csv("extracted-data/raw-landcover-data/LULC-GRO-landcover.csv")
 head(gro_data)
 
-# Integrate the two dataframes
+# Combine the two dataframes (without standardizing cover names)
+lc_unmod <- nlcd_data %>%
+  # Use bind_rows to account for difference in category names
+  dplyr::bind_rows(gro_data) %>%
+  # Move the GRO's category column to be next to the other one
+  relocate(lulc_category, .before = cover_pixel_ct) %>%
+  # Make a single column for both types of category
+  mutate(cover_category = coalesce(nlcd_category, lulc_category)) %>%
+  # Remove any NAs
+  filter(!is.na(cover_category)) %>%
+  # Standardize casing/special character use in that combined column
+  mutate(cover_category = tolower(gsub("\\/| |\\-", "_", cover_category))) %>%
+  # Remove unneeded columns
+  select(-nlcd_category, -lulc_category) %>%
+  # Calculate total pixels per stream
+  group_by(LTER, uniqueID) %>%
+  mutate(total_pixels = sum(cover_pixel_ct, na.rm = T)) %>%
+  # And pivot to wide format
+  pivot_wider(id_cols = -cover_category:-cover_pixel_ct,
+              names_from = cover_category,
+              values_from = cover_pixel_ct)
+
+# Integrate the two dataframes (for real)
 lc_data <- nlcd_data %>%
   # Use bind_rows to account for difference in category names
   dplyr::bind_rows(gro_data) %>%
@@ -535,26 +557,34 @@ lc_data <- nlcd_data %>%
   # Remove any NAs
   filter(!is.na(cover_category)) %>%
   # Standardize casing/special character use in that combined column
-  mutate(cover_category = tolower(gsub("\\/| ", "_", cover_category))) %>%
+  mutate(cover_category = tolower(gsub("\\/| |\\-", "_", cover_category))) %>%
   # And collapse (seemingly) synonymous categories into one another
   mutate(
     cover_category = case_when(
       # Some additional combination is possible but these are the "safe" changes in my (Nick's) opinion
-      cover_category == "deciduous_broadleaf_forest" ~ "deciduous_forest",
-      cover_category == "deciduous_needleleaf_forest" ~ "deciduous_forest",
-      cover_category == "evergreen_needleleaf_forest" ~ "evergreen_forest",
       cover_category == "barren_or_sparsely_vegetated" ~ "barren_land",
       cover_category == "snow_or_ice" ~ "perennial_ice_snow",
       cover_category == "dwarf_shrub" ~ "shrubland",
       cover_category == "shrub_scrub" ~ "shrubland",
       cover_category == "woody_wetlands" ~ "wooded_wetland",
+      cover_category == "emergent_herbaceous_wetlands" ~ "herbaceous_wetland",
+      cover_category == "herbaceous_wetland" ~ "herbaceous_wetland",
+      cover_category == "grassland_herbaceous" ~ "grassland",
+      cover_category == "grassland" ~ "grassland",
+      cover_category == "sedge_herbaceous" ~ "grassland",
+      cover_category == "savanna" ~ "grassland",
+      cover_category == "open_water" ~ "open_water",
+      cover_category == "water_bodies" ~ "open_water",
+      cover_category == "wooded_tundra" ~ "tundra",
+      cover_category == "mixed_tundra" ~ "tundra",
+      cover_category == "bare_ground_tundra" ~ "tundra",
+      cover_category == "herbaceous_tundra" ~ "tundra",
       # cover_category == "" ~ "",
       T ~ as.character(cover_category) ) ) %>%
   # Re-summarize within our new categories
   ## Note that this drops the original category columns so you'd need to go back to find those
   group_by(LTER, uniqueID, cover_category) %>%
   summarise(cover_pixel_ct = sum(cover_pixel_ct)) %>%
-  
   # Group by LTER and uniqueID (looking across categories within watersheds)
   group_by(LTER, uniqueID) %>%
   # Count the total pixels and get percent from that
@@ -611,6 +641,11 @@ write.csv(x = cover_export,
           file = "extracted-data/SilicaSites_landcover.csv",
           na = '', row.names = F)
 
+# And export the unmodified variant too
+write.csv(x = lc_unmod,
+          file = "extracted-data/SilicaSites_landcover_raw_categories.csv",
+          na = '', row.names = F)
+
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
@@ -622,8 +657,8 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 rocks <- read.csv("extracted-data/SilicaSites_litho.csv")
 cover <- read.csv("extracted-data/SilicaSites_landcover.csv")
 
-# Get a vector of shared column names (note that both data types have a "water_bodies" category)
-shared_cols <- setdiff(intersect(names(rocks), names(cover)), "water_bodies")
+# Get a vector of shared column names
+shared_cols <- intersect(names(rocks), names(cover))
 shared_cols
 
 # Combine and process the two
@@ -637,11 +672,9 @@ combo <- cover %>%
                names_to = "rock_types", values_to = "rocks_perc") %>%
   # Fix the column names by:
   mutate(
-    ## Removing "_rocks" from names
+    ## Removing "_rocks" from end of names
     rock_types = gsub("\\_rocks", "", rock_types),
     ## Adding prefix "rocks_" to all columns (this will help differentiate between rock and cover data that might otherwise be ambiguous)
-    ## Remove '.y' on ambiguous water bodies column
-    rock_types = gsub("water_bodies.y", "water_bodies", rock_types),
     rock_types = paste0("rocks_", rock_types) ) %>%
   # Pivot back to wide format
   pivot_wider(id_cols = -rock_types:-rocks_perc,
@@ -650,8 +683,7 @@ combo <- cover %>%
   # Now do the same for the cover categories
   pivot_longer(cols = deciduous_forest:pasture_hay,
                names_to = "cover_types", values_to = "cover_perc") %>%
-  mutate(cover_types = gsub("water_bodies.x", "water_bodies", cover_types),
-         cover_types = paste0("cover_", cover_types)) %>%
+  mutate(cover_types = paste0("cover_", cover_types)) %>%
   pivot_wider(id_cols = -cover_types:-cover_perc,
               names_from = cover_types, values_from = cover_perc) %>%
   # McMurdo uses expert knowledge rather than extracted information (for now)
