@@ -142,6 +142,23 @@ rock_data_v1 <- rocky_sheds %>%
   left_join(rock_index, by = "rock_code") %>%
   # Remove the now-unneeded code column
   dplyr::select(-rock_code) %>%
+  dplyr::mutate(
+  rock_type = case_when(
+    rock_type == 'unconsolidated_sediments' ~ 'sedimentary',
+    rock_type == 'siliciclastic_sedimentary_rocks' ~ 'sedimentary',
+    rock_type == 'mixed_sedimentary_rocks' ~ 'sedimentary',
+    rock_type == 'pyroclastic' ~ 'volcanic',
+    rock_type == 'carbonate_sedimentary_rocks' ~ 'carbonate_evaporite',
+    rock_type == 'evaporites' ~ 'carbonate_evaporite',
+    rock_type == 'metamorphic_rocks' ~ 'metamorphic',
+    rock_type == 'acid_plutonic_rocks' ~ 'plutonic',
+    rock_type == 'intermediate_plutonic_rocks' ~ 'plutonic',
+    rock_type == 'basic_plutonic_rocks' ~ 'plutonic',
+    rock_type == 'acid_volcanic_rocks' ~ 'volcanic',
+    rock_type == 'intermediate_volcanic_rocks' ~ 'volcanic',
+    rock_type == 'basic_volcanic_rocks' ~ 'volcanic',
+    T ~ as.character(rock_type)
+  ) ) %>%
   # Group by LTER and uniqueID
   group_by(LTER, uniqueID, rock_type) %>%
   # Count the instances within each rock type
@@ -150,8 +167,11 @@ rock_data_v1 <- rocky_sheds %>%
   # Make it a dataframe (to avoid a list of tibbles)
   as.data.frame() %>%
   # Remove the 'no_data' cells
-  filter(rock_type != "no_data") %>%
-  # # Group by LTER and uniqueID
+  filter(rock_type != "no_data" &
+           rock_type != 'ice_and_glaciers' &
+           rock_type != 'water_bodies') %>%
+  # Bin rock categories and re-summarise within consolidated categories
+  # Group by LTER and uniqueID
   group_by(LTER, uniqueID) %>%
   # We'll want the totals as a percent (total pixels is not very intuitive)
   dplyr::mutate( total_shed_pixels = sum(rock_totals) ) %>%
@@ -559,16 +579,19 @@ lc_data <- nlcd_data %>%
   # Standardize casing/special character use in that combined column
   mutate(cover_category = tolower(gsub("\\/| |\\-", "_", cover_category))) %>%
   # And collapse (seemingly) synonymous categories into one another
-  mutate(
+  dplyr::mutate(
     cover_category = case_when(
       # Some additional combination is possible but these are the "safe" changes in my (Nick's) opinion
-      cover_category == "barren_or_sparsely_vegetated" ~ "barren_land",
-      cover_category == "snow_or_ice" ~ "perennial_ice_snow",
+      cover_category == "barren_or_sparsely_vegetated" ~ "barren_perennial_snow_ice",
+      cover_category == "barren_land" ~ "barren_perennial_snow_ice",
+      cover_category == "snow_or_ice" ~ "barren_perennial_snow_ice",
+      cover_category == "perennial_ice_snow" ~ "barren_perennial_snow_ice",
       cover_category == "dwarf_shrub" ~ "shrubland",
       cover_category == "shrub_scrub" ~ "shrubland",
-      cover_category == "woody_wetlands" ~ "wooded_wetland",
-      cover_category == "emergent_herbaceous_wetlands" ~ "herbaceous_wetland",
-      cover_category == "herbaceous_wetland" ~ "herbaceous_wetland",
+      cover_category == "woody_wetlands" ~ "wetland",
+      cover_category == "wooded_wetland" ~ "wetland",
+      cover_category == "emergent_herbaceous_wetlands" ~ "wetland",
+      cover_category == "herbaceous_wetland" ~ "wetland",
       cover_category == "grassland_herbaceous" ~ "grassland",
       cover_category == "grassland" ~ "grassland",
       cover_category == "sedge_herbaceous" ~ "grassland",
@@ -579,6 +602,17 @@ lc_data <- nlcd_data %>%
       cover_category == "mixed_tundra" ~ "tundra",
       cover_category == "bare_ground_tundra" ~ "tundra",
       cover_category == "herbaceous_tundra" ~ "tundra",
+      cover_category == "cropland_grassland_mosaic" ~ "cultivated_crops",
+      cover_category == "cropland_woodland_mosaic" ~ "cultivated_crops",
+      cover_category == "dryland_cropland_and_pasture" ~ "cultivated_crops",
+      cover_category == "irrigated_cropland_and_pasture" ~ "cultivated_crops",
+      cover_category == "urban_and_built_up_land" ~ "low_medium_intensity_developed",
+      cover_category == "developed_high_intensity" ~ "low_medium_intensity_developed",
+      cover_category == "developed_medium_intensity" ~ "low_medium_intensity_developed",
+      cover_category == "developed_low_intensity" ~ "low_medium_intensity_developed",
+      cover_category == "developed_open_space" ~ "low_medium_intensity_developed",
+      cover_category == "evergreen_needleleaf_forest" ~ "evergreen_forest",
+      cover_category == "deciduous_forest" ~ "deciduous_broadleaf_forest",
       # cover_category == "" ~ "",
       T ~ as.character(cover_category) ) ) %>%
   # Re-summarize within our new categories
@@ -668,12 +702,10 @@ combo <- cover %>%
   # Re-order columns
   relocate(major_rock, .after = major_cover) %>%
   # We want to fix some column names but its faster to do this via long format
-  pivot_longer(cols = basic_volcanic_rocks:ice_and_glaciers,
+  pivot_longer(cols = volcanic:plutonic,
                names_to = "rock_types", values_to = "rocks_perc") %>%
   # Fix the column names by:
   mutate(
-    ## Removing "_rocks" from end of names
-    rock_types = gsub("\\_rocks", "", rock_types),
     ## Adding prefix "rocks_" to all columns (this will help differentiate between rock and cover data that might otherwise be ambiguous)
     rock_types = paste0("rocks_", rock_types) ) %>%
   # Pivot back to wide format
@@ -681,7 +713,7 @@ combo <- cover %>%
               names_from = rock_types,
               values_from = rocks_perc) %>%
   # Now do the same for the cover categories
-  pivot_longer(cols = deciduous_forest:pasture_hay,
+  pivot_longer(cols = deciduous_broadleaf_forest:pasture_hay,
                names_to = "cover_types", values_to = "cover_perc") %>%
   mutate(cover_types = paste0("cover_", cover_types)) %>%
   pivot_wider(id_cols = -cover_types:-cover_perc,
