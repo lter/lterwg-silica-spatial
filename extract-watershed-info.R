@@ -802,6 +802,55 @@ write.csv(actual, file = "extracted-data/SilicaSites_litho_and_landcover.csv",
 write.csv(bib, file = "extracted-data/SilicaSites_data_source_info.csv",
           na = '', row.names = F)
 
+# (Further) simplify cover categories
+simp <- combo %>%
+  # Remove unneeded-columns
+  select(LTER, stream, uniqueID, starts_with('cover_')) %>%
+  # pivot to long format
+  pivot_longer(cols = starts_with('cover_'),
+               names_to = "cover_categories",
+               values_to = "percents") %>%
+  # Streamline cover categories
+  mutate(
+  cover_categories = case_when(
+    cover_categories == "cover_deciduous_broadleaf_forest" ~ "cover_forest",
+    cover_categories == "cover_evergreen_forest" ~ "cover_forest",
+    cover_categories == "cover_mixed_forest" ~ "cover_forest",
+    # cover_categories == "cover_shrubland" ~ "cover_", ## ? ##
+    cover_categories == "cover_barren_perennial_snow_ice" ~ "cover_barren_ice",
+    # cover_categories == "cover_grassland" ~ "cover_", ## ? ##
+    cover_categories == "cover_cultivated_crops" ~ "cover_impacted",
+    cover_categories == "cover_deciduous_needleleaf_forest" ~ "cover_forest",
+    # cover_categories == "cover_open_water" ~ "cover_", ## ? ##
+    # cover_categories == "cover_tundra" ~ "cover_", ## ? ##
+    # cover_categories == "cover_wetland" ~ "cover_", ## ? ##
+    cover_categories == "cover_low_medium_intensity_developed" ~ "cover_impacted",
+    cover_categories == "cover_pasture_hay" ~ "cover_impacted",
+    T ~ cover_categories) ) %>%
+  # Make it a dataframe rather than a list tibble
+  as.data.frame() %>%
+  # Group by everything except cover category info
+  group_by(LTER, stream, uniqueID, cover_categories) %>%
+  # Summarize through new categories
+  summarise(percents = sum(percents, na.rm = T)) %>%
+  # Pivot to wide format
+  pivot_wider(id_cols = LTER:uniqueID,
+              names_from = cover_categories,
+              values_from = percents) %>%
+  # Bring rocks back in
+  left_join(y = actual %>%
+              select(LTER, stream, uniqueID,
+                     starts_with('rocks_')),
+            by = c("LTER", "stream", "uniqueID"))
+
+# Examine that
+names(simp)
+
+# Export this to for later use
+write.csv(simp,
+          file = "extracted-data/SilicaSites_simplified_litho_and_landcover.csv",
+          na = '', row.names = F)
+
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
