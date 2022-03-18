@@ -130,6 +130,159 @@ str(sites_actual)
 # This object has polygons defined at the finest possible level
 # We may want to visualize aggregated basins so let's go that direction now
 
+# Get custom Hydrosheds functions ------------------------------------------
+
+# These are modified from someone's GitHub functions to accept non-S4 objects
+# Link to originals here: https://rdrr.io/github/ECCC-MSC/Basin-Delineation/
+
+# First function finds just the next upstream polygon(s)
+find_next_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F){
+  
+  # Process sf object into a regular dataframe
+  HYBAS_df <- HYBAS %>%
+    sf::st_drop_geometry()
+  
+  # Find next upstream polygon(s) as character
+  upstream.ab <- HYBAS_df[HYBAS_df$NEXT_DOWN == HYBAS.ID, c("HYBAS_ID", "ENDO")]
+  
+  if (ignore.endorheic){
+    upstream.ab <- upstream.ab[upstream.ab$ENDO != 2, ]
+  }
+  return(as.character(upstream.ab$HYBAS_ID))
+}
+
+# Second function iteratively runs through the first one to find all of the upstream polygons
+find_all_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
+  
+  # make containers
+  HYBAS.ID <- as.character(HYBAS.ID)
+  HYBAS.ID.master <- list()
+  
+  #Get the possible upstream 'branches'
+  direct.upstream <- find_next_up(HYBAS = HYBAS, HYBAS.ID = HYBAS.ID,
+                                  ignore.endorheic = ignore.endorheic)
+  
+  # for each branch iterate upstream until only returning empty results
+  for (i in direct.upstream){
+    run <- T
+    HYBAS.ID.list <- i
+    sub.basins <- i # this is the object that gets passed to find_next_up in each iteration
+    while (run){
+      result.i <- unlist(lapply(sub.basins, find_next_up,
+                                HYBAS = HYBAS, ignore.endorheic = ignore.endorheic))
+      
+      if (length(result.i) == 0){ run <- F } # Stopping criterion
+      HYBAS.ID.list <- c(HYBAS.ID.list, result.i)
+      sub.basins <- result.i
+    }
+    HYBAS.ID.master[[i]] <- HYBAS.ID.list
+  }
+  
+  if (!split){ HYBAS.ID.master <- as.character(unlist(HYBAS.ID.master)) }
+  
+  return(HYBAS.ID.master)
+}
+
+# Identify all upstream polygon(s) -----------------------------------------
+
+# Try without the GRO sites because they are huge
+sites_sub <- sites_actual %>%
+  filter(LTER != "GRO")
+sites_sub
+
+# For every supplied focal polygon HYBAS_ID, find all of the upstream polygons
+for (stream_id in unique(sites_sub$uniqueID)) {
+  
+  # If the file already exists, skip the processing step
+  if (fs::file_exists(paste0('hydrosheds-basin-ids/', stream_id, '_HYBAS_ID.csv'))) {
+    print(paste0("HydroSheds IDs for '", stream_id, "' already identified."))
+    
+    # If the file doesn't yet exist, get it
+  } else {
+  # Identify which uniqueID is being processed
+  focal_poly <- as.character(sites_sub$HYBAS_ID[sites_sub$uniqueID == stream_id])
+  # unq_id <- as.character(sites_sub$uniqueID[sites_sub$HYBAS_ID == focal_poly])
+  
+  # Print start-up message
+  print(paste0( "Processing for '", stream_id, "' begun at ", Sys.time()))
+  
+  # Identify all upstream shapes
+  fxn_out <- find_all_up(HYBAS = basin_needs, HYBAS.ID = focal_poly)
+  
+  # Make a dataframe of this
+  hydro_df <- data.frame(uniqueID = rep(stream_id, (length(fxn_out) + 1)),
+                         hybas_id = c(focal_poly, fxn_out))
+  
+  # Save this out
+   write.csv(x = hydro_df,
+             file = paste0('hydrosheds-basin-ids/', stream_id, '_HYBAS_ID.csv'),
+             na = '', row.names = F)
+   
+  # Print success message
+  print(paste0( "Processing complete for '", stream_id, "' at ", Sys.time()))
+  }
+}
+
+
+# NOTE FOR FUTURE: -----
+## Need to build another for loop that reads in all complete .csvs and binds them out of list into a single dataframe
+## 2x for loops is superior because it saves processing when re-running same code (i.e., only processes the streams that actually don't have data yet)
+
+
+# Potentially useful components cut out of earlier loop variant
+
+
+# Make an empty list and a counter set to 1
+# hydro_list <- list()
+# k <- 1
+
+# Put it in the list
+# hydro_list[[k]] <- hydro_df
+
+# Advance counter by 1
+# k <- k + 1
+
+
+# Go from a list of 2-column dataframes to a single long 2-col dataframe
+# hydro_out <- do.call(rbind, hydro_list)
+# str(hydro_out) 
+
+# Strip the polygons that correspond to those IDs
+hydro_poly <- basin_needs %>%
+  filter(HYBAS_ID %in% hydro_out$hybas_id) %>%
+  # Bring in uniqueID designations
+  mutate(
+    uniqueID = hydro_out$uniqueID[match(HYBAS_ID, hydro_out$hybas_id)]
+  ) %>%
+  # Within uniqueIDs...
+  group_by(uniqueID) %>%
+  # ...sum sub-polygon areas and combine sub-polygon geometries
+  summarise(
+    drainSqKm_calc = sum(SUB_AREA),
+    geometry = sf::st_union(geometry)
+  ) %>%
+  # Then eliminate any small gaps within those shapes
+  nngeo::st_remove_holes()
+
+# Experimentally plot subsets of this larger sf object
+unique(hydro_poly$uniqueID)
+hydro_poly2 <- hydro_poly %>%
+  select(-drainSqKm_calc) %>%
+  filter(LTER == "AND")
+
+# Plot this object
+plot(hydro_poly2, reset = F, axes = T, lab = c(2, 2, 2))
+plot(hydro_actual["uniqueID"], add = T, pch = 15, col = 'gray45')
+
+
+
+
+
+
+
+
+
+
 # Dissolve polygons within specified category -------------------------------
 
 # Make an object where all polygons are dissolved within PFAF_1
