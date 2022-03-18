@@ -3,7 +3,7 @@
 ## PIs: 
 
 - Joanna Carey
-- Kathijo Jankowski
+- Kathi Jo Jankowski
 
 ## Project summary
 
