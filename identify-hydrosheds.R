@@ -196,46 +196,45 @@ test_poly <- basin_needs %>%
 plot(test_poly, reset = F, axes = T, lab = c(2, 2, 2))
 plot(test_actual["uniqueID"], add = T, pch = 15, col = 'gray45')
 
-# Identify next upstream polygon(s)
-up_poly <- basin_needs %>%
-  # Find polygons where the next downstream polygon is one that a point landed in
-  filter(NEXT_DOWN %in% test_actual$HYBAS_ID)
+# Get custom HydroSheds functions ------------------------------------------
 
-# upstream.ab <- HYBAS[HYBAS$NEXT_DOWN == HYBAS.ID, c("HYBAS_ID", "ENDO")]
+# These are modified from someone's GitHub functions to accept non-S4 objects
+# Link to originals here: https://rdrr.io/github/ECCC-MSC/Basin-Delineation/
 
-
-
-
-
-
-FindUpstreamSubBasins <- function(HYBAS, HYBAS.ID, ignore.endorheic = F){
+# First function finds just the next upstream polygon(s)
+find_next_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F){
   
+  # Process sf object into a regular dataframe
   HYBAS_df <- HYBAS %>%
     sf::st_drop_geometry()
   
-  upstream.ab <- HYBAS_df[HYBAS_df$NEXT_DOWN == HYBAS.ID, c("HYBAS_ID", "ENDO")] # returns as char
+  # Find next upstream polygon(s) as character
+  upstream.ab <- HYBAS_df[HYBAS_df$NEXT_DOWN == HYBAS.ID, c("HYBAS_ID", "ENDO")]
+  
   if (ignore.endorheic){
     upstream.ab <- upstream.ab[upstream.ab$ENDO != 2, ]
   }
   return(as.character(upstream.ab$HYBAS_ID))
 }
-FindAllUpstreamSubBasins <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
+
+# Second function iteratively runs through the first one to find all of the upstream polygons
+find_all_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
   
   # make containers
   HYBAS.ID <- as.character(HYBAS.ID)
   HYBAS.ID.master <- list()
   
   #Get the possible upstream 'branches'
-  direct.upstream <- FindUpstreamSubBasins(HYBAS = HYBAS, HYBAS.ID = HYBAS.ID,
-                                           ignore.endorheic = ignore.endorheic)
+  direct.upstream <- find_next_up(HYBAS = HYBAS, HYBAS.ID = HYBAS.ID,
+                                  ignore.endorheic = ignore.endorheic)
   
   # for each branch iterate upstream until only returning empty results
   for (i in direct.upstream){
     run <- T
     HYBAS.ID.list <- i
-    sub.basins <- i # this is the object that gets passed to FindUpstreamSubBasins in each iteration
+    sub.basins <- i # this is the object that gets passed to find_next_up in each iteration
     while (run){
-      result.i <- unlist(lapply(sub.basins, FindUpstreamSubBasins,
+      result.i <- unlist(lapply(sub.basins, find_next_up,
                                 HYBAS = HYBAS, ignore.endorheic = ignore.endorheic))
       
       if (length(result.i) == 0){ run <- F } # Stopping criterion
@@ -250,18 +249,23 @@ FindAllUpstreamSubBasins <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, spli
   return(HYBAS.ID.master)
 }
 
+# Identify all upstream polygon(s) -----------------------------------------
+
+# Make an empty list and a counter set to 1
 fxn_test_list <- list()
 k <- 1
+
+# For every supplied focal polygon HYBAS_ID, find all of the upstream polygons
 for (focal_poly in unique(test_actual$HYBAS_ID)) {
 
   # Identify which uniqueID is being processed
   unq_id <- as.character(test_actual$uniqueID[test_actual$HYBAS_ID == focal_poly])
     
   # Print start-up message
-  print(paste( 'Processing for', unq_id, 'begun at', Sys.time() ))
+  print(paste( 'Processing for', unq_id, 'begun at', Sys.time()))
   
-  # Identify all upstream sheds
-  fxn_out <- FindAllUpstreamSubBasins(HYBAS = basin_needs, HYBAS.ID = focal_poly)
+  # Identify all upstream shapes
+  fxn_out <- find_all_up(HYBAS = basin_needs, HYBAS.ID = focal_poly)
   
   # Make a dataframe of this
   fxn_df <- data.frame(uniqueID = rep(unq_id, (length(fxn_out) + 1)),
@@ -274,23 +278,34 @@ for (focal_poly in unique(test_actual$HYBAS_ID)) {
   k <- k + 1
   
   # Print success message
-  print(paste( 'Processing complete for', unq_id,  'at', Sys.time() ))
+  print(paste( 'Processing complete for', unq_id, 'at', Sys.time()))
 }
 
-# Go from a list to a long, 2-column dataframe
+# Go from a list of 2-column dataframes to a single long 2-col dataframe
 test_final_out <- do.call(rbind, fxn_test_list)
 str(test_final_out) 
 
 # Strip the polygons that correspond to those IDs
 test_poly <- basin_needs %>%
-  dplyr::select(HYBAS_ID, PFAF_12, geometry) %>%
-  dplyr::filter(HYBAS_ID %in% test_final_out$hybas_id) %>%
-  group_by(PFAF_12) %>%
-  summarise(geometry = sf::st_union(geometry)) %>%
+  filter(HYBAS_ID %in% test_final_out$hybas_id) %>%
+  mutate(
+    uniqueID = test_final_out$uniqueID[match(HYBAS_ID, test_final_out$hybas_id)]
+    ) %>%
+  group_by(uniqueID) %>%
+  summarise(
+    drainSqKm_calc = sum(SUB_AREA),
+    geometry = sf::st_union(geometry)
+    ) %>%
   nngeo::st_remove_holes()
 
+# Experimentally remove uniqueIDs
+unique(test_poly$uniqueID)
+test_poly2 <- test_poly %>%
+  select(-drainSqKm_calc) %>%
+  filter(uniqueID != "KRR_S65A")
+
 # Plot this object
-plot(test_poly, reset = F, axes = T, lab = c(2, 2, 2))
+plot(test_poly2, reset = F, axes = T, lab = c(2, 2, 2))
 plot(test_actual["uniqueID"], add = T, pch = 15, col = 'gray45')
 
 
