@@ -186,8 +186,9 @@ find_all_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
 # Identify all upstream polygon(s) -----------------------------------------
 
 # Try without the GRO sites because they are huge
-sites_sub <- sites_actual %>%
-  filter(LTER != "GRO")
+sites_sub <- sites_actual # %>%
+  # filter(LTER != "GRO")
+
 sites_sub
 
 # For every supplied focal polygon HYBAS_ID, find all of the upstream polygons
@@ -201,8 +202,7 @@ for (stream_id in unique(sites_sub$uniqueID)) {
   } else {
   # Identify which uniqueID is being processed
   focal_poly <- as.character(sites_sub$HYBAS_ID[sites_sub$uniqueID == stream_id])
-  # unq_id <- as.character(sites_sub$uniqueID[sites_sub$HYBAS_ID == focal_poly])
-  
+
   # Print start-up message
   print(paste0( "Processing for '", stream_id, "' begun at ", Sys.time()))
   
