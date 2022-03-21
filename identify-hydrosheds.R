@@ -185,14 +185,8 @@ find_all_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
 
 # Identify all upstream polygon(s) -----------------------------------------
 
-# Try without the GRO sites because they are huge
-sites_sub <- sites_actual # %>%
-  # filter(LTER != "GRO")
-
-sites_sub
-
-# For every supplied focal polygon HYBAS_ID, find all of the upstream polygons
-for (stream_id in unique(sites_sub$uniqueID)) {
+# For every uniqueID, find all of the upstream polygons
+for (stream_id in unique(sites_actual$uniqueID)) {
   
   # If the file already exists, skip the processing step
   if (fs::file_exists(paste0('hydrosheds-basin-ids/', stream_id, '_HYBAS_ID.csv'))) {
@@ -200,8 +194,9 @@ for (stream_id in unique(sites_sub$uniqueID)) {
     
     # If the file doesn't yet exist, get it
   } else {
-  # Identify which uniqueID is being processed
-  focal_poly <- as.character(sites_sub$HYBAS_ID[sites_sub$uniqueID == stream_id])
+    
+  # Identify the focal polygon HYBAS_ID that corresponds to this uniqueID
+  focal_poly <- as.character(sites_actual$HYBAS_ID[sites_actual$uniqueID == stream_id])
 
   # Print start-up message
   print(paste0( "Processing for '", stream_id, "' begun at ", Sys.time()))
@@ -219,88 +214,83 @@ for (stream_id in unique(sites_sub$uniqueID)) {
              na = '', row.names = F)
    
   # Print success message
-  print(paste0( "Processing complete for '", stream_id, "' at ", Sys.time()))
-  }
-}
+  print(paste0( "Processing complete for '", stream_id, "' at ", Sys.time())) } }
 
+# Make an empty list and counter set to 1
+id_list <- list()
+n <- 1
 
-# NOTE FOR FUTURE: -----
-## Need to build another for loop that reads in all complete .csvs and binds them out of list into a single dataframe
-## 2x for loops is superior because it saves processing when re-running same code (i.e., only processes the streams that actually don't have data yet)
-
-
-# Potentially useful components cut out of earlier loop variant
-
-
-# Make an empty list and a counter set to 1
-# hydro_list <- list()
-# k <- 1
-
-# Put it in the list
-# hydro_list[[k]] <- hydro_df
-
-# Advance counter by 1
-# k <- k + 1
-
+# Now that we have individual .csvs for every watershed, let's read them back in
+for (stream_id in unique(sites_actual$uniqueID)) {
+  
+  # If the file doesn't yet exist, warn the user
+  if (fs::file_exists(paste0('hydrosheds-basin-ids/', stream_id, '_HYBAS_ID.csv')) == F) {
+    print(paste0("HydroSheds IDs for '", stream_id, "' NOT identified."))
+    
+    # If the file does exist, get it
+  } else {
+    
+    # Read in the csv being considered
+    ids <- read.csv(paste0('hydrosheds-basin-ids/', stream_id, '_HYBAS_ID.csv'))
+    
+    # Add it to the list at the nth position
+    id_list[[n]] <- ids
+    
+    # Advance the counter by 1
+    n <- n + 1 } }
 
 # Go from a list of 2-column dataframes to a single long 2-col dataframe
-# hydro_out <- do.call(rbind, hydro_list)
-# str(hydro_out) 
+hydro_out <- do.call(rbind, id_list)
+str(hydro_out)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual',
+                          'basin_needs', 'hydro_out')))
+
+# Subset basin object to only needed polygons ---------------------------------
+
+# Pre-emptively resolve an error with 'invalid spherical geometry'
+sf::sf_use_s2(F)
+  ## s2 processing assumes that two points lie on a sphere
+  ## earlier form of processing assumes two points lie on a plane
 
 # Strip the polygons that correspond to those IDs
-# hydro_poly <- basin_needs %>%
-#   filter(HYBAS_ID %in% hydro_out$hybas_id) %>%
-#   # Bring in uniqueID designations
-#   mutate(
-#     uniqueID = hydro_out$uniqueID[match(HYBAS_ID, hydro_out$hybas_id)]
-#   ) %>%
-#   # Within uniqueIDs...
-#   group_by(uniqueID) %>%
-#   # ...sum sub-polygon areas and combine sub-polygon geometries
-#   summarise(
-#     drainSqKm_calc = sum(SUB_AREA),
-#     geometry = sf::st_union(geometry)
-#   ) %>%
-#   # Then eliminate any small gaps within those shapes
-#   nngeo::st_remove_holes()
-# 
-# # Experimentally plot subsets of this larger sf object
-# unique(hydro_poly$uniqueID)
-# hydro_poly2 <- hydro_poly %>%
-#   select(-drainSqKm_calc) %>%
-#   filter(LTER == "AND")
-# 
-# # Plot this object
-# plot(hydro_poly2, reset = F, axes = T, lab = c(2, 2, 2))
-# plot(hydro_actual["uniqueID"], add = T, pch = 15, col = 'gray45')
-
-
-
-
-
-
-
-
-
-
-# Dissolve polygons within specified category -------------------------------
-
-# Make an object where all polygons are dissolved within PFAF_1
-pfaf1 <- basin_needs %>%
-  # Keep only PFAF of interest
-  dplyr::select(PFAF_1, geometry) %>%
-  # Keep only levels of that layer that match with side levels
-  dplyr::filter(PFAF_1 %in% sites_actual$PFAF_1) %>%
-  # Group by that PFAF layer
-  group_by(PFAF_1) %>%
-  # Blend all of the tiny watersheds **within that layer** together
-  summarise(geometry = sf::st_union(geometry)) %>%
-  # Close holes
+hydro_poly <- hydro_out %>%
+  # Make the HydroBasins ID column have an identical name between the df and sf objects
+  rename(HYBAS_ID = hybas_id) %>%
+  # Attach everything in the polygon variant
+  ## Necessary because of some polygons are found in >1 uniqueID
+  left_join(basin_needs, by = 'HYBAS_ID') %>%
+  # Within uniqueID...
+  group_by(uniqueID) %>%
+  # ...sum sub-polygon areas and combine sub-polygon geometries
+  summarise(
+    drainSqKm_calc = sum(SUB_AREA),
+    geometry = sf::st_union(geometry)
+  ) %>%
+  # Need to make the class officially sf again before continuing
+  st_as_sf() %>%
+  # Then eliminate any small gaps within those shapes
   nngeo::st_remove_holes() %>%
-  # Ungroup (not sure if this is needed but it is good practice)
-  ungroup()
+  # Retrieve the LTER and stream names
+  separate(col = uniqueID, into = c("LTER", "stream"), sep = "_", remove = F)
 
-# Take a look
-plot(pfaf1)
+# Check structure
+str(hydro_poly)
+
+# Experimentally plot subsets of this larger sf object
+hydro_poly2 <- hydro_poly %>%
+  select(-drainSqKm_calc) %>%
+  filter(uniqueID %in% c("GRO_Kolyma", "GRO_Lena", "GRO_Mackenzie", "GRO_Ob", "GRO_Yenisey"))
+
+# Plot this object
+plot(hydro_poly2["uniqueID"], reset = F, axes = T, lab = c(2, 2, 2))
+plot(sites_actual["uniqueID"], add = T, pch = 15, col = 'gray45')
+
+# Plot all of the watersheds
+plot(hydro_poly["uniqueID"], reset = F, axes = T, lab = c(2, 2, 2))
+
+# Save out shapefile
+st_write(obj = hydro_poly, dsn = "hydrosheds-shapefiles/hydrosheds_watersheds.shp", delete_layer = T)
 
 # End ----------------------------------------------------------------
