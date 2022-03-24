@@ -1,14 +1,13 @@
 ## ----------------------------------------------------------------------- ##
                           # LTER WG: Silica Synthesis
 ## ----------------------------------------------------------------------- ##
+# Written by:
+## Nick J Lyon + 
 
 # Purpose:
 ## Identify watershed boundaries for later use in gathering additional data
 ## Note that step-by-step comments are only included for processing AND LTER
 ## Other LTERs follow same process so commenting is somewhat reduced
-
-# streamstats::delineateWatershed component written by Kristen Peach (see 'delineateWatershed.Rmd')
-# Streamlined/consolidated and rest written by Nick Lyon
 
 # Housekeeping ----------------------------------------------------------
 

@@ -1,13 +1,12 @@
 ## ----------------------------------------------------------------------- ##
                         # LTER WG: Silica Synthesis
 ## ----------------------------------------------------------------------- ##
+# Written by:
+## Nick J Lyon + 
 
 # Purpose:
 ## Using the watershed shapefiles created in "identify-watersheds.R"
 ## extract lithology and land cover data for each watershed
-
-# Written by:
-## Set up + lithology extraction by Nick Lyon
 
 # Housekeeping ---------------------------------------------------------------
 

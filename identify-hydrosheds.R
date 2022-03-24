@@ -1,4 +1,8 @@
-# LTER Silica Synthesis WG ---------------------------------------------
+## ----------------------------------------------------------------------- ##
+                          # LTER WG: Silica Synthesis
+## ----------------------------------------------------------------------- ##
+# Written by:
+## Nick J Lyon + 
 
 # Purpose:
 ## Create/find shapefiles of watershed boundaries around site lat/long points
