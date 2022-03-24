@@ -452,7 +452,7 @@ gro_sf <- sheds %>%
   filter(LTER == "GRO")
 
 # Read in data
-## gblulcgeo20 = USGS Land Use and Land Cover Classification (LULC)
+## gbigbpgeo20 = International Geosphere Biosphere Programme Land Cover Classification  (IGBP)
 globe <- terra::rast("extracted-data/raw-landcover-data/MODIS_GLCC_Global_1992/gbigbpgeo20.tif")
 
 # Exploratory plot
@@ -475,7 +475,7 @@ st_crs(gro_sf)
 gro_lc_list <- exactextractr::exact_extract(x = globe_crop, y = gro_sf, include_cols = c("LTER", "uniqueID"))
 str(gro_lc_list)
 
-# Read in LULC index
+# Read in IGBP index
 ## Created manually from description here
 ## www.usgs.gov/media/files/global-land-cover-characteristics-data-base-readme-version2
 igbp_index <- read.csv("extracted-data/raw-landcover-data/IGBP_index.csv")
@@ -732,7 +732,7 @@ combo <- cover %>%
     coverSource = case_when(
       LTER == "AND" ~ "2019 NLCD Continental US (manual bounding box via web app)",
       LTER == "ARC" ~ "2016 NLCD Alaska",
-      LTER == "GRO" ~ "USGS Land Use/Land Cover (LULC) System",
+      LTER == "GRO" ~ "International Geosphere Biosphere Programme (IGBP) Land Cover Classification",
       LTER == "HBR" ~ "2019 NLCD Continental US (manual bounding box via web app)",
       LTER == "KRR" ~ "2019 NLCD Continental US (manual bounding box via web app)",
       LTER == "LMP" ~ "2019 NLCD Continental US (manual bounding box via web app)",
