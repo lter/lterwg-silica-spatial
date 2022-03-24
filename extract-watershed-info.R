@@ -454,7 +454,7 @@ gro_sf <- sheds %>%
 
 # Read in data
 ## gblulcgeo20 = USGS Land Use and Land Cover Classification (LULC)
-globe <- terra::rast("extracted-data/raw-landcover-data/MODIS_GLCC_Global_1992/gblulcgeo20.tif")
+globe <- terra::rast("extracted-data/raw-landcover-data/MODIS_GLCC_Global_1992/gbigbpgeo20.tif")
 
 # Exploratory plot
 plot(globe)
@@ -479,8 +479,8 @@ str(gro_lc_list)
 # Read in LULC index
 ## Created manually from description here
 ## www.usgs.gov/media/files/global-land-cover-characteristics-data-base-readme-version2
-lulc_index <- read.csv("extracted-data/raw-landcover-data/LULC_index.csv")
-head(lulc_index)
+igbp_index <- read.csv("extracted-data/raw-landcover-data/IGBP_index.csv")
+head(igbp_index)
 
 # Process this out of list form
 gro_lc <- gro_lc_list %>%
@@ -491,17 +491,19 @@ gro_lc <- gro_lc_list %>%
   # Count instances of each pixel category
   summarise(cover_pixel_ct = n()) %>%
   # Bring in category names
-  rename(lulc_code = value) %>%
-  left_join(lulc_index, by = "lulc_code") %>%
+  rename(igbp_code = value) %>%
+  left_join(igbp_index, by = "igbp_code") %>%
+  # Fix weird spacing issue
+  mutate(igbp_category = str_sub(igbp_category, 2, nchar(igbp_category))) %>%
   # Keep only desired columns
-  select(LTER, uniqueID, lulc_category, cover_pixel_ct)
+  select(LTER, uniqueID, igbp_category, cover_pixel_ct)
 
 # Check it
-unique(gro_lc$lulc_category)
+unique(gro_lc$igbp_category)
 head(gro_lc)
 
 # Export this as is so that we can standardize cover categories between different sources of land cover data
-write.csv(gro_lc, "extracted-data/raw-landcover-data/LULC-GRO-landcover.csv", na = '', row.names = F)
+write.csv(gro_lc, "extracted-data/raw-landcover-data/IGBP-GRO-landcover.csv", na = '', row.names = F)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
@@ -541,7 +543,7 @@ nlcd_data <- nlcd_list %>%
 head(nlcd_data)
 
 # Read in GRO land cover (from different source!)
-gro_data <- read.csv("extracted-data/raw-landcover-data/LULC-GRO-landcover.csv")
+gro_data <- read.csv("extracted-data/raw-landcover-data/IGBP-GRO-landcover.csv")
 head(gro_data)
 
 # Combine the two dataframes (without standardizing cover names)
@@ -549,15 +551,15 @@ lc_unmod <- nlcd_data %>%
   # Use bind_rows to account for difference in category names
   dplyr::bind_rows(gro_data) %>%
   # Move the GRO's category column to be next to the other one
-  relocate(lulc_category, .before = cover_pixel_ct) %>%
+  relocate(igbp_category, .before = cover_pixel_ct) %>%
   # Make a single column for both types of category
-  mutate(cover_category = coalesce(nlcd_category, lulc_category)) %>%
+  mutate(cover_category = coalesce(nlcd_category, igbp_category)) %>%
   # Remove any NAs
   filter(!is.na(cover_category)) %>%
   # Standardize casing/special character use in that combined column
   mutate(cover_category = tolower(gsub("\\/| |\\-", "_", cover_category))) %>%
   # Remove unneeded columns
-  select(-nlcd_category, -lulc_category) %>%
+  select(-nlcd_category, -igbp_category) %>%
   # Calculate total pixels per stream
   group_by(LTER, uniqueID) %>%
   mutate(total_pixels = sum(cover_pixel_ct, na.rm = T)) %>%
@@ -571,49 +573,51 @@ lc_data <- nlcd_data %>%
   # Use bind_rows to account for difference in category names
   dplyr::bind_rows(gro_data) %>%
   # Move the GRO's category column to be next to the other one
-  relocate(lulc_category, .before = cover_pixel_ct) %>%
+  relocate(igbp_category, .before = cover_pixel_ct) %>%
   # Make a single column for both types of category
-  mutate(cover_category = coalesce(nlcd_category, lulc_category)) %>%
+  mutate(cover_category = coalesce(nlcd_category, igbp_category)) %>%
   # Remove any NAs
   filter(!is.na(cover_category)) %>%
-  # Standardize casing/special character use in that combined column
-  mutate(cover_category = tolower(gsub("\\/| |\\-", "_", cover_category))) %>%
-  # And collapse (seemingly) synonymous categories into one another
+  # Collapse seemingly synonymous categories into one another (and standardize casing/special characters)
   dplyr::mutate(
     cover_category = case_when(
       # Some additional combination is possible but these are the "safe" changes in my (Nick's) opinion
-      cover_category == "barren_or_sparsely_vegetated" ~ "barren_perennial_snow_ice",
-      cover_category == "barren_land" ~ "barren_perennial_snow_ice",
-      cover_category == "snow_or_ice" ~ "barren_perennial_snow_ice",
-      cover_category == "perennial_ice_snow" ~ "barren_perennial_snow_ice",
-      cover_category == "dwarf_shrub" ~ "shrubland",
-      cover_category == "shrub_scrub" ~ "shrubland",
-      cover_category == "woody_wetlands" ~ "wetland",
-      cover_category == "wooded_wetland" ~ "wetland",
-      cover_category == "emergent_herbaceous_wetlands" ~ "wetland",
-      cover_category == "herbaceous_wetland" ~ "wetland",
-      cover_category == "grassland_herbaceous" ~ "grassland",
-      cover_category == "grassland" ~ "grassland",
-      cover_category == "sedge_herbaceous" ~ "grassland",
-      cover_category == "savanna" ~ "grassland",
-      cover_category == "open_water" ~ "open_water",
-      cover_category == "water_bodies" ~ "open_water",
-      cover_category == "wooded_tundra" ~ "tundra",
-      cover_category == "mixed_tundra" ~ "tundra",
-      cover_category == "bare_ground_tundra" ~ "tundra",
-      cover_category == "herbaceous_tundra" ~ "tundra",
-      cover_category == "cropland_grassland_mosaic" ~ "cultivated_crops",
-      cover_category == "cropland_woodland_mosaic" ~ "cultivated_crops",
-      cover_category == "dryland_cropland_and_pasture" ~ "cultivated_crops",
-      cover_category == "irrigated_cropland_and_pasture" ~ "cultivated_crops",
-      cover_category == "urban_and_built_up_land" ~ "low_medium_intensity_developed",
-      cover_category == "developed_high_intensity" ~ "low_medium_intensity_developed",
-      cover_category == "developed_medium_intensity" ~ "low_medium_intensity_developed",
-      cover_category == "developed_low_intensity" ~ "low_medium_intensity_developed",
-      cover_category == "developed_open_space" ~ "low_medium_intensity_developed",
-      cover_category == "evergreen_needleleaf_forest" ~ "evergreen_forest",
-      cover_category == "deciduous_forest" ~ "deciduous_broadleaf_forest",
-      # cover_category == "" ~ "",
+      ## NLCD category simplification
+      nlcd_category == "Barren_Land" ~ "barren_land",
+      nlcd_category == "Perennial_Ice_Snow" ~ "barren_land",
+      nlcd_category == "Cultivated_Crops" ~ "cultivated_crops",
+      nlcd_category == "Deciduous_Forest" ~ "deciduous_forest",
+      nlcd_category == "Developed_High_Intensity" ~ "low_medium_intensity_developed",
+      nlcd_category == "Developed_Low_Intensity" ~ "low_medium_intensity_developed",
+      nlcd_category == "Developed_Medium_Intensity" ~ "low_medium_intensity_developed",
+      nlcd_category == "Developed_Open_Space" ~ "low_medium_intensity_developed",
+      nlcd_category == "Evergreen_Forest" ~ "evergreen_forest",
+      nlcd_category == "Grassland_Herbaceous" ~ "grassland",
+      nlcd_category == "Sedge_Herbaceous" ~ "grassland",
+      nlcd_category == "Mixed_Forest" ~ "mixed_forest",
+      nlcd_category == "Open_Water" ~ "open_water",
+      nlcd_category == "Pasture_Hay" ~ "pasture_hay",
+      nlcd_category == "Dwarf_Shrub" ~ "shrubland",
+      nlcd_category == "Shrub_Scrub" ~ "shrubland",
+      nlcd_category == "Emergent_Herbaceous_Wetlands" ~ "wetland",
+      nlcd_category == "Woody_Wetlands" ~ "wetland",
+      ## IGBP category simplification
+      igbp_category == "Barren or Sparsely Vegetated " ~ "barren_land",
+      igbp_category == "Snow and Ice" ~ "barren_land",
+      igbp_category == "Cropland/Natural Vegetation Mosaic" ~ "cultivated_crops",
+      igbp_category == "Croplands" ~ "cultivated_crops",
+      igbp_category == "Deciduous Needleleaf Forest" ~ "deciduous_needleaf_forest",
+      igbp_category == "Urban and Built-Up" ~ "low_medium_intensity_developed",
+      igbp_category == "Evergreen Needleleaf Forest" ~ "evergreen_forest",
+      igbp_category == "Grasslands" ~ "grassland",
+      igbp_category == "Savannas" ~ "grassland",
+      igbp_category == "Woody Savannas" ~ "grassland", # *NOTE JUDGMENT CALL*
+      igbp_category == "Mixed Forest" ~ "mixed_forest",
+      igbp_category == "Water Bodies" ~ "open_water",
+      igbp_category == "Closed Shrublands" ~ "shrubland",
+      igbp_category == "Open Shrublands" ~ "shrubland",
+      igbp_category == "Permanent Wetlands" ~ "wetland",
+      # _category == "" ~ "",
       T ~ as.character(cover_category) ) ) %>%
   # Re-summarize within our new categories
   ## Note that this drops the original category columns so you'd need to go back to find those
@@ -709,15 +713,14 @@ combo <- cover %>%
     ## Adding prefix "rocks_" to all columns (this will help differentiate between rock and cover data that might otherwise be ambiguous)
     rock_types = paste0("rocks_", rock_types) ) %>%
   # Pivot back to wide format
-  pivot_wider(id_cols = -rock_types:-rocks_perc,
-              names_from = rock_types,
+  pivot_wider(names_from = rock_types,
               values_from = rocks_perc) %>%
   # Now do the same for the cover categories
-  pivot_longer(cols = deciduous_broadleaf_forest:pasture_hay,
+  pivot_longer(cols = deciduous_forest:pasture_hay,
                names_to = "cover_types", values_to = "cover_perc") %>%
   mutate(cover_types = paste0("cover_", cover_types)) %>%
-  pivot_wider(id_cols = -cover_types:-cover_perc,
-              names_from = cover_types, values_from = cover_perc) %>%
+  pivot_wider(names_from = cover_types,
+              values_from = cover_perc) %>%
   # McMurdo uses expert knowledge rather than extracted information (for now)
   mutate(major_rock = ifelse(LTER == "MCM", yes = "glacial_drift", no = major_rock),
          major_cover = ifelse(LTER == "MCM", yes = "barren_land", no = major_cover)) %>%
@@ -810,23 +813,25 @@ simp <- combo %>%
   pivot_longer(cols = starts_with('cover_'),
                names_to = "cover_categories",
                values_to = "percents") %>%
-  # Streamline cover categories
-  mutate(
-  cover_categories = case_when(
-    cover_categories == "cover_deciduous_broadleaf_forest" ~ "cover_forest",
-    cover_categories == "cover_evergreen_forest" ~ "cover_forest",
-    cover_categories == "cover_mixed_forest" ~ "cover_forest",
-    # cover_categories == "cover_shrubland" ~ "cover_", ## ? ##
-    cover_categories == "cover_barren_perennial_snow_ice" ~ "cover_barren_ice",
-    # cover_categories == "cover_grassland" ~ "cover_", ## ? ##
-    cover_categories == "cover_cultivated_crops" ~ "cover_impacted",
-    cover_categories == "cover_deciduous_needleleaf_forest" ~ "cover_forest",
-    # cover_categories == "cover_open_water" ~ "cover_", ## ? ##
-    # cover_categories == "cover_tundra" ~ "cover_", ## ? ##
-    # cover_categories == "cover_wetland" ~ "cover_", ## ? ##
-    cover_categories == "cover_low_medium_intensity_developed" ~ "cover_impacted",
-    cover_categories == "cover_pasture_hay" ~ "cover_impacted",
-    T ~ cover_categories) ) %>%
+  # Drop "cover_" prefixes
+  mutate(cover_categories = gsub("cover_", "", cover_categories)) %>%
+  # Streamline remaining categories
+  mutate(cover_categories = case_when(
+    cover_categories == "deciduous_forest" ~ "forest",
+    cover_categories == "deciduous_needleaf_forest" ~ "forest",
+    cover_categories == "evergreen_forest" ~ "forest",
+    cover_categories == "mixed_forest" ~ "forest",
+    cover_categories == "cultivated_crops" ~ "impacted",
+    cover_categories == "low_medium_intensity_developed" ~ "impacted",
+    cover_categories == "pasture_hay" ~ "impacted",
+    cover_categories == "grassland" ~ "shrub_grass",
+    cover_categories == "shrubland" ~ "shrub_grass",
+    cover_categories == "barren_land" ~ "barren",
+    cover_categories == "open_water" ~ "water",
+    cover_categories == "wetland" ~ "wetland",
+    T ~ as.character(cover_categories) ) ) %>%
+  # Add the "cover_" prefix back on
+  mutate(cover_categories = paste0("cover_", cover_categories)) %>%
   # Make it a dataframe rather than a list tibble
   as.data.frame() %>%
   # Group by everything except cover category info
@@ -834,8 +839,7 @@ simp <- combo %>%
   # Summarize through new categories
   summarise(percents = sum(percents, na.rm = T)) %>%
   # Pivot to wide format
-  pivot_wider(id_cols = LTER:uniqueID,
-              names_from = cover_categories,
+  pivot_wider(names_from = cover_categories,
               values_from = percents) %>%
   # Bring rocks back in
   left_join(y = actual %>%
