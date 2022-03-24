@@ -37,7 +37,8 @@ sites <- sites_full %>%
   # Make uniqueID and LTER factors
   mutate(across(LTER:uniqueID, factor)) %>%
   # Drop McMurdo (Antarctica isn't included in Hydrosheds)
-  filter(LTER != "MCM")
+  # Also drop GRO (its shapefiles take too long to process in this path so we can just use their special ones used in the 'extract-watershed-info.R' script)
+  filter(LTER != "MCM" & LTER != "GRO")
 
 # Check structure
 str(sites)
@@ -114,7 +115,7 @@ sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
 # 1 = Africa; 2 = Europe; 3 = Siberia; 4 = Asia; 5 = Australia; 6 = South America; 7 = North America; 8 = Arctic (North America); 9 = Greenland 
 
 # Prepare only needed HydroSheds 'continents'
-basin_needs <- rbind(siberia, north_am, arctic)
+basin_needs <- rbind(north_am, arctic)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs')))
@@ -269,7 +270,7 @@ hydro_poly <- hydro_out %>%
   group_by(uniqueID) %>%
   # ...sum sub-polygon areas and combine sub-polygon geometries
   summarise(
-    drainSqKm_calc = sum(SUB_AREA),
+    drainSqKm = sum(SUB_AREA),
     geometry = sf::st_union(geometry)
   ) %>%
   # Need to make the class officially sf again before continuing
@@ -278,23 +279,52 @@ hydro_poly <- hydro_out %>%
   nngeo::st_remove_holes() %>%
   # Retrieve the LTER and stream names
   separate(col = uniqueID, into = c("LTER", "stream"), sep = "_", remove = F)
+  ## ignore "expected 2 pieces" warning because it refers to "Sagehen"
 
 # Check structure
 str(hydro_poly)
 
 # Experimentally plot subsets of this larger sf object
 hydro_poly2 <- hydro_poly %>%
-  select(-drainSqKm_calc) %>%
-  filter(uniqueID %in% c("GRO_Kolyma", "GRO_Lena", "GRO_Mackenzie", "GRO_Ob", "GRO_Yenisey"))
+  select(-drainSqKm)
 
 # Plot this object
 plot(hydro_poly2["uniqueID"], reset = F, axes = T, lab = c(2, 2, 2))
 plot(sites_actual["uniqueID"], add = T, pch = 15, col = 'gray45')
 
 # Plot all of the watersheds
-plot(hydro_poly["uniqueID"], reset = F, axes = T, lab = c(2, 2, 2))
+plot(hydro_poly["uniqueID"], axes = T, lab = c(2, 2, 2))
 
-# Save out shapefile
-st_write(obj = hydro_poly, dsn = "hydrosheds-shapefiles/hydrosheds_watersheds.shp", delete_layer = T)
+# Add on GRO watersheds' files ---------------------------------------------
+
+# Grab all of our special single-origin shapefiles
+artisanal_sheds <- sf::st_read('watershed-shapefiles/SilicaSynthesis_allWatersheds.shp')
+
+# Get just the GRO polygons out of that
+gro_sheds <- artisanal_sheds %>%
+  filter(LTER == "GRO") %>%
+  # Reformat to match structure of HydroSheds object
+  ## Move uniqueID column
+  relocate(uniqueID, .before = LTER) %>%
+  # Add blank columns that the hydro_poly has that this one doesn't
+  mutate(stream = NA,
+         drainSqKm = NA,
+         .after = LTER)
+
+# Check structure
+str(gro_sheds)
+str(hydro_poly)
+
+# Now let's attach the GRO shapefiles we got elsewhere to the HydroSheds polygons
+poly_actual <- rbind(hydro_poly, gro_sheds)
+
+# Make a plot to make sure it worked
+plot(poly_actual["uniqueID"], axes = T, lab = c(2, 2, 2)) # yep!
+
+# And check structure
+str(poly_actual)
+
+# Save out shapefile of all the HydroSheds polygons and the GRO polygons
+st_write(obj = poly_actual, dsn = "hydrosheds-shapefiles/hydrosheds_watersheds.shp", delete_layer = T)
 
 # End ----------------------------------------------------------------
