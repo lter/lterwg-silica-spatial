@@ -461,7 +461,7 @@ plot(globe)
 # Crop to band of interest (all longitudes but only northern-most latitudes)
 ext(globe)
 globe_crop <- terra::crop(globe, terra::ext(-179.999999999967, 179.999985600033,
-                                            60, 89.9999999999667))
+                                            55, 89.9999999999667))
 
 # Plot cropped version
 plot(globe_crop)
