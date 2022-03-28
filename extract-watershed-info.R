@@ -45,53 +45,28 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 # Ultimately want both lithology and land cover but we'll start with rocks
 
-# Lithology Pre-Processing ---------------------------------------------------
+# Lithology Extraction ---------------------------------------------------
 
 # Pull in the raw lithology data
-rocks_raw <- stars::read_stars("extracted-data/raw-lithology-data/glim_wgs84_0point5deg.txt.asc")
+rocks_raw <- terra::rast("extracted-data/raw-lithology-data/glim_wgs84_0point5deg.txt.asc")
 
-# Convert it to an sf object
-rocks_sf <- sf::st_as_sf(rocks_raw)
+# Check CRS
+crs(rocks_raw)
+## Looks good
 
-# Examine it
-str(rocks_sf)
-rocks_sf$geometry
-st_crs(rocks_sf)
-  ## CRS is missing!
+# Experimental plotting
+plot(rocks_raw)
 
-# Prepare the lithology dataset for extraction
-rocks_actual <- rocks_sf %>%
-  # Because the structure call shows that it is WGS84 we can set the NA without fear
-  sf::st_set_crs(value = 4326) %>%
-  # Name the data column more descriptively
-  dplyr::rename(rock_code = glim_wgs84_0point5deg.txt.asc)
+# Strip out rocks from our polygons
+rocks_list <- exactextractr::exact_extract(x = rocks_raw, y = sheds, include_cols = c("LTER", "uniqueID"))
+str(rocks_list)
 
-# Check it now
-str(rocks_actual)
-st_crs(rocks_actual)
-  ## Looks good!
+# Get that to a dataframs
+rocks_actual <- rocks_list %>%
+  map_dfr(select, c(LTER, uniqueID, value))
 
-# Plot just to make sure they seem to be stacking correctly
-plot(rocks_actual["rock_code"], main = "All Lithology Information", axes = T, reset = F)
-## Note that plotting the global lithology takes a minute
-plot(sheds["LTER"], axes = T, add = T)
-  ## Looks about right!
-
-# Preemptively turn off s2 processing
-sf::sf_use_s2(use_s2 = F)
-
-# Lithology Extraction ------------------------------------------------------
-
-# Strip out the lithology data from within our watershed polygons
-rocky_sheds <- sheds %>%
-  # Identify intersections between watersheds and rocks
-  ## Note this line takes a minute
-  st_intersection(rocks_actual)
-
-# Plot it for exploratory purposes
-plot(rocky_sheds["rock_code"], main = "Lithology Extraction", axes = T)
-## If you use the "Zoom" button you'll see there are colors in there
-## In the plotting pane you can only see the edges of all the cells
+# Check contents
+head(rocks_actual)
 
 # Lithology Summarization ---------------------------------------------------
 
@@ -132,32 +107,32 @@ rock_index <- rock_index_raw %>%
 # Check that worked
 head(rock_index)  
 sort(unique(rock_index$rock_type))
-  
+
 # Process the extracted lithology information into a dataframe
-rock_data_v1 <- rocky_sheds %>%
-  # Remove the truly spatial part of the data to make it easier to work with
-  st_drop_geometry() %>%
+rock_data_v1 <- rocks_actual %>%
+  # Get value column named more informatively
+  dplyr::rename(rock_code = value) %>%
   # Bring over the rock names from the index
   left_join(rock_index, by = "rock_code") %>%
   # Remove the now-unneeded code column
   dplyr::select(-rock_code) %>%
   dplyr::mutate(
-  rock_type = case_when(
-    rock_type == 'unconsolidated_sediments' ~ 'sedimentary',
-    rock_type == 'siliciclastic_sedimentary_rocks' ~ 'sedimentary',
-    rock_type == 'mixed_sedimentary_rocks' ~ 'sedimentary',
-    rock_type == 'pyroclastic' ~ 'volcanic',
-    rock_type == 'carbonate_sedimentary_rocks' ~ 'carbonate_evaporite',
-    rock_type == 'evaporites' ~ 'carbonate_evaporite',
-    rock_type == 'metamorphic_rocks' ~ 'metamorphic',
-    rock_type == 'acid_plutonic_rocks' ~ 'plutonic',
-    rock_type == 'intermediate_plutonic_rocks' ~ 'plutonic',
-    rock_type == 'basic_plutonic_rocks' ~ 'plutonic',
-    rock_type == 'acid_volcanic_rocks' ~ 'volcanic',
-    rock_type == 'intermediate_volcanic_rocks' ~ 'volcanic',
-    rock_type == 'basic_volcanic_rocks' ~ 'volcanic',
-    T ~ as.character(rock_type)
-  ) ) %>%
+    rock_type = case_when(
+      rock_type == 'unconsolidated_sediments' ~ 'sedimentary',
+      rock_type == 'siliciclastic_sedimentary_rocks' ~ 'sedimentary',
+      rock_type == 'mixed_sedimentary_rocks' ~ 'sedimentary',
+      rock_type == 'pyroclastic' ~ 'volcanic',
+      rock_type == 'carbonate_sedimentary_rocks' ~ 'carbonate_evaporite',
+      rock_type == 'evaporites' ~ 'carbonate_evaporite',
+      rock_type == 'metamorphic_rocks' ~ 'metamorphic',
+      rock_type == 'acid_plutonic_rocks' ~ 'plutonic',
+      rock_type == 'intermediate_plutonic_rocks' ~ 'plutonic',
+      rock_type == 'basic_plutonic_rocks' ~ 'plutonic',
+      rock_type == 'acid_volcanic_rocks' ~ 'volcanic',
+      rock_type == 'intermediate_volcanic_rocks' ~ 'volcanic',
+      rock_type == 'basic_volcanic_rocks' ~ 'volcanic',
+      T ~ as.character(rock_type)
+    ) ) %>%
   # Group by LTER and uniqueID
   group_by(LTER, uniqueID, rock_type) %>%
   # Count the instances within each rock type
@@ -225,13 +200,10 @@ rock_export <- sites %>%
 head(rock_export)
 names(rock_export)
 
-# Export both this and the shapefile that contains the cropped rock data
+# Export the summarized lithology data
 write.csv(x = rock_export,
           file = "extracted-data/SilicaSites_litho.csv",
           na = '', row.names = F)
-st_write(obj = rocky_sheds,
-         dsn = "extracted-data/SilicaSynthesis_LithologyPolygons.shp",
-         delete_layer = T)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
