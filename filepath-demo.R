@@ -10,7 +10,7 @@ myWD <- getwd()
 myWD
 
 # Can re-set to the shares folder as follows
-setwd(file.path('/', "home", "shares", "lter-si", "gdrive", "BasinCharacteristics"))
+setwd(file.path('/', "home", "shares", "lter-si", "gdrive", "Master_Dataset", "BasinCharacteristics"))
 
 # See?
 getwd()
@@ -25,6 +25,11 @@ str(test_data)
 
 # If you scan through the above you'll see that this script could be run by anyone with access to your group's "shares" sub-folder ("lter-si" in this case)
 
-# No more needing to deal with relative file paths differing among users!
+# If needed, you can toggle back and forth between the two paths!
+getwd()
+setwd(myWD)
+getwd()
+setwd(shares)
+getwd()
 
 # End ----
