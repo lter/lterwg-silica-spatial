@@ -2,6 +2,23 @@
         # Universal File Path Demonstration
 ## ----------------------------------------------- ##
 
+
+
+## Option 1 : Using paths
+
+# Set path and filenames
+base_path <- "/home/shares/lter-si/gdrive"
+basin_path <- "Master_Dataset/BasinCharacteristics"
+
+watershed_file <- "LongTermWatersheds_LatLong_drainArea.csv"
+
+# read the file
+test_data <- read.csv(file = file.path(base_path, basin_path, watershed_file))
+
+
+
+## Option 2 : You can also change the working directory (if you need to read a lot of files)
+
 # Default working directory is the folder containing the current project
 getwd()
 
@@ -10,7 +27,7 @@ myWD <- getwd()
 myWD
 
 # Can re-set to the shares folder as follows
-setwd(file.path('/', "home", "shares", "lter-si", "gdrive", "Master_Dataset", "BasinCharacteristics"))
+setwd(file.path(base_path, basin_path))
 
 # See?
 getwd()
