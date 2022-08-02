@@ -27,9 +27,10 @@ sites_new <- read.csv(file.path(path, "NewSitesLatLong_8.2.2022.csv"))
 
 # Do some pre-processing of the new data
 sites <- sites_new %>%
-  # Swap spaces for hyphens in site names
-  dplyr::mutate(stream = gsub(pattern = " ", replacement = "-", x = site_fullname)) %>%
-  # Make a 'uniqueID' column
+  # Swap spaces/underscores for hyphens in stream site names and domains
+  dplyr::mutate(stream = gsub(pattern = " |_", replacement = "-", x = site_fullname),
+                domain = gsub(pattern = " |_", replacement = "-", x = domain)) %>%
+    # Make a 'uniqueID' column
   dplyr::mutate(uniqueID = paste(domain, stream, sep = "_")) %>%
   # Simplify Sagehen's entry
   dplyr::mutate(uniqueID = ifelse(test = uniqueID == "Sagehen_Sagehen",
@@ -247,8 +248,8 @@ id_list <- list()
 n <- 1
 
 # Now that we have individual .csvs for every watershed, let's read them back in
-# for (stream_id in unique(sites_actual$uniqueID)) {
-for (stream_id in "BNZ_C3"){ # Test "loop"
+for (stream_id in unique(sites_actual$uniqueID)) {
+# for (stream_id in "BNZ_C3"){ # Test "loop"
     
   # If the file doesn't yet exist, warn the user
   if (fs::file_exists(file.path(path, 'hydrosheds-basin-ids',
@@ -289,24 +290,23 @@ sf::sf_use_s2(F)
 # Strip the polygons that correspond to those IDs
 hydro_poly <- hydro_out %>%
   # Make the HydroBasins ID column have an identical name between the df and sf objects
-  rename(HYBAS_ID = hybas_id) %>%
+  dplyr::rename(HYBAS_ID = hybas_id) %>%
   # Attach everything in the polygon variant
   ## Necessary because of some polygons are found in >1 uniqueID
-  left_join(basin_needs, by = 'HYBAS_ID') %>%
+  dplyr::left_join(basin_needs, by = 'HYBAS_ID') %>%
   # Within uniqueID...
-  group_by(uniqueID) %>%
+  dplyr::group_by(uniqueID) %>%
   # ...sum sub-polygon areas and combine sub-polygon geometries
-  summarise(
-    drainSqKm = sum(SUB_AREA),
-    geometry = sf::st_union(geometry)
-  ) %>%
+  dplyr::summarise(drainSqKm = sum(SUB_AREA, na.rm = TRUE),
+                   geometry = sf::st_union(geometry)) %>%
   # Need to make the class officially sf again before continuing
-  st_as_sf() %>%
+  sf::st_as_sf() %>%
   # Then eliminate any small gaps within those shapes
-  nngeo::st_remove_holes() %>%
-  # Retrieve the LTER and stream names
-  separate(col = uniqueID, into = c("domain", "stream"), sep = "_", remove = F)
-  ## ignore "expected 2 pieces" warning because it refers to "Sagehen"
+  # nngeo::st_remove_holes() %>%
+  ## Throws error: `Error in tmp[j][[1]] : subscript out of bounds`
+  # Retrieve the domain and stream names
+  tidyr::separate(col = uniqueID, into = c("domain", "stream"), sep = "_",
+                  remove = F, fill = "right")
 
 # Check structure
 str(hydro_poly)
@@ -331,12 +331,7 @@ artisanal_sheds <- sf::st_read(file.path(path, 'watershed-shapefiles',
 # Get just the GRO polygons out of that
 gro_sheds <- artisanal_sheds %>%
   dplyr::filter(LTER == "GRO") %>%
-  # Reformat to match structure of HydroSheds object
-  ## Move uniqueID column
-  dplyr::relocate(uniqueID, .before = LTER) %>%
-  # Add blank columns that the hydro_poly has that this one doesn't
-  dplyr::mutate(stream = NA, drainSqKm = NA, .after = LTER) %>%
-  # Rename the LTER column more generally
+  # Rename the LTER column to match the phrasing of the newer sites CSV
   dplyr::rename(domain = LTER)
 
 # Check structure
@@ -357,4 +352,4 @@ st_write(obj = poly_actual, dsn = file.path(path, "hydrosheds-shapefiles",
                                             "hydrosheds_watersheds.shp"),
          delete_layer = T)
 
-# End ----------------------------------------------------------------
+# End ----
