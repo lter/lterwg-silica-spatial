@@ -24,9 +24,10 @@ path
 # Load in site names with lat/longs
 sites_old <- read.csv(file.path(path, "tidy_SilicaSites.csv"))
 sites_new <- read.csv(file.path(path, "NewSitesLatLong_8.2.2022.csv"))
-
+sites_finn <- read.csv(file.path(path, "FinnData_LatLongs_8.3.22.csv"))
+  
 # Do some pre-processing of the new data
-sites <- sites_new %>%
+sites_v0 <- sites_new %>%
   # Swap spaces/underscores for hyphens in stream site names and domains
   dplyr::mutate(stream = gsub(pattern = " |_", replacement = "-", x = site_fullname),
                 domain = gsub(pattern = " |_", replacement = "-", x = domain)) %>%
@@ -49,14 +50,41 @@ sites <- sites_new %>%
   dplyr::rename(long = longitude, lat = latitude)
 
 # Check to see if the new dataframe is missing any sites that the old CSV had
-setdiff(x = sites_old$uniqueID, y = sites$uniqueID)
+setdiff(x = sites_old$uniqueID, y = sites_v0$uniqueID)
 ## Any 'GRO_' and 'MCM_' sites *should* be missing because we removed them above
 
 # Want to see which sites are new?
-setdiff(x = sites$uniqueID, y = sites_old$uniqueID)
+setdiff(x = sites_v0$uniqueID, y = sites_old$uniqueID)
+
+# Standardize Finnish sites' dataframe
+sites_finn_rev <- sites_finn %>%
+  # Remove double spaces from station names
+  dplyr::mutate(Station.name = gsub(pattern = "      |  ", replacement = " ",
+                                    x = Station.name)) %>%
+  # Fix column names
+  dplyr::rename(domain = Station.name, stream = Id, lat = Latitude, long = Longitude) %>%
+  # Swap spaces/underscores for hyphens in stream site names and domains
+  dplyr::mutate(stream = gsub(pattern = " |_", replacement = "-", x = stream),
+                domain = gsub(pattern = " |_", replacement = "-", x = domain)) %>%
+  # Make a 'uniqueID' column
+  dplyr::mutate(uniqueID = paste(domain, stream, sep = "_"), .before = lat) %>%
+  # As a quick check, remove any rows that lack coordinates
+  dplyr::filter(!is.na(lat) & !is.na(long)) %>%
+  # Make all character columns into factors
+  dplyr::mutate(dplyr::across(domain:uniqueID, factor))
+
+# Check structure of both
+str(sites_finn_rev)
+str(sites_v0)
+
+# Combine them
+sites <- sites_v0 %>%
+  dplyr::bind_rows(sites_finn_rev)
 
 # Check structure
 str(sites)
+range(sites$lat)
+range(sites$long)
 
 # Get an explicitly spatial version
 sites_spatial <- sf::st_as_sf(sites, coords = c("long", "lat"), crs = 4326)
@@ -70,20 +98,24 @@ str(sites_spatial)
 ## https://www.hydrosheds.org/page/hydrobasins
 
 # Load in relevant files
-arctic <- sf::st_read(file.path(path, "hydrosheds-raw/hybas_ar_lev00_v1c.shp"))
+arctic <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_ar_lev00_v1c.shp"))
 # xmin: -180       ymin: 51.20833   xmax: -61.09936   ymax: 83.21723
-asia <- sf::st_read(file.path(path, "hydrosheds-raw/hybas_as_lev00_v1c.shp"))
+asia <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_as_lev00_v1c.shp"))
 # xmin: 57.60833   ymin: 1.166667   xmax: 150.9215    ymax: 55.9375
-oceania <- sf::st_read(file.path(path, "hydrosheds-raw/hybas_au_lev00_v1c.shp"))
+oceania <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_au_lev00_v1c.shp"))
 # xmin: 94.97022   ymin: -55.11667  xmax: 180.0006    ymax: 24.30053
-greenland <- sf::st_read(file.path(path, "hydrosheds-raw/hybas_gr_lev00_v1c.shp"))
+greenland <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_gr_lev00_v1c.shp"))
 # xmin: -73.00067  ymin: 59.74167   xmax: -11.34932   ymax: 83.62564
-north_am <- sf::st_read(file.path(path, "hydrosheds-raw/hybas_na_lev00_v1c.shp"))
+north_am <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_na_lev00_v1c.shp"))
 # xmin: -137.9625  ymin: 5.495833   xmax: -52.61605   ymax: 62.74232
-south_am <- sf::st_read(file.path(path, "hydrosheds-raw/hybas_sa_lev00_v1c.shp"))
+south_am <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_sa_lev00_v1c.shp"))
 # xmin: -92.00068  ymin: -55.9875   xmax: -32.37453   ymax: 14.88273
-siberia <- sf::st_read(file.path(path, "hydrosheds-raw/hybas_si_lev00_v1c.shp"))
+siberia <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_si_lev00_v1c.shp"))
 # xmin: 58.95833   ymin: 45.5625    xmax: 180         ymax: 81.26735
+africa <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_af_lev00_v1c.shp"))
+# xmin: -18.1631   ymin: 54.5381    xmax: -34.8370    ymax: 37.5631
+europe <- sf::st_read(file.path(path, "hydrosheds-raw", "hybas_eu_lev00_v1c.shp"))
+# xmin: -24.5423   ymin: 69.5545    xmax: 12.5913     ymax: 81.8589
 
 # Antarctica is not supported by this product so we just want everything else
 # (the minimum latitude is -55.2° for any of the slices)
@@ -96,7 +128,8 @@ str(arctic)
 ## PFAF_# + N = progressively finer separation
 
 # Bind our files into a single (admittedly giant) object
-all_basins <- rbind(arctic, asia, oceania, greenland, north_am, south_am, siberia)
+all_basins <- rbind(arctic, asia, oceania, greenland, north_am,
+                    south_am, siberia, africa, europe)
 
 # For ease of manipulation get just the HYBAS_ID
 # These uniquely identify the most specific level so they work upstream too (no pun intended)
@@ -133,7 +166,7 @@ sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
 # 1 = Africa; 2 = Europe; 3 = Siberia; 4 = Asia; 5 = Australia; 6 = South America; 7 = North America; 8 = Arctic (North America); 9 = Greenland 
 
 # Prepare only needed HydroSheds 'continents'
-basin_needs <- rbind(north_am, arctic)
+basin_needs <- rbind(europe, north_am, arctic)
 
 # Clean up environment to have less data stored as we move forward
 rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs')))
