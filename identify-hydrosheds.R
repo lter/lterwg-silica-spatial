@@ -355,8 +355,8 @@ write.csv(hydro_poly_df, file = file.path(path, 'watershed_areas.csv'),
           row.names = F, na = "")
 
 # Now upload this as well to the GoogleDrive
-googledrive::drive_upload(media = file.path(path, 'watershed_areas.csv'),
-                          path = as_id("https://drive.google.com/drive/folders/1HQtpWYoq_YQwj_bDNNbv8D-0swi00o_s"))
+# googledrive::drive_upload(media = file.path(path, 'watershed_areas.csv'),
+#                           path = as_id("https://drive.google.com/drive/folders/1HQtpWYoq_YQwj_bDNNbv8D-0swi00o_s"))
 
 # Experimentally plot subsets of this larger sf object
 hydro_poly2 <- hydro_poly %>%
