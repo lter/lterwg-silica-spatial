@@ -2,87 +2,58 @@
                  # LTER WG: Silica Synthesis
 ## ------------------------------------------------------- ##
 # Written by:
-## Nick J Lyon + 
+## Nick J Lyon
 
 # Purpose:
 ## Create/find shapefiles of watershed boundaries around site lat/long points. These polygons can be used later as 'cookie cutters' to extract the relevant portion of global climate data rasters
 
-# Housekeeping ----------------------------------------------------------
+## ------------------------------------------------------- ##
+                     # Housekeeping -----
+## ------------------------------------------------------- ##
 
 # Read needed libraries
-library(tidyverse); library(sf); library(terra); library(nngeo)
+# install.packages("librarian")
+librarian::shelf(tidyverse, googledrive, sf, terra, nngeo, NCEAS/scicomptools)
 
 # Clear environment
 rm(list = ls())
 
 # Identify path to location of shared data
-path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract")
-path
+(path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
-# Site coordinate retrieval and preparation --------------------
+## ------------------------------------------------------- ##
+# Site Coordinate Acquisition ----
+## ------------------------------------------------------- ##
 
-# Load in site names with lat/longs
-sites_old <- read.csv(file.path(path, "tidy_SilicaSites.csv"))
-sites_new <- read.csv(file.path(path, "NewSitesLatLong_8.2.2022.csv"))
-sites_finn <- read.csv(file.path(path, "FinnData_LatLongs_8.3.22.csv"))
-  
-# Do some pre-processing of the new data
-sites_v0 <- sites_new %>%
-  # Swap spaces/underscores for hyphens in stream site names and domains
-  dplyr::mutate(stream = gsub(pattern = " |_", replacement = "-", x = site_fullname),
-                domain = gsub(pattern = " |_", replacement = "-", x = domain)) %>%
-    # Make a 'uniqueID' column
-  dplyr::mutate(uniqueID = paste(domain, stream, sep = "_")) %>%
-  # Simplify Sagehen's entry
-  dplyr::mutate(uniqueID = ifelse(test = uniqueID == "Sagehen_Sagehen",
-                                  yes = "Sagehen",
-                                  no = uniqueID)) %>%
-  # Pare down to only needed columns
-  dplyr::select(domain, stream, uniqueID, latitude, longitude) %>%
-  # As a quick check, remove any rows that lack coordinates
-  dplyr::filter(!is.na(latitude) & !is.na(longitude)) %>%
-  # Drop McMurdo (Antarctica isn't included in Hydrosheds)
-  # Also drop GRO (its shapefiles take too long to process in this path so we can just use their special ones used in the 'extract-watershed-info.R' script)
-  dplyr::filter(domain != "MCM" & domain != "GRO") %>%
-  # Make all character columns into factors
-  dplyr::mutate(dplyr::across(domain:uniqueID, factor)) %>%
+# Grab ID of the GoogleSheet with site coordinates
+ref_id <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1HQtpWYoq_YQwj_bDNNbv8D-0swi00o_s")) %>%
+  dplyr::filter(name == "WRTDS_Reference_Table")
+
+# Download ref table (overwriting previous downloads)
+googledrive::drive_download(file = googledrive::as_id(ref_id),
+                            path = file.path(path, "Silica_Coordinates.xlsx"),
+                            overwrite = T)
+
+# Read it in
+coord_df <- readxl::read_excel(path = file.path(path, "Silica_Coordinates.xlsx"))
+
+# Do some necessary processing
+sites <- coord_df %>%
+  # Remove some unneeded columns
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, Latitude, Longitude) %>%
+  # Drop missing coordinates
+  dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
+  # Remove McMurdo (Antarctica isn't included in Hydrosheds) and GRO (shapefiles too large)
+  dplyr::filter(!LTER %in% c("GRO", "MCM")) %>%
   # Rename lat/long more simply
-  dplyr::rename(long = longitude, lat = latitude)
-
-# Check to see if the new dataframe is missing any sites that the old CSV had
-setdiff(x = sites_old$uniqueID, y = sites_v0$uniqueID)
-## Any 'GRO_' and 'MCM_' sites *should* be missing because we removed them above
-
-# Want to see which sites are new?
-setdiff(x = sites_v0$uniqueID, y = sites_old$uniqueID)
-
-# Standardize Finnish sites' dataframe
-sites_finn_rev <- sites_finn %>%
-  # Remove double spaces from station names
-  dplyr::mutate(Station.name = gsub(pattern = "      |  ", replacement = " ",
-                                    x = Station.name)) %>%
-  # Fix column names
-  dplyr::rename(domain = Station.name, stream = Id, lat = Latitude, long = Longitude) %>%
-  # Swap spaces/underscores for hyphens in stream site names and domains
-  dplyr::mutate(stream = gsub(pattern = " |_", replacement = "-", x = stream),
-                domain = gsub(pattern = " |_", replacement = "-", x = domain)) %>%
-  # Make a 'uniqueID' column
-  dplyr::mutate(uniqueID = paste(domain, stream, sep = "_"), .before = lat) %>%
-  # As a quick check, remove any rows that lack coordinates
-  dplyr::filter(!is.na(lat) & !is.na(long)) %>%
+  dplyr::rename(long = Longitude, lat = Latitude) %>%
   # Make all character columns into factors
-  dplyr::mutate(dplyr::across(domain:uniqueID, factor))
+  dplyr::mutate(dplyr::across(LTER:Discharge_File_Name, factor))
+  
+# Glimpse it
+dplyr::glimpse(sites)
 
-# Check structure of both
-str(sites_finn_rev)
-str(sites_v0)
-
-# Combine them
-sites <- sites_v0 %>%
-  dplyr::bind_rows(sites_finn_rev)
-
-# Check structure
-str(sites)
+# Check coordinates
 range(sites$lat)
 range(sites$long)
 
@@ -156,14 +127,25 @@ sites_actual <- sites_spatial %>%
                       # ...retain the HYBAS_ID of that interaction...
                       yes = basin_simp$HYBAS_ID[ixn],
                       #...if not, retain nothing
-                      no = '') )
+                      no = '') ) %>%
+  # Manually address sites that apparently are missing but we are confident in
+  dplyr::mutate(HYBAS_ID = ifelse(test = LTER == "Finnish Environmental Institute" & 
+                                    Stream_Name == "Site 28208",
+                                  # This ID is from a *very* close neighboring site
+                                  yes = "2000029960",
+                                  no = HYBAS_ID))
 
 # Check it out
-sites_actual
+dplyr::glimpse(sites_actual)
 
 # And to make our lives easier, check out which continents we actually need
 sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
 # 1 = Africa; 2 = Europe; 3 = Siberia; 4 = Asia; 5 = Australia; 6 = South America; 7 = North America; 8 = Arctic (North America); 9 = Greenland 
+
+# Check any sites missing intersections
+sites_actual %>%
+  dplyr::filter(nchar(stringr::str_sub(HYBAS_ID)) == 0) %>%
+  dplyr::select(LTER, Stream_Name)
 
 # Prepare only needed HydroSheds 'continents'
 basin_needs <- rbind(europe, north_am, arctic)
@@ -242,76 +224,65 @@ find_all_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
 
 # Identify all upstream polygon(s) -----------------------------------------
 
-# For every uniqueID, find all of the upstream polygons
-for (stream_id in unique(sites_actual$uniqueID)) {
-# for (stream_id in "BNZ_C3"){ # Test "loop"
-  
-  # If the file already exists, skip the processing step
-  if (fs::file_exists(file.path(path, 'hydrosheds-basin-ids',
-                                paste0(stream_id, '_HYBAS_ID.csv')))) {
-    message("HydroSheds IDs for '", stream_id, "' already identified.")
-    
-    # If the file doesn't yet exist, get it
-  } else {
-    
-  # Identify the focal polygon HYBAS_ID that corresponds to this uniqueID
-  focal_poly <- as.character(sites_actual$HYBAS_ID[sites_actual$uniqueID == stream_id])
-
-  # Print start-up message
-  message( "Processing for '", stream_id, "' begun at ", Sys.time())
-  
-  # Identify all upstream shapes
-  fxn_out <- find_all_up(HYBAS = basin_needs, HYBAS.ID = focal_poly)
-  
-  # Make a dataframe of this
-  hydro_df <- data.frame(uniqueID = rep(stream_id, (length(fxn_out) + 1)),
-                         hybas_id = c(focal_poly, fxn_out))
-  
-  # Save this out
-  write.csv(x = hydro_df,
-            file = file.path(path, 'hydrosheds-basin-ids',
-                             paste0(stream_id, '_HYBAS_ID.csv')),
-            na = '', row.names = F)
-   
-  # Print success message
-  message( "Processing complete for '", stream_id, "' at ", Sys.time()) } }
-
-# Make an empty list and counter set to 1
+# Create an empty list
 id_list <- list()
-n <- 1
 
-# Now that we have individual .csvs for every watershed, let's read them back in
-for (stream_id in unique(sites_actual$uniqueID)) {
-# for (stream_id in "BNZ_C3"){ # Test "loop"
+# For each focal polygon, identify all upstream polygons
+## This is preferable to 'for each stream' because some streams share a focal polygon
+## So looping across focal polygons avoids redundancy!
+for(focal_poly in unique(sites_actual$HYBAS_ID)){
+# for(focal_poly in "7000073120"){
+  
+  # Create/identify name and path of file
+  poly_file <- file.path(path, 'hydrosheds-basin-ids',
+                         paste0(focal_poly, '_Upstream_IDs.csv'))
+  
+  # If we've already found this polygon's upstream polygons:
+  if (fs::file_exists(poly_file) == TRUE) {
     
-  # If the file doesn't yet exist, warn the user
-  if (fs::file_exists(file.path(path, 'hydrosheds-basin-ids',
-                                paste0(stream_id, '_HYBAS_ID.csv'))) == F) {
-    message("HydroSheds IDs for '", stream_id, "' NOT identified.")
+    # Read the CSV
+    hydro_df <- read.csv(file = poly_file)
     
-    # If the file *does* exist, get it
+    # Add to the list
+    id_list[[focal_poly]] <- hydro_df
+    
+    # Message outcome
+    message("Upstream HydroSheds IDs for HYBAS ID '", focal_poly, "' already identified.")
+    
+    # If we *don't* have the polygon, continue!
   } else {
     
-    # Read in the csv being considered
-    ids <- read.csv(file.path(path, 'hydrosheds-basin-ids',
-                              paste0(stream_id, '_HYBAS_ID.csv')))
+    # Print start-up message
+    message( "Processing for HYBAS ID '", focal_poly, "' begun at ", Sys.time())
     
-    # Add it to the list at the nth position
-    id_list[[n]] <- ids
+    # Identify all upstream shapes
+    fxn_out <- find_all_up(HYBAS = basin_needs, HYBAS.ID = focal_poly)
     
-    # Advance the counter by 1
-    n <- n + 1 } }
+    # Make a dataframe of this
+    hydro_df <- data.frame(focal_poly = rep(focal_poly, (length(fxn_out) + 1)),
+                           hybas_id = c(focal_poly, fxn_out))
+    
+    # Save this out
+    write.csv(x = hydro_df, file = poly_file, na = '', row.names = F)
+    
+    # And add it to the list
+    id_list[[focal_poly]] <- hydro_df
+    
+    # Print finishing message
+    message( "Processing for HYBAS ID '", focal_poly, "' finished at ", Sys.time())
+    
+  } # Close `else` clause
+} # Close `loop`
 
 # Unlist the list
 hydro_out <- id_list %>%
   purrr::map_dfr(dplyr::select, dplyr::everything())
 
 # Check the structure
-str(hydro_out)
+dplyr::glimpse(hydro_out)
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual',
-                          'basin_needs', 'hydro_out')))
+rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro_out')))
 
 # Subset basin object to only needed polygons ---------------------------------
 
