@@ -2,50 +2,50 @@
                         # LTER WG: Silica Synthesis
 ## ----------------------------------------------------------------------- ##
 # Written by:
-## Nick J Lyon + 
+## Nick J Lyon
 
 # Purpose:
 ## Using the watershed shapefiles created in "identify-watersheds.R"
 ## extract lithology and land cover data for each watershed
 
-# Housekeeping ---------------------------------------------------------------
+
+# --- (v) ALERT (v) ---
+## First version of this script uses `setwd` but as a team we've since decided this is suboptimal
+## Need to change all of the paths throughout to use `file.path` instead of assuming correct working directory
+# --- (^) ALERT (^) ---
+
+## ------------------------------------------------------- ##
+                      # Housekeeping ----
+## ------------------------------------------------------- ##
 
 # Read needed libraries
-library(tidyverse); library(sf); library(stars); library(terra); library(exactextractr)
+# install.packages("librarian")
+librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools)
 
 # Clear environment
 rm(list = ls())
 
-# Set working directory to location of shared data
-## Identify path
-path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract")
-## Set WD to path
-setwd(path)
-## Check that it worked
-getwd()
-
-# Site Coordinate & Watershed Shapefile Retrieval ----------------------------
+# Identify path to location of shared data
+(path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 # Load in site names with lat/longs
 sites <- read.csv("tidy_SilicaSites.csv")
 
 # Check it out
-str(sites)
+dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
 sheds <- sf::st_read('watershed-shapefiles/SilicaSynthesis_allWatersheds.shp')
 
 # Check that out
-str(sheds)
+dplyr::glimpse(sheds)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Lithology Data ------------------------------------------------------------
-
-# Ultimately want both lithology and land cover but we'll start with rocks
-
-# Lithology Extraction ---------------------------------------------------
+## ------------------------------------------------------- ##
+                  # Lithology - Extract ----
+## ------------------------------------------------------- ##
 
 # Pull in the raw lithology data
 rocks_raw <- terra::rast("extracted-data/raw-lithology-data/glim_wgs84_0point5deg.txt.asc")
@@ -68,8 +68,9 @@ rocks_actual <- rocks_list %>%
 # Check contents
 head(rocks_actual)
 
-# Lithology Summarization ---------------------------------------------------
-
+## ------------------------------------------------------- ##
+                 # Lithology - Summarize ----
+## ------------------------------------------------------- ##
 # Bring in the index tying rock code integers with rock abbreviations
 rock_index_raw <- read.table(file = "extracted-data/raw-lithology-data/Classnames.txt",
                              header = T, sep = ';')
@@ -190,7 +191,9 @@ str(rock_data_actual)
 head(rock_data_actual)
 names(rock_data_actual)
 
-# Lithology Export -----------------------------------------------------------
+## ------------------------------------------------------- ##
+                  # Lithology - Export ----
+## ------------------------------------------------------- ##
 
 # Let's get ready to export
 rock_export <- sites %>%
@@ -208,9 +211,9 @@ write.csv(x = rock_export,
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Land Cover Data ------------------------------------------------------------
-
-# NLCD Raster CRS Transformation ---------------------------------------------
+## ------------------------------------------------------- ##
+          # Land Cover - CRS Transformation ----
+## ------------------------------------------------------- ##
 
 # Two of the NLCD rasters I downloaded manually don't match the CRS of the other watersheds
 ## Alaska doesn't match, presumably because it is from 2016 versus 2019 for the others
@@ -254,7 +257,9 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Luquillo LTER (LUQ) Land Cover (LC) Processing ----------------------------------
+## ------------------------------------------------------- ##
+          # Land Cover - Luquillo Processing ----
+## ------------------------------------------------------- ##
 
 # Prepare an sf object of just this LTER's watershed shapes
 luq_sf <- sheds %>%
@@ -307,7 +312,9 @@ write.csv(luq_lc_actual, "extracted-data/raw-landcover-data/NLCD-LUQ-landcover.c
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Arctic LTER (ARC) LC Processing -------------------------------------------
+## ------------------------------------------------------- ##
+            # Land Cover - Arctic Processing ----
+## ------------------------------------------------------- ##
 
 # Prepare an sf object of just this LTER's watershed shapes in the correct CRS
 arc_sf <- sheds %>%
@@ -360,7 +367,9 @@ write.csv(arc_lc_actual, "extracted-data/raw-landcover-data/NLCD-ARC-landcover.c
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Continental US LC Processing --------------------------------------------
+## ------------------------------------------------------- ##
+      # Land Cover - Continental USA Processing ----
+## ------------------------------------------------------- ##
 # This includes AND, HBR, KRR, LMP, LUQ, MCM, NWT, Sagehen, & UMR
 
 # Because the process is the same for extracting data for all of our LTERs, let's do it in a for loop 
@@ -416,7 +425,9 @@ for(lter in setdiff(unique(sites$LTER), c("ARC", "LUQ", "GRO", "MCM"))){
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Great Rivers Observatory (GRO) LC Processing -----------------------------
+## ------------------------------------------------------- ##
+  # Land Cover - Great Rivers Observatory Processing ----
+## ------------------------------------------------------- ##
 # Data source https://earthexplorer.usgs.gov/scene/metadata/full/5e83a1d8eecc8bb5/GLCCGBE20/
 
 # Get relevant part of watershed polygons
@@ -479,16 +490,9 @@ write.csv(gro_lc, "extracted-data/raw-landcover-data/IGBP-GRO-landcover.csv", na
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# McMurdo LTER (MCM) LC Processing -----------------------------
-# Need to find a source for these data
-
-
-
-
-# Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
-
-# Combine LC Data Across Watersheds ----------------------------------------
+## ------------------------------------------------------- ##
+         # Land Cover - Combine Watersheds ----
+## ------------------------------------------------------- ##
 
 # We have--at this point--successfully summarized land cover data from most of our LTERs; now we want to combine our LTER-specific csvs into one 'main' variant
 
@@ -636,7 +640,9 @@ lc_actual <- lc_wide %>%
 # Examine
 head(lc_actual)
 
-# LC Export -----------------------------------------------------------------
+## ------------------------------------------------------- ##
+                # Land Cover - Export ----
+## ------------------------------------------------------- ##
 
 # Let's get ready to export
 cover_export <- sites %>%
@@ -658,7 +664,9 @@ write.csv(x = lc_unmod,
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
-# Lithology and Land Cover Combination --------------------------------------
+## ------------------------------------------------------- ##
+          # Combine Lithology and Land Cover ----
+## ------------------------------------------------------- ##
 
 # With both lithology and land cover data in hand, let's make a single 'one-stop shop' dataframe containing both
 
@@ -826,7 +834,4 @@ write.csv(simp,
           file = "extracted-data/SilicaSites_simplified_litho_and_landcover.csv",
           na = '', row.names = F)
 
-# Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
-
-# End ------------------------------------------------------------------------
+# End ----
