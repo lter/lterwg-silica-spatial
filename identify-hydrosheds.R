@@ -22,7 +22,7 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 ## ------------------------------------------------------- ##
-# Site Coordinate Acquisition ----
+            # Site Coordinate Acquisition ----
 ## ------------------------------------------------------- ##
 
 # Grab ID of the GoogleSheet with site coordinates
@@ -30,12 +30,12 @@ ref_id <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/dri
   dplyr::filter(name == "WRTDS_Reference_Table")
 
 # Download ref table (overwriting previous downloads)
-googledrive::drive_download(file = googledrive::as_id(ref_id),
-                            path = file.path(path, "Silica_Coordinates.xlsx"),
-                            overwrite = T)
+googledrive::drive_download(file = googledrive::as_id(ref_id), overwrite = T,
+                            path = file.path(path, "site-coordinates",
+                                             "Silica_Coordinates.xlsx"))
 
 # Read it in
-coord_df <- readxl::read_excel(path = file.path(path, "Silica_Coordinates.xlsx"))
+coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates", "Silica_Coordinates.xlsx"))
 
 # Do some necessary processing
 sites <- coord_df %>%
@@ -63,7 +63,9 @@ sites_spatial <- sf::st_as_sf(sites, coords = c("long", "lat"), crs = 4326)
 # Check it out
 str(sites_spatial)
 
-# Load in HydroSHEDS basin delineations ----------------------------------
+## ------------------------------------------------------- ##
+          # Load HydroSHEDS Basin Delineations ----
+## ------------------------------------------------------- ##
 
 # See HydroSHEDS website (link below) for download links & tech documentation
 ## https://www.hydrosheds.org/page/hydrobasins
@@ -110,7 +112,9 @@ basin_simp <- all_basins %>%
 # Re-check structure
 str(basin_simp)
 
-# Extract IDs at site points --------------------------------------------
+## ------------------------------------------------------- ##
+      # Identify Site x HydroSHEDS Intersections ----
+## ------------------------------------------------------- ##
 
 # Pre-emptively resolve an error with 'invalid spherical geometry'
 sf::sf_use_s2(F)
@@ -150,11 +154,6 @@ sites_actual %>%
 # Prepare only needed HydroSheds 'continents'
 basin_needs <- rbind(europe, north_am, arctic)
 
-# Clean up environment to have less data stored as we move forward
-rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs')))
-
-# Extract PFAF codes from key polygons  --------------------------------------
-
 # Bring each PFAF code into the sites_actual object by matching with HYBAS_ID
 for(i in 1:12) {
   message("Processing Pfafstetter code level ", i)
@@ -165,11 +164,16 @@ for(i in 1:12) {
 sites_actual$SUB_AREA <- basin_needs$SUB_AREA[match(sites_actual$HYBAS_ID, basin_needs$HYBAS_ID)]
 
 # Check the object again
-str(sites_actual)
+dplyr::glimpse(sites_actual)
 # This object has polygons defined at the finest possible level
 # We may want to visualize aggregated basins so let's go that direction now
 
-# Get custom Hydrosheds functions ------------------------------------------
+# Clean up environment to have less data stored as we move forward
+rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs')))
+
+## ------------------------------------------------------- ##
+          # Load Custom HydroSHEDS Functions ----
+## ------------------------------------------------------- ##
 
 # These are modified from someone's GitHub functions to accept non-S4 objects
 # Link to originals here: https://rdrr.io/github/ECCC-MSC/Basin-Delineation/
@@ -222,7 +226,11 @@ find_all_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
   return(HYBAS.ID.master)
 }
 
-# Identify all upstream polygon(s) -----------------------------------------
+## ------------------------------------------------------- ##
+              # Identify Drainage Basins ----
+## ------------------------------------------------------- ##
+
+# We can identify a site's drainage basin by identifying all HydroSHEDS polygons upstream of the polygon that actually intersects with the site's coordinates
 
 # Create an empty list
 id_list <- list()
@@ -284,7 +292,9 @@ dplyr::glimpse(hydro_out)
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro_out')))
 
-# Subset basin object to only needed polygons ---------------------------------
+## ------------------------------------------------------- ##
+            # Wrangle Drainage Basin Object ----
+## ------------------------------------------------------- ##
 
 # Pre-emptively resolve an error with 'invalid spherical geometry'
 sf::sf_use_s2(F)
@@ -299,48 +309,53 @@ hydro_poly <- hydro_out %>%
   ## Necessary because of some polygons are found in >1 uniqueID
   dplyr::left_join(basin_needs, by = 'HYBAS_ID') %>%
   # Within uniqueID...
-  dplyr::group_by(uniqueID) %>%
+  dplyr::group_by(focal_poly) %>%
   # ...sum sub-polygon areas and combine sub-polygon geometries
   dplyr::summarise(drainSqKm = sum(SUB_AREA, na.rm = TRUE),
                    geometry = sf::st_union(geometry)) %>%
   # Need to make the class officially sf again before continuing
   sf::st_as_sf() %>%
   # Then eliminate any small gaps within those shapes
-  # nngeo::st_remove_holes() %>%
+  nngeo::st_remove_holes()
   ## Throws error: `Error in tmp[j][[1]] : subscript out of bounds`
-  # Retrieve the domain and stream names
-  tidyr::separate(col = uniqueID, into = c("domain", "stream"), sep = "_",
-                  remove = F, fill = "right")
 
 # Check structure
 str(hydro_poly)
 
-# Write this out for later use (though as a dataframe)
-hydro_poly_df <- sf::st_drop_geometry(x = hydro_poly)
+# Get a dataframe version of this + site information for later use
+hydro_poly_df <- sites_actual %>%
+  # Drop geometry
+  sf::st_drop_geometry() %>%
+  # Get a column to join by
+  dplyr::mutate(focal_poly = as.numeric(HYBAS_ID)) %>%
+  # Bind in a geometry-less version of the focal polygon thing
+  dplyr::left_join(y = sf::st_drop_geometry(x = hydro_poly), by = "focal_poly") %>%
+  # Drop some unneeded columns
+  dplyr::select(-ixn, -SUB_AREA, -focal_poly) %>%
+  # Relocate area
+  dplyr::relocate(drainSqKm, .before = HYBAS_ID)
 
 # Check it again
-str(hydro_poly_df)
+dplyr::glimpse(hydro_poly_df)
 
 # Export this for later use as a CSV
-write.csv(hydro_poly_df, file = file.path(path, 'watershed_areas.csv'),
-          row.names = F, na = "")
-
-# Now upload this as well to the GoogleDrive
-# googledrive::drive_upload(media = file.path(path, 'watershed_areas.csv'),
-#                           path = as_id("https://drive.google.com/drive/folders/1HQtpWYoq_YQwj_bDNNbv8D-0swi00o_s"))
+write.csv(hydro_poly_df, row.names = F, na = "",
+          file = file.path(path, "site-coordinates", 'Silica_Basin_Areas.csv') )
 
 # Experimentally plot subsets of this larger sf object
 hydro_poly2 <- hydro_poly %>%
   select(-drainSqKm)
 
 # Plot this object
-plot(hydro_poly2["uniqueID"], reset = F, axes = T, lab = c(2, 2, 2))
-plot(sites_actual["uniqueID"], add = T, pch = 15, col = 'gray45')
+plot(hydro_poly2["focal_poly"], reset = F, axes = T, lab = c(2, 2, 2))
+plot(sites_actual["Stream_Name"], add = T, pch = 15, col = 'gray45')
 
 # Plot all of the watersheds
-plot(hydro_poly["uniqueID"], axes = T, lab = c(2, 2, 2))
+plot(hydro_poly["focal_poly"], axes = T, lab = c(2, 2, 2))
 
-# Add on GRO watersheds' files ---------------------------------------------
+## ------------------------------------------------------- ##
+              # Add GRO Streams' Shapefiles ----
+## ------------------------------------------------------- ##
 
 # Grab all of our special single-origin shapefiles
 artisanal_sheds <- sf::st_read(file.path(path, 'watershed-shapefiles',
@@ -349,24 +364,30 @@ artisanal_sheds <- sf::st_read(file.path(path, 'watershed-shapefiles',
 # Get just the GRO polygons out of that
 gro_sheds <- artisanal_sheds %>%
   dplyr::filter(LTER == "GRO") %>%
-  # Rename the LTER column to match the phrasing of the newer sites CSV
-  dplyr::rename(domain = LTER)
+  # Drop LTER column
+  dplyr::select(-LTER) %>%
+  # Rename stream name to match other data object
+  dplyr::rename(focal_poly = uniqueID)
 
 # Check structure
-str(gro_sheds)
-str(hydro_poly)
+dplyr::glimpse(gro_sheds)
+dplyr::glimpse(hydro_poly)
 
 # Now let's attach the GRO shapefiles we got elsewhere to the HydroSheds polygons
-poly_actual <- dplyr::bind_rows(hydro_poly, gro_sheds)
+poly_actual <- hydro_poly %>%
+  # First make "focal_poly" into a character
+  dplyr::mutate(focal_poly = as.character(focal_poly)) %>%
+  # Now attach the GRO shapefiles
+  dplyr::bind_rows(gro_sheds)
 
 # Make a plot to make sure it worked
-plot(poly_actual["uniqueID"], axes = T, lab = c(2, 2, 2)) # yep!
+plot(poly_actual["focal_poly"], axes = T, lab = c(2, 2, 2)) # yep!
 
 # And check structure
-str(poly_actual)
+dplyr::glimpse(poly_actual)
 
 # Save out shapefile of all the HydroSheds polygons and the GRO polygons
-st_write(obj = poly_actual, dsn = file.path(path, "hydrosheds-shapefiles",
+st_write(obj = poly_actual, dsn = file.path(path, "site-hydrosheds-shapefiles",
                                             "hydrosheds_watersheds.shp"),
          delete_layer = T)
 
