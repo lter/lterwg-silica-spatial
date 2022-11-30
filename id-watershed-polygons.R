@@ -5,7 +5,8 @@
 ## Nick J Lyon
 
 # Purpose:
-## Create/find shapefiles of watershed boundaries around site lat/long points. These polygons can be used later as 'cookie cutters' to extract the relevant portion of global climate data rasters
+## Create/find shapefiles of watershed boundaries around site lat/long points.
+## These polygons can be used later as 'cookie cutters' to extract the relevant portion of global climate data rasters
 
 ## ------------------------------------------------------- ##
                      # Housekeeping -----
