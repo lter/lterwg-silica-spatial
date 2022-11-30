@@ -32,10 +32,10 @@ ref_id <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/dri
 # Download ref table (overwriting previous downloads)
 googledrive::drive_download(file = googledrive::as_id(ref_id), overwrite = T,
                             path = file.path(path, "site-coordinates",
-                                             "Silica_Coordinates.xlsx"))
+                                             "silica-coords_RAW.xlsx"))
 
 # Read it in
-coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates", "Silica_Coordinates.xlsx"))
+coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates", "silica-coords_RAW.xlsx"))
 
 # Glimpse this
 dplyr::glimpse(coord_df)
@@ -277,7 +277,6 @@ hydro_poly <- hydro_out %>%
   sf::st_as_sf() %>%
   # Then eliminate any small gaps within those shapes
   nngeo::st_remove_holes()
-  ## Throws error: `Error in tmp[j][[1]] : subscript out of bounds`
 
 # Check structure
 str(hydro_poly)
@@ -291,7 +290,7 @@ hydro_poly_df <- sites_actual %>%
   # Bind in a geometry-less version of the focal polygon thing
   dplyr::left_join(y = sf::st_drop_geometry(x = hydro_poly), by = "focal_poly") %>%
   # Drop some unneeded columns
-  dplyr::select(-ixn, -SUB_AREA, -focal_poly) %>%
+  dplyr::select(-ixn, -SUB_AREA, -focal_poly, -dplyr::starts_with("PFAF_")) %>%
   # Relocate area
   dplyr::relocate(drainSqKm, .before = HYBAS_ID)
 
@@ -300,7 +299,11 @@ dplyr::glimpse(hydro_poly_df)
 
 # Export this for later use as a CSV
 write.csv(hydro_poly_df, row.names = F, na = "",
-          file = file.path(path, "site-coordinates", 'Silica_Basin_Areas.csv') )
+          file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv') )
+
+## ------------------------------------------------------- ##
+                  # Exploratory Plots ----
+## ------------------------------------------------------- ##
 
 # Experimentally plot subsets of this larger sf object
 hydro_poly2 <- hydro_poly %>%
@@ -317,17 +320,13 @@ plot(hydro_poly["focal_poly"], axes = T, lab = c(2, 2, 2))
               # Add GRO Streams' Shapefiles ----
 ## ------------------------------------------------------- ##
 
-# Grab all of our special single-origin shapefiles
-artisanal_sheds <- sf::st_read(file.path(path, 'watershed-shapefiles',
-                                         'SilicaSynthesis_allWatersheds.shp'))
-
-# Get just the GRO polygons out of that
-gro_sheds <- artisanal_sheds %>%
-  dplyr::filter(LTER == "GRO") %>%
-  # Drop LTER column
-  dplyr::select(-LTER) %>%
-  # Rename stream name to match other data object
+# Grab the GRO watershed polygons
+gro_sheds <- sf::st_read(file.path(path, 'GRO-shapefiles', 'GRO_watersheds.shp')) %>%
+  # Rename the unique ID column to match the HydroSHEDS polygons
   dplyr::rename(focal_poly = uniqueID)
+
+# Need to also rename the geometry attribute
+sf::st_geometry(gro_sheds) <- "geom"
 
 # Check structure
 dplyr::glimpse(gro_sheds)
@@ -337,18 +336,19 @@ dplyr::glimpse(hydro_poly)
 poly_actual <- hydro_poly %>%
   # First make "focal_poly" into a character
   dplyr::mutate(focal_poly = as.character(focal_poly)) %>%
+  # Drop the drainage area
+  dplyr::select(-drainSqKm) %>%
   # Now attach the GRO shapefiles
   dplyr::bind_rows(gro_sheds)
-
-# Make a plot to make sure it worked
-plot(poly_actual["focal_poly"], axes = T, lab = c(2, 2, 2)) # yep!
 
 # And check structure
 dplyr::glimpse(poly_actual)
 
+# Make a plot to make sure it worked
+plot(poly_actual["focal_poly"], axes = T, lab = c(2, 2, 2)) # yep!
+
 # Save out shapefile of all the HydroSheds polygons and the GRO polygons
-st_write(obj = poly_actual, dsn = file.path(path, "site-hydrosheds-shapefiles",
-                                            "hydrosheds_watersheds.shp"),
+st_write(obj = poly_actual, dsn = file.path(path, "site-coordinates", "silica-hydrosheds.shp"),
          delete_layer = T)
 
 # End ----
