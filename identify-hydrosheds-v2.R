@@ -348,7 +348,7 @@ dplyr::glimpse(poly_actual)
 plot(poly_actual["focal_poly"], axes = T, lab = c(2, 2, 2)) # yep!
 
 # Save out shapefile of all the HydroSheds polygons and the GRO polygons
-st_write(obj = poly_actual, dsn = file.path(path, "site-coordinates", "silica-hydrosheds.shp"),
+st_write(obj = poly_actual, dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"),
          delete_layer = T)
 
 # End ----
