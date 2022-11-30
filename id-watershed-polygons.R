@@ -1,5 +1,5 @@
 ## ------------------------------------------------------- ##
-                 # LTER WG: Silica Synthesis
+        # Silica WG - Identify Watershed Shapefiles
 ## ------------------------------------------------------- ##
 # Written by:
 ## Nick J Lyon
