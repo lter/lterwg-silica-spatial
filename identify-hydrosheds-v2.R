@@ -37,6 +37,9 @@ googledrive::drive_download(file = googledrive::as_id(ref_id), overwrite = T,
 # Read it in
 coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates", "Silica_Coordinates.xlsx"))
 
+# Glimpse this
+dplyr::glimpse(coord_df)
+
 # Do some necessary processing
 sites <- coord_df %>%
   # Remove some unneeded columns
@@ -133,23 +136,29 @@ sites_actual <- sites_spatial %>%
                       #...if not, retain nothing
                       no = '') ) %>%
   # Manually address sites that apparently are missing but we are confident in
-  dplyr::mutate(HYBAS_ID = ifelse(test = LTER == "Finnish Environmental Institute" & 
-                                    Stream_Name == "Site 28208",
-                                  # This ID is from a *very* close neighboring site
-                                  yes = "2000029960",
-                                  no = HYBAS_ID))
-
+  dplyr::mutate(HYBAS_ID = dplyr::case_when(
+    # This ID is from a *very* close neighboring site (Kiiminkij 13010 4-tie)
+    LTER == "Finnish Environmental Institute" & 
+      Stream_Name == "Site 28208" ~ "2000029960",
+    # This one is slightly further away (Kiiminkij 13010 4-tie)
+    LTER == "Finnish Environmental Institute" & 
+      Stream_Name == "Oulujoki 13000" ~ "2000029960",
+    # Otherwise, keep what we already had
+    TRUE ~ HYBAS_ID))
+  
 # Check it out
 dplyr::glimpse(sites_actual)
 
-# And to make our lives easier, check out which continents we actually need
-sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
-# 1 = Africa; 2 = Europe; 3 = Siberia; 4 = Asia; 5 = Australia; 6 = South America; 7 = North America; 8 = Arctic (North America); 9 = Greenland 
-
 # Check any sites missing intersections
 sites_actual %>%
-  dplyr::filter(nchar(stringr::str_sub(HYBAS_ID)) == 0) %>%
+  dplyr::filter(nchar(stringr::str_sub(HYBAS_ID, 1, 1)) == 0) %>%
   dplyr::select(LTER, Stream_Name)
+
+# And to make our lives easier, check out which continents we actually need
+sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
+# 1 = Africa; 2 = Europe; 3 = Siberia; 4 = Asia;
+# 5 = Australia; 6 = South America; 7 = North America
+# 8 = Arctic (North America); 9 = Greenland 
 
 # Prepare only needed HydroSheds 'continents'
 basin_needs <- rbind(europe, north_am, arctic)
