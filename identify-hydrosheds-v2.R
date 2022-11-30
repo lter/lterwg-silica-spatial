@@ -301,18 +301,6 @@ dplyr::glimpse(hydro_poly_df)
 write.csv(hydro_poly_df, row.names = F, na = "",
           file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv') )
 
-## ------------------------------------------------------- ##
-                  # Exploratory Plots ----
-## ------------------------------------------------------- ##
-
-# Experimentally plot subsets of this larger sf object
-hydro_poly2 <- hydro_poly %>%
-  select(-drainSqKm)
-
-# Plot this object
-plot(hydro_poly2["focal_poly"], reset = F, axes = T, lab = c(2, 2, 2))
-plot(sites_actual["Stream_Name"], add = T, pch = 15, col = 'gray45')
-
 # Plot all of the watersheds
 plot(hydro_poly["focal_poly"], axes = T, lab = c(2, 2, 2))
 
