@@ -240,7 +240,7 @@ for(focal_poly in unique(sites_actual$HYBAS_ID)){
     message( "Processing for HYBAS ID '", focal_poly, "' finished at ", Sys.time())
     
   } # Close `else` clause
-} # Close `loop`
+} # Close main loop
 
 # Unlist the list
 hydro_out <- id_list %>%
