@@ -161,14 +161,13 @@ sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
 # Prepare only needed HydroSheds 'continents'
 basin_needs <- rbind(europe, north_am, arctic)
 
-# Bring each PFAF code into the sites_actual object by matching with HYBAS_ID
-for(i in 1:12) {
-  message("Processing Pfafstetter code level ", i)
-  sites_actual[[paste0("PFAF_", i)]] <- basin_needs[[paste0("PFAF_", i)]][match(sites_actual$HYBAS_ID, basin_needs$HYBAS_ID)]
-}
+# Attach the twelfth Pfafstetter code by matching with HYBAS_ID
+sites_actual$PFAF_12 <- basin_needs$PFAF_12[match(sites_actual$HYBAS_ID, 
+                                                  basin_needs$HYBAS_ID)]
 
 # Also grab area
-sites_actual$SUB_AREA <- basin_needs$SUB_AREA[match(sites_actual$HYBAS_ID, basin_needs$HYBAS_ID)]
+sites_actual$SUB_AREA <- basin_needs$SUB_AREA[match(sites_actual$HYBAS_ID,
+                                                    basin_needs$HYBAS_ID)]
 
 # Check the object again
 dplyr::glimpse(sites_actual)
