@@ -61,12 +61,6 @@ dplyr::glimpse(sites)
 range(sites$lat)
 range(sites$long)
 
-# Get an explicitly spatial version
-sites_spatial <- sf::st_as_sf(sites, coords = c("long", "lat"), crs = 4326)
-
-# Check it out
-str(sites_spatial)
-
 ## ------------------------------------------------------- ##
           # Load HydroSHEDS Basin Delineations ----
 ## ------------------------------------------------------- ##
@@ -126,26 +120,29 @@ sf::sf_use_s2(F)
   ## earlier form of processing assumes two points lie on a plane
 
 # Pull out HYBAS_IDs at site coordinates
-sites_actual <- sites_spatial %>%
+sites_actual <- sites %>%
+  # Quickly address any coordinates that don't intersect with *any* HydroSHEDS (but should)
+  ## Only affects one site and that one is very near the ocean in reality
+  ## Longitude
+  dplyr::mutate(long = dplyr::case_when(
+    # Bump a Finnish site a little further inland
+    LTER == "Finnish Environmental Institute" &
+      Stream_Name %in% c("Site 28208", "Oulujoki 13000") &
+      long == 25.4685 ~ 25.5,
+    # Otherwise retain old coordinate
+    TRUE ~ long)) %>%
+  # Make this explicitly spatial
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
+  # Identify HydroSHEDS polygons that intersect with those coordinates
   dplyr::mutate(
     # Find the interaction points as integers
-    ixn = as.integer(st_intersects(geometry, basin_simp)),
+    ixn = as.integer(sf::st_intersects(geometry, basin_simp)),
     # If a given interaction is not NA (meaning it does overlap)...
     HYBAS_ID = ifelse(test = !is.na(ixn),
                       # ...retain the HYBAS_ID of that interaction...
                       yes = basin_simp$HYBAS_ID[ixn],
                       #...if not, retain nothing
-                      no = '') ) %>%
-  # Manually address sites that apparently are missing but we are confident in
-  dplyr::mutate(HYBAS_ID = dplyr::case_when(
-    # This ID is from a *very* close neighboring site (Kiiminkij 13010 4-tie)
-    LTER == "Finnish Environmental Institute" & 
-      Stream_Name == "Site 28208" ~ "2000029960",
-    # This one is slightly further away (Kiiminkij 13010 4-tie)
-    LTER == "Finnish Environmental Institute" & 
-      Stream_Name == "Oulujoki 13000" ~ "2000029960",
-    # Otherwise, keep what we already had
-    TRUE ~ HYBAS_ID))
+                      no = '') )
   
 # Check it out
 dplyr::glimpse(sites_actual)
