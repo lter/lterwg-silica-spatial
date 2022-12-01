@@ -5,17 +5,11 @@
 ## Nick J Lyon
 
 # Purpose:
-## Using the watershed shapefiles created in "identify-watersheds.R"
-## extract lithology and land cover data for each watershed
-
-
-# --- (v) ALERT (v) ---
-## First version of this script uses `setwd` but as a team we've since decided this is suboptimal
-## Need to change all of the paths throughout to use `file.path` instead of assuming correct working directory
-# --- (^) ALERT (^) ---
+## Using the watershed shapefiles created in "id-watershed-polygons.R"
+## Extract the following data: LITHOLOGY
 
 ## ------------------------------------------------------- ##
-# Housekeeping ----
+                      # Housekeeping ----
 ## ------------------------------------------------------- ##
 
 # Read needed libraries
