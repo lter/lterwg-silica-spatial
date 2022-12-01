@@ -334,13 +334,15 @@ poly_actual <- hydro_poly %>%
   # Drop the drainage area
   dplyr::select(-drainSqKm) %>%
   # Now attach the GRO shapefiles
-  dplyr::bind_rows(gro_sheds)
+  dplyr::bind_rows(gro_sheds) %>%
+  # Let's rename the 'focal_poly' column more informatively
+  dplyr::rename(river_id = focal_poly)
 
 # And check structure
 dplyr::glimpse(poly_actual)
 
 # Make a plot to make sure it worked
-plot(poly_actual["focal_poly"], axes = T, lab = c(2, 2, 2)) # yep!
+plot(poly_actual["river_id"], axes = T, lab = c(2, 2, 2)) # yep!
 
 # Save out shapefile of all the HydroSheds polygons and the GRO polygons
 st_write(obj = poly_actual, delete_layer = T,
@@ -362,7 +364,9 @@ sites_final <- hydro_poly_df %>%
   # Make HYBAS_ID a character
   dplyr::mutate(HYBAS_ID = as.character(HYBAS_ID)) %>%
   # Bind on GRO coordinates
-  dplyr::bind_rows(gro_coords)
+  dplyr::bind_rows(gro_coords) %>%
+  # Rename ID column more informatively
+  dplyr::rename(river_id = HYBAS_ID)
 
 # Glimpse it
 dplyr::glimpse(sites_final)
