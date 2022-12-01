@@ -189,36 +189,45 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs')))
 # Load custom functions needed for this operation
 source("hydrosheds_custom_fxns.R")
 
+# Identify focal polygons where we've already identified upstream polygon IDs
+found_polys <- dir(path = file.path(path, 'hydrosheds-basin-ids'),
+                   pattern = "_Upstream_IDs.csv")
+
+# Simplify names
+found_ids <- gsub(pattern = "_Upstream_IDs.csv", replacement = "", x = found_polys)
+
 # Create an empty list
 id_list <- list()
 
-# For each focal polygon, identify all upstream polygons
-## This is preferable to 'for each stream' because some streams share a focal polygon
-## So looping across focal polygons avoids redundancy!
-for(focal_poly in unique(sites_actual$HYBAS_ID)){
-# for(focal_poly in "7000073120"){
+# Loop across found polygons to read their CSVs
+for(focal_poly in found_ids){
   
-  # Create/identify name and path of file
-  poly_file <- file.path(path, 'hydrosheds-basin-ids',
-                         paste0(focal_poly, '_Upstream_IDs.csv'))
+  # Read CSV
+  id_df <- read.csv(file = file.path(path, "hydrosheds-basin-ids",
+                                     paste0(focal_poly, "_Upstream_IDs.csv")))
   
-  # If we've already found this polygon's upstream polygons:
-  if (fs::file_exists(poly_file) == TRUE) {
-    
-    # Read the CSV
-    hydro_df <- read.csv(file = poly_file)
-    
-    # Add to the list
-    id_list[[focal_poly]] <- hydro_df
-    
-    # Message outcome
-    message("Upstream HydroSheds IDs for HYBAS ID '", focal_poly, "' already identified.")
-    
-    # If we *don't* have the polygon, continue!
-  } else {
+  # Add to list
+  id_list[[focal_poly]] <- id_df
+  
+  # Completion message
+  message("HYBAS ID '", focal_poly, "' retrieved") }
+
+# Now, we also need to identify upstream polygons for any where we hadn't yet done that
+
+# Identify to-be-identified ones
+unk_polys <- setdiff(x = unique(sites_actual$HYBAS_ID),
+                     y = as.numeric(found_ids))
+
+# If any are unknown, get them!
+if(length(unk_polys) != 0){
+  for(focal_poly in unk_polys){
     
     # Print start-up message
     message( "Processing for HYBAS ID '", focal_poly, "' begun at ", Sys.time())
+    
+    # Assemble file name
+    poly_file <- file.path(path, 'hydrosheds-basin-ids',
+                           paste0(focal_poly, '_Upstream_IDs.csv'))
     
     # Identify all upstream shapes
     fxn_out <- find_all_up(HYBAS = basin_needs, HYBAS.ID = focal_poly)
@@ -234,10 +243,9 @@ for(focal_poly in unique(sites_actual$HYBAS_ID)){
     id_list[[focal_poly]] <- hydro_df
     
     # Print finishing message
-    message( "Processing for HYBAS ID '", focal_poly, "' finished at ", Sys.time())
-    
-  } # Close `else` clause
-} # Close main loop
+    message( "Processing for HYBAS ID '", focal_poly, "' finished at ", Sys.time()) 
+  } 
+} else { message("No unidentified upstream polygons.") }
 
 # Unlist the list
 hydro_out <- id_list %>%
