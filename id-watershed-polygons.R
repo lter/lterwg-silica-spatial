@@ -297,7 +297,9 @@ hydro_poly_df <- sites_actual %>%
   # Drop some unneeded columns
   dplyr::select(-ixn, -SUB_AREA, -focal_poly, -dplyr::starts_with("PFAF_")) %>%
   # Relocate area
-  dplyr::relocate(drainSqKm, .before = HYBAS_ID)
+  dplyr::relocate(drainSqKm, .before = HYBAS_ID) %>%
+  # Attach original lat/long coordinates in case needed later
+  dplyr::left_join(y = sites, by = c("LTER", "Stream_Name", "Discharge_File_Name"))
 
 # Check it again
 dplyr::glimpse(hydro_poly_df)
