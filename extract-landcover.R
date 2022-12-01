@@ -5,17 +5,11 @@
 ## Nick J Lyon
 
 # Purpose:
-## Using the watershed shapefiles created in "identify-watersheds.R"
-## extract lithology and land cover data for each watershed
-
-
-# --- (v) ALERT (v) ---
-## First version of this script uses `setwd` but as a team we've since decided this is suboptimal
-## Need to change all of the paths throughout to use `file.path` instead of assuming correct working directory
-# --- (^) ALERT (^) ---
+## Using the watershed shapefiles created in "id-watershed-polygons.R"
+## Extract the following data: LITHOLOGY
 
 ## ------------------------------------------------------- ##
-# Housekeeping ----
+                    # Housekeeping ----
 ## ------------------------------------------------------- ##
 
 # Read needed libraries
@@ -29,13 +23,13 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 # Load in site names with lat/longs
-sites <- read.csv("tidy_SilicaSites.csv")
+sites <- read.csv(file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv'))
 
 # Check it out
 dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
-sheds <- sf::st_read('watershed-shapefiles/SilicaSynthesis_allWatersheds.shp')
+sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
 
 # Check that out
 dplyr::glimpse(sheds)
