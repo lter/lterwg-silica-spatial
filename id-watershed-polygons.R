@@ -175,7 +175,7 @@ dplyr::glimpse(sites_actual)
 # We may want to visualize aggregated basins so let's go that direction now
 
 # Clean up environment to have less data stored as we move forward
-rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs')))
+rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'coord_df')))
 
 ## ------------------------------------------------------- ##
               # Identify Drainage Basins ----
@@ -255,7 +255,7 @@ hydro_out <- id_list %>%
 dplyr::glimpse(hydro_out)
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro_out')))
+rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro_out', 'coord_df')))
 
 ## ------------------------------------------------------- ##
             # Wrangle Drainage Basin Object ----
@@ -306,7 +306,7 @@ dplyr::glimpse(hydro_poly_df)
 
 # Export this for later use as a CSV
 write.csv(hydro_poly_df, row.names = F, na = "",
-          file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv') )
+          file = file.path(path, "site-coordinates", 'silica-coords_HydroSHEDS.csv') )
 
 # Plot all of the watersheds
 plot(hydro_poly["focal_poly"], axes = T, lab = c(2, 2, 2))
@@ -343,8 +343,32 @@ dplyr::glimpse(poly_actual)
 plot(poly_actual["focal_poly"], axes = T, lab = c(2, 2, 2)) # yep!
 
 # Save out shapefile of all the HydroSheds polygons and the GRO polygons
-st_write(obj = poly_actual, dsn = file.path(path, "site-coordinates", 
-                                            "silica-watersheds.shp"),
-         delete_layer = T)
+st_write(obj = poly_actual, delete_layer = T,
+         dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
+
+# Strip GRO information from coordinate dataframe
+gro_coords <- coord_df %>%
+  # Filter to only GRO
+  dplyr::filter(LTER == "GRO") %>%
+  # Pare down to only desired columns
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, drainSqKm,
+                lat = Latitude, long = Longitude) %>%
+  # Make a "HYBAS_ID" stand-in column
+  dplyr::mutate(HYBAS_ID = paste(LTER, Stream_Name, sep = "_"),
+                .after = drainSqKm)
+
+# Combine this information with the HydroSHEDS site info already gathered
+sites_final <- hydro_poly_df %>%
+  # Make HYBAS_ID a character
+  dplyr::mutate(HYBAS_ID = as.character(HYBAS_ID)) %>%
+  # Bind on GRO coordinates
+  dplyr::bind_rows(gro_coords)
+
+# Glimpse it
+dplyr::glimpse(sites_final)
+
+# Export for later
+write.csv(sites_final, row.names = F, na = "",
+          file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv') )
 
 # End ----
