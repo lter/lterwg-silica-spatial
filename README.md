@@ -5,7 +5,7 @@
 Joanna Carey & Kathi Jo Jankowski
 
 - [Project Summary](https://lternet.edu/working-groups/river-si-exports/)
--[Participant Information](https://www.nceas.ucsb.edu/projects/12816)
+- [Participant Information](https://www.nceas.ucsb.edu/projects/12816)
 
 ## Script Explanations
 
