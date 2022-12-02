@@ -106,7 +106,7 @@ rock_index <- rock_index_raw %>%
 dplyr::glimpse(rock_index)
 
 # Process the extracted lithology information into a dataframe
-rock_data_v1 <- rocks_out %>%
+rock_v2 <- rocks_out %>%
   # Get value column named more informatively
   dplyr::rename(rock_code = value) %>%
   # Bring over the rock names from the index
@@ -152,13 +152,13 @@ rock_data_v1 <- rocks_out %>%
 
 # Now we want to split into two directions
 ## First: get a version where each rock type is its own column
-rock_data_wide <- rock_data_v1 %>%
+rock_data_wide <- rock_v2 %>%
   # Pivot to wide format
   tidyr::pivot_wider(names_from = rock_type,
                      values_from = perc_total)
 
 ## Second: get the *majority* rock for each watershed
-rock_data_major <- rock_data_v1 %>%
+rock_data_major <- rock_v2 %>%
   # Filter to only max of each rock type per uniqueID & LTER
   dplyr::group_by(river_id) %>%
   filter(perc_total == max(perc_total)) %>%

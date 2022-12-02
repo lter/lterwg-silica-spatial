@@ -71,7 +71,7 @@ lulc_index <- read.csv(file = file.path(path, "raw-driver-data",
   dplyr::rename(value = lulc_code)
 
 # Wrangle extracted data
-land_data_v1 <- land_out %>%
+land_v2 <- land_out %>%
   # Drop coverage fraction column
   dplyr::select(-coverage_fraction) %>%
   # Summarize to count number of pixels per category
@@ -114,18 +114,18 @@ land_data_v1 <- land_out %>%
   dplyr::select(-land_total, -total_pixels)
 
 # Check remaining categories  
-sort(unique(land_data_v1$lulc_category))
+sort(unique(land_v2$lulc_category))
 
 # Glimpse this object
-dplyr::glimpse(land_data_v1)
+dplyr::glimpse(land_v2)
 
 # Make a version of this that is wide
-land_wide <- land_data_v1 %>%
+land_wide <- land_v2 %>%
   tidyr::pivot_wider(names_from = lulc_category,
                      values_from = perc_total)
 
 # Also identify the dominant land cover type(s) in each river's polygon
-land_major <- land_data_v1 %>%
+land_major <- land_v2 %>%
   # Filter to only max of each rock type per river
   dplyr::group_by(river_id) %>%
   dplyr::filter(perc_total == max(perc_total, na.rm = T)) %>%
