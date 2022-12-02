@@ -83,7 +83,7 @@ land_data_v1 <- land_out %>%
   # Simplify data now that descriptive categories are included
   dplyr::select(-value) %>%
   dplyr::relocate(lulc_category, .after = river_id) %>%
-  dplyr::mutate(lulc_category = tolower(gsub(pattern = " ", 
+  dplyr::mutate(lulc_category = tolower(gsub(pattern = " |-", 
                                              replacement = "_", 
                                              x = lulc_category))) %>%
   # Streamline category information
@@ -146,6 +146,24 @@ land_actual <- land_wide %>%
 # Glimpse it
 dplyr::glimpse(land_actual)
 
+## ------------------------------------------------------- ##
+                # Land Cover - Export ----
+## ------------------------------------------------------- ##
+
+# Let's get ready to export
+land_export <- sites %>%
+  # Join the rock data
+  dplyr::left_join(y = land_actual, by = c("river_id"))
+
+# Check it out
+dplyr::glimpse(land_export)
+
+# Create folder to export to
+dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
+
+# Export the summarized lithology data
+write.csv(x = land_export, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "si-extract_landcover.csv"))
 
 # End ----
 
