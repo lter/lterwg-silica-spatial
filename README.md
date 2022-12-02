@@ -9,6 +9,8 @@ Joanna Carey & Kathi Jo Jankowski
 
 ## Script Explanations
 
-- "identify-hydrosheds.R": Identifies watershed drainage basins based on provided lat/long coordinates. Uses HydroSHEDS delineations of watersheds (see [here](https://www.hydrosheds.org/page/hydrobasins))
+- **id-watershed-polygons.R** - Identifies watershed drainage basins. Uses HydroSHEDS basin delineations (see [here](https://www.hydrosheds.org/page/hydrobasins)) unless otherwise specified
 
-- "extract-watershed-info.R": Extracts lithology and land cover data within watershed shapefiles (see "identify-hydrosheds.R")
+    - **hydrosheds_custom_fxns.R** - Identification of upstream HydroSHEDS polygons must be recursive and requires two custom functions found on GitHub
+ 
+- **extract-[...].R** - These scripts are each responsible for extracting, summarizing, and exporting the spatial data type included in the script name. Each script uses the watersheds identified by "id-watershed-polygons.R" but is otherwise completely independent of other scripts in this repo
