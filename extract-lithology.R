@@ -50,7 +50,8 @@ crs(rocks_raw)
 ## Looks good
 
 # Experimental plotting
-plot(rocks_raw)
+plot(rocks_raw, reset = F, axes = T)
+plot(sheds, add = T, axes = T)
 
 # Strip out rocks from our polygons
 rocks_out <- exactextractr::exact_extract(x = rocks_raw, y = sheds,
