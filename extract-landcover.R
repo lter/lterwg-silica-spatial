@@ -38,6 +38,106 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
+              # Land Cover - Extract ----
+## ------------------------------------------------------- ##
+
+# Read in dataset
+lulc_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-glcc-landcover-data",
+                                      "global-glcc-wgs84", "gblulcg20.tif"))
+
+
+# lulc_raw <- stars::read_stars(.x = file.path(path, "raw-driver-data", "raw-glcc-landcover-data",
+#                                              "global-glcc-goode", "gblulcg20.tif"))
+lulc_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-glcc-landcover-data",
+                                      "global-glcc-goode", "gblulcg20.tif"))
+
+# Crop out the lower hemisphere
+lulc_crop <- terra::crop(x = lulc_raw, y = terra::ext(-3e7, -1e7, 1e7, 5e7))
+
+# Plot this
+plot(lulc_crop, axes = T)
+
+
+# Re-project to a different EPSG code
+# lulc_conv <- terra::project(x = lulc_raw, y = "epsg:4326")
+## Note this takes .... (START - 2:01 / END - )
+lulc_conv <- lulc_raw %>%
+  stars::st_transform_proj(crs = 5070)
+
+# Convert the watersheds' coordinate reference system (CRS) to match
+sheds_conv <- sheds %>%
+  sf::st_transform(crs = 5070)
+
+# Plot to see if they overlap visually
+plot(lulc_conv, reset = F, axes = T)
+plot(sheds_conv, add = T, axes = T)
+
+
+
+# Exploration below (vvv)
+
+ext(lulc_raw)
+ext(sheds_conv)
+
+plot(sheds_conv, axes = T)
+plot(lulc_raw, axes = T)
+
+  # Convert to the watersheds' 
+lulc_4326 <- terra::project(x = lulc_raw, y = "ESRI:54052")
+
+
+
+# Convert watersheds' CRS to match
+sheds_conv <- sheds %>%
+  sf::st_transform(crs = 5070)
+
+# Check CRS of both
+crs(sheds_conv)
+crs(lulc_raw)
+
+# Plot together for "eyeball check"
+plot(lulc_raw, reset = F, axes = T)
+plot(sheds_conv, add = T, axes = T)
+
+
+# Strip out land cover for our polygons
+land_out <- exactextractr::exact_extract(x = lulc_raw, y = sheds_conv,
+                                          include_cols = c("river_id")) %>%
+  # Above returns a list so switch it to a dataframe
+  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+  # Filter out NAs
+  dplyr::filter(!is.na(value))
+
+# Check that dataframe
+dplyr::glimpse(land_out)
+
+# End ----
+
+
+
+
+
+
+
+## ------------------------------------------------------- ##
+                # Land Cover - Extract ----
+## ------------------------------------------------------- ##
+
+# Check the CRS of these polygons
+crs(sheds)
+
+# Transform into EPSG 5070 to match the land use categories
+sheds_5070 <- sheds %>%
+  sf::st_transform(crs = 5070)
+
+# Re-check
+crs(sheds_5070)
+
+
+
+
+
+## ------------------------------------------------------- ##
 # Land Cover - Luquillo Processing ----
 ## ------------------------------------------------------- ##
 
