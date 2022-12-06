@@ -165,4 +165,9 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 write.csv(x = land_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_landcover.csv"))
 
+# Upload to GoogleDrive
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_landcover.csv"),
+                          overwrite = T,
+                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+
 # End ----

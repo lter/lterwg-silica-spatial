@@ -65,7 +65,7 @@ rocks_out <- exactextractr::exact_extract(x = rocks_raw, y = sheds,
 dplyr::glimpse(rocks_out)
 
 ## ------------------------------------------------------- ##
-                # Lithology - Summarize ----
+                # Lithology - Index Prep ----
 ## ------------------------------------------------------- ##
 # Bring in the index tying rock code integers with rock abbreviations
 rock_index_raw <- read.table(file = file.path(path, "raw-driver-data", 
@@ -104,6 +104,10 @@ rock_index <- rock_index_raw %>%
 
 # Check that worked
 dplyr::glimpse(rock_index)
+
+## ------------------------------------------------------- ##
+                # Lithology - Summarize ----
+## ------------------------------------------------------- ##
 
 # Process the extracted lithology information into a dataframe
 rock_v2 <- rocks_out %>%
@@ -197,5 +201,10 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 # Export the summarized lithology data
 write.csv(x = rock_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_lithology.csv"))
+
+# Upload to GoogleDrive
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_lithology.csv"),
+                          overwrite = T,
+                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
 # End ----
