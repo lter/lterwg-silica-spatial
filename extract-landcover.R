@@ -14,7 +14,7 @@
 
 # Read needed libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools)
+librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, googledrive)
 
 # Clear environment
 rm(list = ls())
@@ -167,6 +167,71 @@ write.csv(x = land_export, na = '', row.names = F,
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_landcover.csv"),
+                          overwrite = T,
+                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+
+## ------------------------------------------------------- ##
+              # Combine Extracted Data ----
+## ------------------------------------------------------- ##
+# Clear environment
+rm(list = setdiff(ls(), c('path', 'sites')))
+
+# List current extracted data
+extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+
+# Make an empty list
+data_list <- list()
+
+# Download these files
+for(file_name in extracted_data$name){
+  
+  # Filter to desired filed
+  wanted <- extracted_data %>%
+    dplyr::filter(name == file_name)
+  
+  # Download
+  googledrive::drive_download(file = googledrive::as_id(wanted$id),
+                              path = file.path(path, "extracted-data", file_name),
+                              overwrite = T)
+  
+  # Read the CSV and add to the list
+  data_list[[file_name]] <- read.csv(file = file.path(path, "extracted-data", file_name))
+  
+} # End loop
+
+# Get a duplicate of the 'sites' object
+out_df <- sites
+
+# Now loop across remaining elements and left join each
+for(k in 1:length(data_list)){
+  
+  # Add each bit to the existing dataframe
+  out_df <- out_df %>%
+    # Left join by all non-data columns
+    dplyr::left_join(y = data_list[[k]],
+                     by = c("LTER", "Stream_Name", "Discharge_File_Name", "drainSqKm", 
+                            "river_id", "lat", "long")) %>%
+    # Drop duplicated columns
+    unique()
+}
+
+# Check for dropped rivers (i.e., rows)
+## Stream names (chemistry river names)
+setdiff(x = unique(sites$Stream_Name), y = unique(out_df$Stream_Name))
+setdiff(y = unique(sites$Stream_Name), x = unique(out_df$Stream_Name))
+## Discharge file names (discharge river names)
+setdiff(x = unique(sites$Discharge_File_Name), y = unique(out_df$Discharge_File_Name))
+setdiff(y = unique(sites$Discharge_File_Name), x = unique(out_df$Discharge_File_Name))
+
+# Take a look
+dplyr::glimpse(out_df)
+
+# Export this
+write.csv(x = out_df, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "all-data_si-extract.csv"))
+
+# And upload to GoogleDrive
+googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
