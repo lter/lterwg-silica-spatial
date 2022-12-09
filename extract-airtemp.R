@@ -76,9 +76,17 @@ ncdf4::ncatt_get(nc = air_nc, varid = "time", attname = "units")$value
 # Convert time to a human-readable format
 time_fix <- as.POSIXct("1800-01-01 00:00") + as.difftime(tim = nc_time, units = "hours")
 
+
+
+# HERE NOW ----
+
+
+
+
+
 # Create all combinations of variables
 ## Takes several seconds
-mat_data <- as.matrix(x = expand.grid(long_fix, nc_lat, time_fix))
+# mat_data <- as.matrix(x = expand.grid(long_fix, nc_lat, time_fix))
 
 
 
