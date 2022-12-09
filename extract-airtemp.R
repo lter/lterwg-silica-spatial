@@ -41,8 +41,98 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
               # Convert netCDF to Raster ----
 ## ------------------------------------------------------- ##
 
+# Load needed libraries
+library(ncdf4)
+
+# Load netCDF file
+air_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
+                                               "air.mon.mean.nc"))
+
+# Look at this
+print(air_nc)
+
+# Read coordinates out of netCDF object
+nc_lat <- ncdf4::ncvar_get(nc = air_nc, varid = "lat")
+nc_long <- ncdf4::ncvar_get(nc = air_nc, varid = "lon")
+
+# Tweak longitude to be from -180 to 180
+long_fix <- base::ifelse(test = (as.numeric(nc_long) > 180),
+                         yes = as.numeric(nc_long) - 180,
+                         no = as.numeric(nc_long))
+range(long_fix)
+
+# Grab the data of interest and its attributes
+## Takes a few seconds to strip the response var (~4 sec)
+nc_resp <- ncdf4::ncvar_get(nc = air_nc, varid = "air")
+(nc_resp_att <- ncdf4::ncatt_get(nc = air_nc, varid = "air", attname = "missing_value")$value)
+
+# Fill the missing value with R's missing value (`NA`)
+nc_resp[nc_resp == nc_resp_att] <- NA
+
+# Grab time and check its units
+nc_time <- ncdf4::ncvar_get(nc = air_nc, varid = "time")
+ncdf4::ncatt_get(nc = air_nc, varid = "time", attname = "units")$value
+
+# Convert time to a human-readable format
+time_fix <- as.POSIXct("1800-01-01 00:00") + as.difftime(tim = nc_time, units = "hours")
+
+# Create all combinations of variables
+## Takes several seconds
+mat_data <- as.matrix(x = expand.grid(long_fix, nc_lat, time_fix))
 
 
+
+
+# Create 2D matrix of coordinates + time
+## May take several seconds
+# df_partial <- as.matrix(x = expand.grid(nc_lat, nc_long, time_fix))
+# str(df_partial)
+
+# Create a dataframe from these objects
+# air_df <- 
+
+
+
+# 
+# # Read some key pieces out of the netCDF object
+# long <- ncdf4::ncvar_get(nc = data, varid = long)
+# lat <- ncdf4::ncvar_get(data, varid = lat)
+# arag <- ncdf4::ncvar_get(data, varid = variable_to_extract)
+# 
+# # Create the dataframe
+# df <- base::as.data.frame(
+#   base::cbind(base::as.vector(long),
+#               base::as.vector(lat),
+#               base::as.vector(arag[,,1])))
+# 
+# # Put back the longitude data from -180 to 180
+# df$x <- base::ifelse(test = (df$x > 180),
+#                      yes = (df$x - 360),
+#                      no = df$x)
+# 
+# # remove filling values
+# if (filling_value_flag) {
+#   # Currently assuming the filling value is a large number!!!!
+#   df$z <- ifelse(test = (df$z == base::max(df$z)),
+#                  yes = NA, no = df$z)
+# }
+# 
+# # project it to a regular grid
+# regridded <- akima::interp(x = df$x, y = df$y, z = df$value,
+#                            xo = base::seq(from = -180,
+#                                           to = 180,
+#                                           grid_resolution),
+#                            yo = base::seq(from = -80,
+#                                           to = 90,
+#                                           grid_resolution),
+#                            linear = TRUE, extrap = TRUE,
+#                            duplicate = "mean")
+# 
+# # Create a rasterLayer object
+# r <- raster::raster(regridded)
+# 
+# # Give it the correct CRS label
+# raster::crs(r) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
 
 
 
