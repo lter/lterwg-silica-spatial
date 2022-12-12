@@ -62,8 +62,11 @@ print(air_rast$air_99)
 # Create an empty list to store this information in
 out_list <- list()
 
+# Identify how many layers are in this
+(layer_ct <- length(names(air_rast)))
+
 # We'll need to strip each layer separately
-for(k in 1:899){
+for(k in 1:layer_ct){
   
   # Build name of layer
   focal_layer <- paste0("air_", k)
@@ -95,7 +98,7 @@ for(k in 1:899){
   out_list[[focal_layer]] <- small_out_df
   
   # Success message
-  message("Processing complete for ", layer_time, " (number ", k, ")") }
+  message("Processing complete for ", layer_time, " (number ", k, " of ", layer_ct, ")") }
 
 # Exploratory plot one of what we just extracted
 plot(rotated, axes = T, reset = F)
@@ -110,7 +113,16 @@ full_out_df <- out_list %>%
   
 # Glimpse it
 dplyr::glimpse(full_out_df)
+
+# Summarize within month across years
+
   
+
+
+# Then summarize within year across months
+
+
+
 
 ## ------------------------------------------------------- ##
                     # Air Temp - Export ----
