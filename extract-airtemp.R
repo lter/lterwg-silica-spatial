@@ -109,25 +109,92 @@ plot(sheds, axes = T, add = T)
 ## ------------------------------------------------------- ##
 # Unlist that list
 full_out_df <- out_list %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything())
+  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+  # Strip out year and month
+  dplyr::mutate(year = stringr::str_sub(string = time, start = 1, end = 4),
+                month = stringr::str_sub(string = time, start = 6, end = 7),
+                .after = time)
   
 # Glimpse it
 dplyr::glimpse(full_out_df)
 
 # Summarize within month across years
-
+year_df <- full_out_df %>%
+  # Do summarization
+  dplyr::group_by(river_id, year) %>%
+  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Make more informative year column
+  dplyr::mutate(name = paste0("temp_", year, "_degC")) %>%
+  # Drop simple year column
+  dplyr::select(-year) %>%
+  # Pivot to wide format
+  tidyr::pivot_wider(names_from = name,
+                     values_from = value)
   
-
+# Glimpse this
+dplyr::glimpse(year_df)
 
 # Then summarize within year across months
+month_df <- full_out_df %>%
+  # Do summarization
+  dplyr::group_by(river_id, month) %>%
+  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Change month number to letters
+  dplyr::mutate(month_simp = dplyr::case_when(
+    month == "01" ~ "jan",
+    month == "02" ~ "feb",
+    month == "03" ~ "mar",
+    month == "04" ~ "apr",
+    month == "05" ~ "may",
+    month == "06" ~ "jun",
+    month == "07" ~ "jul",
+    month == "08" ~ "aug",
+    month == "09" ~ "sep",
+    month == "10" ~ "oct",
+    month == "11" ~ "nov",
+    month == "12" ~ "dec")) %>%
+  # Make more informative month column
+  dplyr::mutate(name = paste0("temp_", month_simp, "_degC")) %>%
+  # Drop simple month column
+  dplyr::select(-month, -month_simp) %>%
+  # Pivot to wide format
+  tidyr::pivot_wider(names_from = name,
+                     values_from = value)
 
+# Glimpse this
+dplyr::glimpse(month_df)
 
+# Combine these dataframes
+air_actual <- year_df %>%
+  dplyr::left_join(y = month_df, by = "river_id")
 
+# Glimpse again
+dplyr::glimpse(air_actual)
 
 ## ------------------------------------------------------- ##
                     # Air Temp - Export ----
 ## ------------------------------------------------------- ##
+# Let's get ready to export
+air_export <- sites %>%
+  # Join the rock data
+  dplyr::left_join(y = air_actual, by = c("river_id"))
 
+# Check it out
+dplyr::glimpse(air_export)
+
+# Create folder to export to
+dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
+
+# Export the summarized lithology data
+write.csv(x = air_export, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "si-extract_air-temp.csv"))
+
+# Upload to GoogleDrive
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_air-temp.csv"),
+                          overwrite = T,
+                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
 ## ------------------------------------------------------- ##
                 # Combine Extracted Data ----
@@ -136,7 +203,8 @@ dplyr::glimpse(full_out_df)
 rm(list = setdiff(ls(), c('path', 'sites')))
 
 # List current extracted data
-extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU")) %>%
+  dplyr::filter(name != "all-data_si-extract.csv")
 
 # Make an empty list
 data_list <- list()
