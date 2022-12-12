@@ -214,7 +214,8 @@ googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_
 rm(list = setdiff(ls(), c('path', 'sites')))
 
 # List current extracted data
-extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU")) %>%
+  dplyr::filter(name != "all-data_si-extract.csv")
 
 # Make an empty list
 data_list <- list()
