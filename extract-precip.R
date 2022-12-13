@@ -39,40 +39,59 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-# Precip - Extract ----
+                    # Precip - Extract ----
 ## ------------------------------------------------------- ##
+# The GPCP Precip data has each month of each year as a separate netCDF file
+
+# List all of these files
+file_vec <- dir(path = file.path(path, "raw-driver-data", "raw-gpcp-precip"))
+
+# Do some post-processing of this vector of files
+precip_files <- data.frame("orig_name" = file_vec) %>%
+  # Drop an unneeded part of the file name
+  dplyr::mutate(name_simp = gsub(pattern = "_c[[:digit:]]{8}.nc", replacement = ".nc",
+                                 x = orig_name))
+
+# Check it out
+head(precip_files)
+
+# Now we'll do our extraction for each of these files
+focal_precip <- precip_files[1,]
+
+# Read in the file as netCDF
+prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-gpcp-precip",
+                                               paste0("gpcp_v02r03_monthly_d202209_c20221208.nc")))
+
+
 # Read in the netCDF file and examine for context on units / etc.
-prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
-                                              "air.mon.mean.nc"))
+prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-gpcp-precip",
+                                              "gpcp_v02r03_monthly_d202209_c20221208.nc"))
 
 # Look at this
 print(prec_nc)
 
 # Read it as a raster too
 ## This format is more easily manipulable for our purposes
-prec_rast <- terra::rast(x = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
-                                      "air.mon.mean.nc"))
+prec_rast <- terra::rast(x = file.path(path, "raw-driver-data", "raw-gpcp-precip",
+                                       "gpcp_v02r03_monthly_d202209_c20221208.nc"))
 
 # Check names
 names(prec_rast)
 
 # Check out just one of those
-print(prec_rast$prec_99)
+print(prec_rast$precip)
 
 # Create an empty list to store this information in
 out_list <- list()
 
-# Identify how many layers are in this
-(layer_ct <- length(names(prec_rast)))
-
 # We'll need to strip each layer separately
-for(k in 1:layer_ct){
+# for(k in 1:layer_ct){
   
   # Build name of layer
-  focal_layer <- paste0("prec_", k)
+  # focal_layer <- paste0("prec_", k)
   
   # Rotate so longitude is from -180 to 180 (rather than 0 to 360)
-  rotated <- terra::rotate(x = prec_rast[[focal_layer]])
+  rotated <- terra::rotate(x = prec_rast$precip)
   
   # Identify time of this layer
   layer_time <- terra::time(x = rotated)
@@ -85,20 +104,20 @@ for(k in 1:layer_ct){
     purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
     # Filter out NAs
     dplyr::filter(!is.na(value)) %>%
-    # Convert from Kelvin to Celsius
-    dplyr::mutate(value_c = value - 273.15) %>%
-    # Average temperature within river ID
+    # Average precip within river ID
     dplyr::group_by(river_id) %>%
-    dplyr::summarize(value_avg = mean(value_c, na.rm = T)) %>%
+    dplyr::summarize(avg_mm_precip_per_day = mean(value, na.rm = T)) %>%
     dplyr::ungroup() %>%
     # Add a column for what timestamp this is
     dplyr::mutate(time = layer_time, .before = dplyr::everything())
   
   # Add it to the list
-  out_list[[focal_layer]] <- small_out_df
+  # out_list[[focal_layer]] <- small_out_df
   
   # Success message
-  message("Processing complete for ", layer_time, " (number ", k, " of ", layer_ct, ")") }
+  # message("Processing complete for ", layer_time, " (number ", k, " of ", layer_ct, ")") 
+  
+  # }
 
 # Exploratory plot one of what we just extracted
 plot(rotated, axes = T, reset = F)
