@@ -41,7 +41,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 ## ------------------------------------------------------- ##
                     # Precip - Extract ----
 ## ------------------------------------------------------- ##
-# The GPCP Precip data has each month of each year as a separate netCDF file
+# The GPCP precipitation data has each month of each year as a separate netCDF file
 
 # List all of these files
 precip_files <- dir(path = file.path(path, "raw-driver-data", "raw-gpcp-precip"))
@@ -94,9 +94,7 @@ for(k in 1:file_ct){
   out_list[[focal_precip]] <- small_out_df
   
   # Success message
-  message("Processing complete for ", layer_time, " (number ", k, " of ", file_ct, ")")
-  
-}
+  message("Processing complete for ", layer_time, " (number ", k, " of ", file_ct, ")") }
 
 # Exploratory plot one of what we just extracted
 plot(rotated, axes = T, reset = F)
@@ -128,8 +126,12 @@ full_out_df %>%
   dplyr::group_by(year) %>%
   dplyr::summarize(month_ct = length(unique(month))) %>%
   dplyr::ungroup() %>%
-  # Drop all years where we have 12 months
-  dplyr::filter(month_ct != 12)
+  # Make a plot to more easily visualize the quality control
+  ggplot(data = ., aes(x = as.numeric(year), y = month_ct, fill = month_ct)) +
+  geom_smooth(method = "lm", formula = "y ~ x", se = F, color = "black") +
+  geom_point(size = 2, pch = 23) +
+  labs(x = "Year", y = "Month Count") +
+  theme_classic()
 
 # Summarize within month across years
 year_df <- full_out_df %>%
