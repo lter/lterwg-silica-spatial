@@ -120,18 +120,27 @@ full_out_df <- out_list %>%
 dplyr::glimpse(full_out_df)
 
 # Make sure we have all 12 months for every year
-## Could easily have missed downloading one because they are separate files
-full_out_df %>%
+## Make a test dataframe counting months per year
+precip_check <- full_out_df %>%
   # Count number of months for each year
   dplyr::group_by(year) %>%
   dplyr::summarize(month_ct = length(unique(month))) %>%
-  dplyr::ungroup() %>%
+  dplyr::ungroup()
+
+## Could easily have missed downloading one because they are separate files
+precip_check %>%
   # Make a plot to more easily visualize the quality control
   ggplot(data = ., aes(x = as.numeric(year), y = month_ct, fill = month_ct)) +
   geom_smooth(method = "lm", formula = "y ~ x", se = F, color = "black") +
   geom_point(size = 2, pch = 23) +
   labs(x = "Year", y = "Month Count") +
   theme_classic()
+
+# Check in a non-visal way too
+unique(1979:2022 %in% unique(full_out_df$year))
+precip_check %>%
+  # Filter out those with 12 months
+  dplyr::filter(month_ct != 12)
 
 # Summarize within month across years
 year_df <- full_out_df %>%
