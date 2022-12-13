@@ -39,139 +39,48 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-# Soil Order - Extract ----
+              # Soil Order - Extract ----
 ## ------------------------------------------------------- ##
-# Read in the netCDF file and examine for context on units / etc.
-soil_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
-                                              "air.mon.mean.nc"))
+# Pull in the raw lithology data
+soil_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-soil", "TAXNWRB_250m_ll.tif"))
 
-# Look at this
-print(soil_nc)
+# Check CRS
+crs(soil_raw)
 
-# Read it as a raster too
-## This format is more easily manipulable for our purposes
-soil_rast <- terra::rast(x = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
-                                      "air.mon.mean.nc"))
+# Experimental plotting
+plot(soil_raw, reset = F, axes = T)
+plot(sheds, add = T, axes = T)
 
-# Check names
-names(soil_rast)
-
-# Check out just one of those
-print(soil_rast$soil_99)
-
-# Create an empty list to store this information in
-out_list <- list()
-
-# Identify how many layers are in this
-(layer_ct <- length(names(soil_rast)))
-
-# We'll need to strip each layer separately
-for(k in 1:layer_ct){
-  
-  # Build name of layer
-  focal_layer <- paste0("soil_", k)
-  
-  # Rotate so longitude is from -180 to 180 (rather than 0 to 360)
-  rotated <- terra::rotate(x = soil_rast[[focal_layer]])
-  
-  # Identify time of this layer
-  layer_time <- terra::time(x = rotated)
-  
-  # Strip out the relevant bit
-  small_out_df <- exactextractr::exact_extract(x = rotated, y = sheds, 
-                                               include_cols = c("river_id"),
-                                               progress = F) %>%
-    # Above returns a list so switch it to a dataframe
-    purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-    # Filter out NAs
-    dplyr::filter(!is.na(value)) %>%
-    # Convert from Kelvin to Celsius
-    dplyr::mutate(value_c = value - 273.15) %>%
-    # Average temperature within river ID
-    dplyr::group_by(river_id) %>%
-    dplyr::summarize(value_avg = mean(value_c, na.rm = T)) %>%
-    dplyr::ungroup() %>%
-    # Add a column for what timestamp this is
-    dplyr::mutate(time = layer_time, .before = dplyr::everything())
-  
-  # Add it to the list
-  out_list[[focal_layer]] <- small_out_df
-  
-  # Success message
-  message("Processing complete for ", layer_time, " (number ", k, " of ", layer_ct, ")") }
-
-# Exploratory plot one of what we just extracted
-plot(rotated, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
-
-## ------------------------------------------------------- ##
-# Soil Order - Summarize ----
-## ------------------------------------------------------- ##
-# Unlist that list
-full_out_df <- out_list %>%
+# Strip out rocks from our polygons
+soil_out <- exactextractr::exact_extract(x = soil_raw, y = sheds,
+                                         include_cols = c("river_id")) %>%
+  # Above returns a list so switch it to a dataframe
   purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-  # Strip out year and month
-  dplyr::mutate(year = stringr::str_sub(string = time, start = 1, end = 4),
-                month = stringr::str_sub(string = time, start = 6, end = 7),
-                .after = time)
+  # Filter out NAs
+  dplyr::filter(!is.na(value))
 
-# Glimpse it
-dplyr::glimpse(full_out_df)
+# Check that dataframe
+dplyr::glimpse(soil_out)
 
-# Summarize within month across years
-year_df <- full_out_df %>%
-  # Do summarization
-  dplyr::group_by(river_id, year) %>%
-  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
-  dplyr::ungroup() %>%
-  # Make more informative year column
-  dplyr::mutate(name = paste0("temp_", year, "_degC")) %>%
-  # Drop simple year column
-  dplyr::select(-year) %>%
-  # Pivot to wide format
-  tidyr::pivot_wider(names_from = name,
-                     values_from = value)
+## ------------------------------------------------------- ##
+                # Soil Order - Summarize ----
+## ------------------------------------------------------- ##
+# Summarize that dataframe to be more manageable
+soil_v2 <- soil_out %>%
+  # Count pixels per category and river
+  dplyr::group_by(river_id, value) %>%
+  dplyr::summarize(pixel_ct = dplyr::n()) %>%
+  dplyr::ungroup()
 
 # Glimpse this
-dplyr::glimpse(year_df)
+dplyr::glimpse(soil_v2)
 
-# Then summarize within year across months
-month_df <- full_out_df %>%
-  # Do summarization
-  dplyr::group_by(river_id, month) %>%
-  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
-  dplyr::ungroup() %>%
-  # Change month number to letters
-  dplyr::mutate(month_simp = dplyr::case_when(
-    month == "01" ~ "jan",
-    month == "02" ~ "feb",
-    month == "03" ~ "mar",
-    month == "04" ~ "apr",
-    month == "05" ~ "may",
-    month == "06" ~ "jun",
-    month == "07" ~ "jul",
-    month == "08" ~ "aug",
-    month == "09" ~ "sep",
-    month == "10" ~ "oct",
-    month == "11" ~ "nov",
-    month == "12" ~ "dec")) %>%
-  # Make more informative month column
-  dplyr::mutate(name = paste0("temp_", month_simp, "_degC")) %>%
-  # Drop simple month column
-  dplyr::select(-month, -month_simp) %>%
-  # Pivot to wide format
-  tidyr::pivot_wider(names_from = name,
-                     values_from = value)
+# Need to convert integer values into text
 
-# Glimpse this
-dplyr::glimpse(month_df)
 
-# Combine these dataframes
-soil_actual <- year_df %>%
-  dplyr::left_join(y = month_df, by = "river_id")
+# Then identify "major" (i.e., dominant) soil types per river
 
-# Glimpse again
-dplyr::glimpse(soil_actual)
+
 
 ## ------------------------------------------------------- ##
 # Soil Order - Export ----
