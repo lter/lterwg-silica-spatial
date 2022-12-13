@@ -44,51 +44,30 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # The GPCP Precip data has each month of each year as a separate netCDF file
 
 # List all of these files
-file_vec <- dir(path = file.path(path, "raw-driver-data", "raw-gpcp-precip"))
-
-# Do some post-processing of this vector of files
-precip_files <- data.frame("orig_name" = file_vec) %>%
-  # Drop an unneeded part of the file name
-  dplyr::mutate(name_simp = gsub(pattern = "_c[[:digit:]]{8}.nc", replacement = ".nc",
-                                 x = orig_name))
+precip_files <- dir(path = file.path(path, "raw-driver-data", "raw-gpcp-precip"))
 
 # Check it out
 head(precip_files)
 
-# Now we'll do our extraction for each of these files
-focal_precip <- precip_files[1,]
+# Count number of files
+(file_ct <- length(precip_files))
 
-# Read in the file as netCDF
-prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-gpcp-precip",
-                                               paste0("gpcp_v02r03_monthly_d202209_c20221208.nc")))
-
-
-# Read in the netCDF file and examine for context on units / etc.
-prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-gpcp-precip",
-                                              "gpcp_v02r03_monthly_d202209_c20221208.nc"))
-
-# Look at this
-print(prec_nc)
-
-# Read it as a raster too
-## This format is more easily manipulable for our purposes
-prec_rast <- terra::rast(x = file.path(path, "raw-driver-data", "raw-gpcp-precip",
-                                       "gpcp_v02r03_monthly_d202209_c20221208.nc"))
-
-# Check names
-names(prec_rast)
-
-# Check out just one of those
-print(prec_rast$precip)
-
-# Create an empty list to store this information in
+# Create an empty list to store extracted information in
 out_list <- list()
 
-# We'll need to strip each layer separately
-# for(k in 1:layer_ct){
+# Now we'll do our extraction for each of these files
+for(k in 1:file_ct){
   
-  # Build name of layer
-  # focal_layer <- paste0("prec_", k)
+  # Identify focal file
+  focal_precip <- precip_files[k]
+  
+  # Read in the file as netCDF
+  prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-gpcp-precip",
+                                                 focal_precip))
+  
+  # Read it as a raster too
+  prec_rast <- terra::rast(x = file.path(path, "raw-driver-data", "raw-gpcp-precip", 
+                                         focal_precip))
   
   # Rotate so longitude is from -180 to 180 (rather than 0 to 360)
   rotated <- terra::rotate(x = prec_rast$precip)
@@ -112,16 +91,21 @@ out_list <- list()
     dplyr::mutate(time = layer_time, .before = dplyr::everything())
   
   # Add it to the list
-  # out_list[[focal_layer]] <- small_out_df
+  out_list[[focal_precip]] <- small_out_df
   
   # Success message
-  # message("Processing complete for ", layer_time, " (number ", k, " of ", layer_ct, ")") 
+  message("Processing complete for ", layer_time, " (number ", k, " of ", file_ct, ")")
   
-  # }
+}
 
 # Exploratory plot one of what we just extracted
 plot(rotated, axes = T, reset = F)
 plot(sheds, axes = T, add = T)
+
+# Can also double check other aspects of what we've processed
+print(prec_nc)
+names(prec_rast)
+print(rotated$precip)
 
 ## ------------------------------------------------------- ##
 # Precip - Summarize ----
