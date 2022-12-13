@@ -108,7 +108,7 @@ names(prec_rast)
 print(rotated$precip)
 
 ## ------------------------------------------------------- ##
-# Precip - Summarize ----
+                    # Precip - Summarize ----
 ## ------------------------------------------------------- ##
 # Unlist that list
 full_out_df <- out_list %>%
@@ -121,14 +121,24 @@ full_out_df <- out_list %>%
 # Glimpse it
 dplyr::glimpse(full_out_df)
 
+# Make sure we have all 12 months for every year
+## Could easily have missed downloading one because they are separate files
+full_out_df %>%
+  # Count number of months for each year
+  dplyr::group_by(year) %>%
+  dplyr::summarize(month_ct = length(unique(month))) %>%
+  dplyr::ungroup() %>%
+  # Drop all years where we have 12 months
+  dplyr::filter(month_ct != 12)
+
 # Summarize within month across years
 year_df <- full_out_df %>%
   # Do summarization
   dplyr::group_by(river_id, year) %>%
-  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
+  dplyr::summarize(value = mean(avg_mm_precip_per_day, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0("temp_", year, "_degC")) %>%
+  dplyr::mutate(name = paste0("precip_", year, "_mm")) %>%
   # Drop simple year column
   dplyr::select(-year) %>%
   # Pivot to wide format
@@ -142,7 +152,7 @@ dplyr::glimpse(year_df)
 month_df <- full_out_df %>%
   # Do summarization
   dplyr::group_by(river_id, month) %>%
-  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
+  dplyr::summarize(value = mean(avg_mm_precip_per_day, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Change month number to letters
   dplyr::mutate(month_simp = dplyr::case_when(
@@ -159,7 +169,7 @@ month_df <- full_out_df %>%
     month == "11" ~ "nov",
     month == "12" ~ "dec")) %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0("temp_", month_simp, "_degC")) %>%
+  dplyr::mutate(name = paste0("precip_", month_simp, "_mm")) %>%
   # Drop simple month column
   dplyr::select(-month, -month_simp) %>%
   # Pivot to wide format
@@ -177,7 +187,7 @@ prec_actual <- year_df %>%
 dplyr::glimpse(prec_actual)
 
 ## ------------------------------------------------------- ##
-# Precip - Export ----
+                  # Precip - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
 prec_export <- sites %>%
@@ -200,7 +210,7 @@ googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_
                           path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
 ## ------------------------------------------------------- ##
-# Combine Extracted Data ----
+              # Combine Extracted Data ----
 ## ------------------------------------------------------- ##
 # Clear environment
 rm(list = setdiff(ls(), c('path', 'sites')))
