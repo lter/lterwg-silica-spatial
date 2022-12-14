@@ -55,7 +55,11 @@ land_out <- exactextractr::exact_extract(x = lulc_raw, y = sheds,
   # Above returns a list so switch it to a dataframe
   purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
   # Filter out NAs
-  dplyr::filter(!is.na(value))
+  dplyr::filter(!is.na(value)) %>%
+  # Summarize to count number of pixels per category
+  dplyr::group_by(river_id, value) %>%
+  dplyr::summarize(pixel_ct = dplyr::n()) %>%
+  dplyr::ungroup()
 
 # Check that dataframe
 dplyr::glimpse(land_out)
@@ -72,12 +76,6 @@ lulc_index <- read.csv(file = file.path(path, "raw-driver-data",
 
 # Wrangle extracted data
 land_v2 <- land_out %>%
-  # Drop coverage fraction column
-  dplyr::select(-coverage_fraction) %>%
-  # Summarize to count number of pixels per category
-  dplyr::group_by(river_id, value) %>%
-  dplyr::summarize(pixel_ct = dplyr::n()) %>%
-  dplyr::ungroup() %>%
   # Attach index information
   dplyr::left_join(y = lulc_index, by = "value") %>%
   # Simplify data now that descriptive categories are included
@@ -121,6 +119,9 @@ dplyr::glimpse(land_v2)
 
 # Make a version of this that is wide
 land_wide <- land_v2 %>%
+  # Add "land" to each of these before they become columns
+  dplyr::mutate(lulc_category = paste0("land_", lulc_category)) %>%
+  # Now pivot wider
   tidyr::pivot_wider(names_from = lulc_category,
                      values_from = perc_total)
 
@@ -132,7 +133,7 @@ land_major <- land_v2 %>%
   dplyr::ungroup() %>%
   # Remove the percent total
   dplyr::select(-perc_total) %>%
-  # Get the columns into wide format where the column name and value are both the dominant land
+  # Pivot back to wide format
   tidyr::pivot_wider(names_from = lulc_category,
                      values_from = lulc_category) %>%
   # Paste all the non-NAs (i.e., the dominant rocks) into a single column
@@ -149,7 +150,6 @@ dplyr::glimpse(land_actual)
 ## ------------------------------------------------------- ##
                 # Land Cover - Export ----
 ## ------------------------------------------------------- ##
-
 # Let's get ready to export
 land_export <- sites %>%
   # Join the rock data
