@@ -59,7 +59,11 @@ rocks_out <- exactextractr::exact_extract(x = rocks_raw, y = sheds,
   # Above returns a list so switch it to a dataframe
   purrr::map_dfr(dplyr::select, c(river_id, value)) %>%
   # Filter out NAs
-  dplyr::filter(!is.na(value))
+  dplyr::filter(!is.na(value)) %>%
+  # Count pixels within each river
+  dplyr::group_by(river_id, value) %>%
+  dplyr::summarise(pixel_ct = dplyr::n()) %>%
+  dplyr::ungroup()
 
 # Check that dataframe
 dplyr::glimpse(rocks_out)
@@ -100,7 +104,7 @@ rock_index <- rock_index_raw %>%
       rock_abbrev == 'nd' ~ 'no_data',
       TRUE ~ as.character(rock_abbrev) ) ) %>%
   # Remove unneeded columns
-  dplyr::select(rock_code, rock_type)
+  dplyr::select(value = rock_code, rock_type)
 
 # Check that worked
 dplyr::glimpse(rock_index)
@@ -111,12 +115,11 @@ dplyr::glimpse(rock_index)
 
 # Process the extracted lithology information into a dataframe
 rock_v2 <- rocks_out %>%
-  # Get value column named more informatively
-  dplyr::rename(rock_code = value) %>%
   # Bring over the rock names from the index
-  dplyr::left_join(y = rock_index, by = "rock_code") %>%
+  dplyr::left_join(y = rock_index, by = "value") %>%
   # Remove the now-unneeded code column
-  dplyr::select(-rock_code) %>%
+  dplyr::select(-value) %>%
+  # Simplify the imported categories
   dplyr::mutate(
     rock_type = dplyr::case_when(
       rock_type == 'unconsolidated_sediments' ~ 'sedimentary',
@@ -133,55 +136,50 @@ rock_v2 <- rocks_out %>%
       rock_type == 'intermediate_volcanic_rocks' ~ 'volcanic',
       rock_type == 'basic_volcanic_rocks' ~ 'volcanic',
       T ~ as.character(rock_type) ) ) %>%
-  # Group by focal polygon and rock type
-  dplyr::group_by(river_id, rock_type) %>%
-  # Count the instances within each rock type
-  ## 0.5° degree pixels within the watershed that contain this rock type
-  dplyr::summarise(rock_totals = dplyr::n()) %>%
-  # Ungroup
-  dplyr::ungroup() %>%
   # Remove unwanted data values
   dplyr::filter(!rock_type %in% c("no_data", "water_bodies", "ice_and_glaciers")) %>%
   # Bin rock categories and re-summarise within consolidated categories
-  # Group by LTER and uniqueID
+  dplyr::group_by(river_id, rock_type) %>%
+  dplyr::summarize(pixel_ct_v2 = sum(pixel_ct, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Now count total pixels per watershed
   dplyr::group_by(river_id) %>%
-  # We'll want the totals as a percent (total pixels is not very intuitive)
-  dplyr::mutate(total_shed_pixels = sum(rock_totals, na.rm = T)) %>%
-  # Now ungroup
+  dplyr::mutate(total_shed_pixels = sum(pixel_ct_v2, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # And calculate the percent of total for each row
-  dplyr::mutate(perc_total = ((rock_totals / total_shed_pixels) * 100)) %>%
+  dplyr::mutate(perc_total = ((pixel_ct_v2 / total_shed_pixels) * 100)) %>%
   # Remove the two pixel count columns
-  dplyr::select(-rock_totals, -total_shed_pixels)
+  dplyr::select(-pixel_ct_v2, -total_shed_pixels)
 
-# Now we want to split into two directions
-## First: get a version where each rock type is its own column
-rock_data_wide <- rock_v2 %>%
-  # Pivot to wide format
+# Get wide format version where categories are columns
+rock_wide <- rock_v2 %>%
+  # Add "rocks" to each category
+  dplyr::mutate(rock_type = paste0("rocks_", rock_type)) %>%
+  # Now pivot
   tidyr::pivot_wider(names_from = rock_type,
                      values_from = perc_total)
 
-## Second: get the *majority* rock for each watershed
-rock_data_major <- rock_v2 %>%
+# Now identify "major" (i.e., dominant) rocks
+rock_major <- rock_v2 %>%
   # Filter to only max of each rock type per uniqueID & LTER
   dplyr::group_by(river_id) %>%
-  filter(perc_total == max(perc_total)) %>%
+  dplyr::filter(perc_total == max(perc_total)) %>%
   dplyr::ungroup() %>%
   # Remove the percent total
   dplyr::select(-perc_total) %>%
-  # Get the columns into wide format where the column name and value are both whatever the dominant rock was
+  # Pivot back to wide format
   tidyr::pivot_wider(names_from = rock_type,
                      values_from = rock_type) %>%
   # Paste all the non-NAs (i.e., the dominant rocks) into a single column
   tidyr::unite(col = major_rock, -river_id, na.rm = T, sep = "; ")
 
 # Now attach the major rocks to the wide format one
-rock_data_actual <- rock_data_wide %>%
-  dplyr::left_join(y = rock_data_major, by = c("river_id")) %>%
+rock_actual <- rock_wide %>%
+  dplyr::left_join(y = rock_major, by = c("river_id")) %>%
   dplyr::relocate(major_rock, .after = river_id)
 
 # Examine
-dplyr::glimpse(rock_data_actual)
+dplyr::glimpse(rock_actual)
 
 ## ------------------------------------------------------- ##
                   # Lithology - Export ----
@@ -190,7 +188,7 @@ dplyr::glimpse(rock_data_actual)
 # Let's get ready to export
 rock_export <- sites %>%
   # Join the rock data
-  dplyr::left_join(y = rock_data_actual, by = c("river_id"))
+  dplyr::left_join(y = rock_actual, by = c("river_id"))
 
 # Check it out
 dplyr::glimpse(rock_export)
