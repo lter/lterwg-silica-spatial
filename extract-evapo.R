@@ -88,8 +88,8 @@ full_out <- list()
 
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels outside of each bounding box's extent
-for(day_num in "001") {
-# for(day_num in unique(file_all$doy)){
+# for(day_num in "001") {
+for(day_num in unique(file_all$doy)){
   
   # Starting message
   message("Processing begun for day of year: ", day_num)
@@ -152,7 +152,6 @@ plot(sheds, axes = T, add = T)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'full_out')))
-
 
 ## ------------------------------------------------------- ##
             # Evapotranspiration - Summarize ----
