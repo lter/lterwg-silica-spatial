@@ -47,7 +47,8 @@ file_list <- list()
 
 # Identify files for each region
 for(region in c("north-america-usa", "north-america-arctic", "puerto-rico",
-                "russia-west", "russia-center", "russia-east", "scandinavia")){
+                "russia-west", "russia-west-2", "russia-center", "russia-east", 
+                "scandinavia")){
   
   # Identify files in that folder
   file_df <- data.frame("region" = region,
