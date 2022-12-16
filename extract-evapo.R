@@ -130,10 +130,10 @@ for(day_num in "001") {
                     .after = river_id)
     
     # Add this dataframe to the list we made within the larger for loop
-    doy_list[[region]] <- ex_data
+    doy_list[[focal_region]] <- ex_data
     
     # End message
-    message("Finished region: ", region) }
+    message("Finished region: ", focal_region) }
   
   # Wrangle the output of the within-day of year extraction
   full_data <- doy_list %>%
