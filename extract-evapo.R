@@ -1,15 +1,15 @@
 ## ------------------------------------------------------- ##
-# Silica WG - Extract Spatial Data - Air Temperature
+   # Silica WG - Extract Spatial Data - Evapotranspiration
 ## ------------------------------------------------------- ##
 # Written by:
 ## Nick J Lyon
 
 # Purpose:
 ## Using the watershed shapefiles created in "id-watershed-polygons.R"
-## Extract the following data: AIR TEMPERATURE (MONTHLY)
+## Extract the following data: EVAPOTRANSPIRATION
 
 ## ------------------------------------------------------- ##
-# Housekeeping ----
+                      # Housekeeping ----
 ## ------------------------------------------------------- ##
 
 # Read needed libraries
@@ -39,93 +39,140 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-# Air Temp - Extract ----
+        # MODIS16A2 (v. 061) - Identify Files ----
 ## ------------------------------------------------------- ##
-# Read in the netCDF file and examine for context on units / etc.
-air_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
-                                              "air.mon.mean.nc"))
 
-# Look at this
-print(air_nc)
+# Make an empty list
+file_list <- list()
 
-# Read it as a raster too
-## This format is more easily manipulable for our purposes
-air_rast <- terra::rast(x = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
-                                      "air.mon.mean.nc"))
-
-# Check names
-names(air_rast)
-
-# Check out just one of those
-print(air_rast$air_99)
-
-# Create an empty list to store this information in
-out_list <- list()
-
-# Identify how many layers are in this
-(layer_ct <- length(names(air_rast)))
-
-# We'll need to strip each layer separately
-for(k in 1:layer_ct){
+# Identify files for each region
+for(region in c("north-america-usa", "north-america-arctic", "puerto-rico",
+                "russia-west", "russia-center", "russia-east", "scandinavia")){
   
-  # Build name of layer
-  focal_layer <- paste0("air_", k)
+  # Identify files in that folder
+  file_df <- data.frame("region" = region,
+                        "files" = dir(path = file.path(path, "raw-driver-data", 
+                                                       "raw-evapo", region),
+                                      pattern = "MOD16A2.061_ET_500m_"))
   
-  # Rotate so longitude is from -180 to 180 (rather than 0 to 360)
-  rotated <- terra::rotate(x = air_rast[[focal_layer]])
-  
-  # Identify time of this layer
-  layer_time <- terra::time(x = rotated)
-  
-  # Strip out the relevant bit
-  small_out_df <- exactextractr::exact_extract(x = rotated, y = sheds, 
-                                               include_cols = c("river_id"),
-                                               progress = F) %>%
-    # Above returns a list so switch it to a dataframe
-    purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-    # Filter out NAs
-    dplyr::filter(!is.na(value)) %>%
-    # Convert from Kelvin to Celsius
-    dplyr::mutate(value_c = value - 273.15) %>%
-    # Average temperature within river ID
-    dplyr::group_by(river_id) %>%
-    dplyr::summarize(value_avg = mean(value_c, na.rm = T)) %>%
-    dplyr::ungroup() %>%
-    # Add a column for what timestamp this is
-    dplyr::mutate(time = layer_time, .before = dplyr::everything())
-  
-  # Add it to the list
-  out_list[[focal_layer]] <- small_out_df
-  
-  # Success message
-  message("Processing complete for ", layer_time, " (number ", k, " of ", layer_ct, ")") }
+  # Add that set of files to the list
+  file_list[[region]] <- file_df }
 
-# Exploratory plot one of what we just extracted
-plot(rotated, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
-
-## ------------------------------------------------------- ##
-# Air Temp - Summarize ----
-## ------------------------------------------------------- ##
-# Unlist that list
-full_out_df <- out_list %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-  # Strip out year and month
-  dplyr::mutate(year = stringr::str_sub(string = time, start = 1, end = 4),
-                month = stringr::str_sub(string = time, start = 6, end = 7),
-                .after = time)
+# Wrangle the list
+file_all <- file_list %>%
+  # Unlist the loop's output
+  purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+  # Identify date from file name
+  dplyr::mutate(date_raw = stringr::str_extract(string = files, 
+                                                pattern = "_doy[[:digit:]]{7}")) %>%
+  # Simplify that column
+  dplyr::mutate(date = gsub(pattern = "_doy", replacement = "", x = date_raw)) %>%
+  # Identify day of year & year
+  dplyr::mutate(year = stringr::str_sub(string = date, start = 1, end = 4),
+                doy = stringr::str_sub(string = date, start = 5, end = 7)) %>%
+  # Drop 'raw' version
+  dplyr::select(-date_raw)
 
 # Glimpse it
-dplyr::glimpse(full_out_df)
+dplyr::glimpse(file_all)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+
+## ------------------------------------------------------- ##
+            # Evapotranspiration - Extract ----
+## ------------------------------------------------------- ##
+
+# Make a list to house extracted information
+full_out <- list()
+
+# Extract all possible information from each
+## Note this results in *many* NAs for pixels outside of each bounding box's extent
+for(day_num in "001") {
+# for(day_num in unique(file_all$doy)){
+  
+  # Starting message
+  message("Processing begun for day of year: ", day_num)
+  
+  # File dataframe of files to just that doy
+  simp_df <- dplyr::filter(file_all, doy == day_num)
+
+  # Make an empty list
+  doy_list <- list()
+  
+  # Now read in & extract each raster of that day of year
+  for(region in unique(simp_df$region)){
+    
+    # Starting message
+    message("Begun for region: ", region)
+    
+    # Subset simp_df to that region
+    very_simp_df <- dplyr::filter(simp_df, region == region)
+    
+    # Read in raster
+    et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                                     very_simp_df$region, very_simp_df$files))
+    
+    # Extract all possible information from that dataframe
+    ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds, 
+                                            include_cols = c("river_id"),
+                                            progress = FALSE) %>%
+      # Unlist to dataframe
+      purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+      # Average within river_id
+      dplyr::group_by(river_id) %>%
+      dplyr::summarize(mean_val = mean(value, na.rm = T)) %>%
+      dplyr::ungroup() %>%
+      # Create some other useful columns
+      dplyr::mutate(year = as.numeric(very_simp_df$year),
+                    day_of_year = as.numeric(day_num),
+                    .after = river_id)
+    
+    # Add this dataframe to the list we made within the larger for loop
+    doy_list[[region]] <- ex_data
+    
+    # End message
+    message("Finished region: ", region) }
+  
+  # Wrangle the output of the within-day of year extraction
+  full_data <- doy_list %>%
+    # Unlist to dataframe
+    purrr::map_dfr(.f = dplyr::select, dplyr::everything())
+  
+  # Add this to a second, larger list
+  full_out[[day_num]] <- full_data
+    
+  # Ending message
+  message("Processing ended for day of year: ", day_num) }
+
+# Exploratory plot one of what we just extracted
+plot(et_rast, axes = T, reset = F)
+plot(sheds, axes = T, add = T)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'full_out')))
+
+
+## ------------------------------------------------------- ##
+# Evapotranspiration - Summarize ----
+## ------------------------------------------------------- ##
+# Unlist that list
+out_df <- full_out %>%
+  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+  # Drop any possible duplicate rows
+  unique()
+  
+# Glimpse it
+dplyr::glimpse(out_df)
 
 # Summarize within month across years
-year_df <- full_out_df %>%
+year_df <- out_df %>%
   # Do summarization
   dplyr::group_by(river_id, year) %>%
-  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
+  dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0("temp_", year, "_degC")) %>%
+  dplyr::mutate(name = paste0("evapotrans_", year, "_kg_m2")) %>%
   # Drop simple year column
   dplyr::select(-year) %>%
   # Pivot to wide format
@@ -135,30 +182,38 @@ year_df <- full_out_df %>%
 # Glimpse this
 dplyr::glimpse(year_df)
 
-# Then summarize within year across months
-month_df <- full_out_df %>%
-  # Do summarization
+# Need to convert day of year into months to get a monthly value
+month_v1 <- out_df %>%
+  # Get months
+  dplyr::mutate(month = dplyr::case_when(
+    day_of_year <= 31 ~ "jan", # 31 days in January
+    day_of_year > 31 & day_of_year <= 59 ~ "feb", # +28 in Feb (note ignored leap days...)
+    day_of_year > 59 & day_of_year <= 90 ~ "mar", # +31
+    day_of_year > 90 & day_of_year <= 120 ~ "apr", # +30
+    day_of_year > 120 & day_of_year <= 151 ~ "may", # +31
+    day_of_year > 151 & day_of_year <= 181 ~ "jun", # +30 
+    day_of_year > 181 & day_of_year <= 212 ~ "jul", # +31
+    day_of_year > 212 & day_of_year <= 243 ~ "aug", # +31
+    day_of_year > 243 & day_of_year <= 273 ~ "sep", # +30
+    day_of_year > 273 & day_of_year <= 304 ~ "oct", # +31
+    day_of_year > 304 & day_of_year <= 334 ~ "nov", # +30 
+    day_of_year > 334 ~ "dec"))
+
+# Check that each month is (roughly) equivalent in number of 8 day samples
+month_v1 %>%
+  dplyr::group_by(month) %>%
+  summarize(count = n())
+
+# Finish averaging within "month"
+month_df <- month_v1 %>%
+  # Average within month / river
   dplyr::group_by(river_id, month) %>%
-  dplyr::summarize(value = mean(value_avg, na.rm = T)) %>%
+  dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
-  # Change month number to letters
-  dplyr::mutate(month_simp = dplyr::case_when(
-    month == "01" ~ "jan",
-    month == "02" ~ "feb",
-    month == "03" ~ "mar",
-    month == "04" ~ "apr",
-    month == "05" ~ "may",
-    month == "06" ~ "jun",
-    month == "07" ~ "jul",
-    month == "08" ~ "aug",
-    month == "09" ~ "sep",
-    month == "10" ~ "oct",
-    month == "11" ~ "nov",
-    month == "12" ~ "dec")) %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0("temp_", month_simp, "_degC")) %>%
+  dplyr::mutate(name = paste0("evapotrans_", month, "_kg_m2")) %>%
   # Drop simple month column
-  dplyr::select(-month, -month_simp) %>%
+  dplyr::select(-month) %>%
   # Pivot to wide format
   tidyr::pivot_wider(names_from = name,
                      values_from = value)
@@ -167,37 +222,37 @@ month_df <- full_out_df %>%
 dplyr::glimpse(month_df)
 
 # Combine these dataframes
-air_actual <- year_df %>%
+et_actual <- year_df %>%
   dplyr::left_join(y = month_df, by = "river_id")
 
 # Glimpse again
-dplyr::glimpse(air_actual)
+dplyr::glimpse(et_actual)
 
 ## ------------------------------------------------------- ##
-# Air Temp - Export ----
+            # Evapotranspiration - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-air_export <- sites %>%
+et_export <- sites %>%
   # Join the rock data
-  dplyr::left_join(y = air_actual, by = c("river_id"))
+  dplyr::left_join(y = et_actual, by = c("river_id"))
 
 # Check it out
-dplyr::glimpse(air_export)
+dplyr::glimpse(et_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
-write.csv(x = air_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_air-temp.csv"))
+write.csv(x = et_export, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "si-extract_evapo.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_air-temp.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_evapo.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
 ## ------------------------------------------------------- ##
-# Combine Extracted Data ----
+                # Combine Extracted Data ----
 ## ------------------------------------------------------- ##
 # Clear environment
 rm(list = setdiff(ls(), c('path', 'sites')))
