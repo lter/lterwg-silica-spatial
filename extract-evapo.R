@@ -101,13 +101,14 @@ for(day_num in "001") {
   doy_list <- list()
   
   # Now read in & extract each raster of that day of year
-  for(region in unique(simp_df$region)){
+  for(focal_region in unique(simp_df$region)){
     
     # Starting message
-    message("Begun for region: ", region)
+    message("Begun for region: ", focal_region)
     
     # Subset simp_df to that region
-    very_simp_df <- dplyr::filter(simp_df, region == region)
+    very_simp_df <- simp_df %>% 
+      dplyr::filter(region == focal_region)
     
     # Read in raster
     et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
