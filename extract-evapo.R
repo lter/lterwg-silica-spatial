@@ -80,6 +80,61 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
+        # Evapotranspiration - Bounding Box Check ----
+## ------------------------------------------------------- ##
+# Let's check to make sure each of my manual bounding boxes fits the sites for that region
+
+# Filter to only one day of year
+(viz_files <- dplyr::filter(file_all, doy == "001"))
+
+# Read in one raster of each region
+rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                               viz_files$region[1], viz_files$files[1]))
+rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                               viz_files$region[2], viz_files$files[2]))
+rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                               viz_files$region[3], viz_files$files[3]))
+rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                               viz_files$region[4], viz_files$files[4]))
+rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                               viz_files$region[5], viz_files$files[5]))
+rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                               viz_files$region[6], viz_files$files[6]))
+rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+                               viz_files$region[7], viz_files$files[7]))
+# Plot each "tile" of data against the watersheds polygons
+## USA
+plot(rast1, axes = T, reset = F, main = viz_files$region[1])
+plot(sheds, axes = T, add = T)
+
+## North America Arctic
+plot(rast2, axes = T, reset = F, main = viz_files$region[2])
+plot(sheds, axes = T, add = T)
+
+## Puerto Rico
+plot(rast3, axes = T, reset = F, main = viz_files$region[3])
+plot(sheds, axes = T, add = T)
+
+## Russia - West
+plot(rast4, axes = T, reset = F, main = viz_files$region[4])
+plot(sheds, axes = T, add = T)
+
+## Russia - Center
+plot(rast5, axes = T, reset = F, main = viz_files$region[5])
+plot(sheds, axes = T, add = T)
+
+## Russia - East
+plot(rast6, axes = T, reset = F, main = viz_files$region[6])
+plot(sheds, axes = T, add = T)
+
+## Scandinavia
+plot(rast7, axes = T, reset = F, main = viz_files$region[7])
+plot(sheds, axes = T, add = T)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+
+## ------------------------------------------------------- ##
             # Evapotranspiration - Extract ----
 ## ------------------------------------------------------- ##
 
@@ -145,10 +200,6 @@ for(day_num in unique(file_all$doy)){
     
   # Ending message
   message("Processing ended for day of year: ", day_num) }
-
-# Exploratory plot one of what we just extracted
-plot(et_rast, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'full_out')))
