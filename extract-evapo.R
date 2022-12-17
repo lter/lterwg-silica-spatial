@@ -47,14 +47,16 @@ file_list <- list()
 
 # Identify files for each region
 for(region in c("north-america-usa", "north-america-arctic", "puerto-rico",
-                "russia-west", "russia-west-2", "russia-center", "russia-east", 
+                "russia-west", "russia-west-2", 
+                # "russia-center", 
+                "russia-east", 
                 "scandinavia")){
   
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-evapo", region),
-                                      pattern = "MOD16A2.061_ET_500m_"))
+                                                       "raw-evapo-modis16a2-v006", region),
+                                      pattern = "MOD16A2.006_ET_500m_"))
   
   # Add that set of files to the list
   file_list[[region]] <- file_df }
@@ -85,24 +87,31 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
 # Let's check to make sure each of my manual bounding boxes fits the sites for that region
 
-# Filter to only one day of year
-(viz_files <- dplyr::filter(file_all, doy == "001"))
+# Filter to only one row per 'region'
+(viz_files <- file_all %>% 
+   # Find first file per region
+   dplyr::group_by(region) %>%
+   dplyr::summarize(files = dplyr::first(x = files)) %>%
+   dplyr::ungroup() )
 
 # Read in one raster of each region
-rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[1], viz_files$files[1]))
-rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[2], viz_files$files[2]))
-rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[3], viz_files$files[3]))
-rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[4], viz_files$files[4]))
-rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[5], viz_files$files[5]))
-rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[6], viz_files$files[6]))
-rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[7], viz_files$files[7]))
+# rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+#                                viz_files$region[8], viz_files$files[8]))
+
 # Plot each "tile" of data against the watersheds polygons
 ## USA
 plot(rast1, axes = T, reset = F, main = viz_files$region[1])
@@ -116,15 +125,15 @@ plot(sheds, axes = T, add = T)
 plot(rast3, axes = T, reset = F, main = viz_files$region[3])
 plot(sheds, axes = T, add = T)
 
-## Russia - West
+## Russia - East
 plot(rast4, axes = T, reset = F, main = viz_files$region[4])
 plot(sheds, axes = T, add = T)
 
-## Russia - Center
+## Russia - West
 plot(rast5, axes = T, reset = F, main = viz_files$region[5])
 plot(sheds, axes = T, add = T)
 
-## Russia - East
+## Russia - West 2
 plot(rast6, axes = T, reset = F, main = viz_files$region[6])
 plot(sheds, axes = T, add = T)
 
@@ -167,7 +176,7 @@ for(day_num in unique(file_all$doy)){
       dplyr::filter(region == focal_region)
     
     # Read in raster
-    et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo",
+    et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                      very_simp_df$region, very_simp_df$files))
     
     # Extract all possible information from that dataframe
