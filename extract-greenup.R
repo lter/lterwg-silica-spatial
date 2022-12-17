@@ -42,19 +42,21 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 #.    MCD12Q2 (v. 061) - Convert Files to Rasters ----
 ## ------------------------------------------------------- ##
 
+# Only need to run this section once - (DONE)
+
 # List all the raw hdf files
-files <- dir(file.path(path, "raw-driver-data", "raw-greenup-data"), pattern = ".hdf")
-
-# Make new filenames for the converted files
-tif_filenames <- substr(files,1,41)
-tif_filenames <- paste0(tif_filenames, ".tif")
-tif_filenames
-
-# Convert hdf files to rasters 
-# The Greenup layer is the second layer so sd_index = 2
-for (i in 1:length(files)){
-  gdal_translate(src_dataset = file.path(path, "raw-driver-data", "raw-greenup-data", files[i]), dst_dataset = file.path(path, "raw-driver-data", "converted-greenup-data", tif_filenames[i]), sd_index = 2)
-}
+# files <- dir(file.path(path, "raw-driver-data", "raw-greenup-data"), pattern = ".hdf")
+# 
+# # Make new filenames for the converted files
+# tif_filenames <- substr(files,1,41)
+# tif_filenames <- paste0(tif_filenames, ".tif")
+# tif_filenames
+# 
+# # Convert hdf files to rasters 
+# # The Greenup layer is the second layer so sd_index = 2
+# for (i in 1:length(files)){
+#   gdal_translate(src_dataset = file.path(path, "raw-driver-data", "raw-greenup-data", files[i]), dst_dataset = file.path(path, "raw-driver-data", "converted-greenup-data", tif_filenames[i]), sd_index = 2)
+# }
 
 ## ------------------------------------------------------- ##
 #.      MCD12Q2 (v. 061) - Reproject Rasters ----
