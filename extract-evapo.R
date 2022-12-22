@@ -47,10 +47,8 @@ file_list <- list()
 
 # Identify files for each region
 for(region in c("north-america-usa", "north-america-arctic", "puerto-rico",
-                "russia-west", "russia-west-2", 
-                # "russia-center", 
-                "russia-east", 
-                "scandinavia")){
+                "russia-west", "russia-west-2", "russia-upper",
+                "russia-center", "cropped-russia-east", "scandinavia")){
   
   # Identify files in that folder
   file_df <- data.frame("region" = region,
@@ -109,11 +107,11 @@ rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v0
                                viz_files$region[6], viz_files$files[6]))
 rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[7], viz_files$files[7]))
-# rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
-#                                viz_files$region[8], viz_files$files[8]))
+rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+                               viz_files$region[8], viz_files$files[8]))
 
 # Plot each "tile" of data against the watersheds polygons
-## USA
+## Russia East (Cropped)
 plot(rast1, axes = T, reset = F, main = viz_files$region[1])
 plot(sheds, axes = T, add = T)
 
@@ -121,24 +119,28 @@ plot(sheds, axes = T, add = T)
 plot(rast2, axes = T, reset = F, main = viz_files$region[2])
 plot(sheds, axes = T, add = T)
 
-## Puerto Rico
+## USA
 plot(rast3, axes = T, reset = F, main = viz_files$region[3])
 plot(sheds, axes = T, add = T)
 
-## Russia - East
+## Puerto Rico
 plot(rast4, axes = T, reset = F, main = viz_files$region[4])
 plot(sheds, axes = T, add = T)
 
-## Russia - West
+## Russia - Center
 plot(rast5, axes = T, reset = F, main = viz_files$region[5])
 plot(sheds, axes = T, add = T)
 
-## Russia - West 2
+## Russia - Upper
 plot(rast6, axes = T, reset = F, main = viz_files$region[6])
 plot(sheds, axes = T, add = T)
 
-## Scandinavia
+## Russia - West
 plot(rast7, axes = T, reset = F, main = viz_files$region[7])
+plot(sheds, axes = T, add = T)
+
+## Russia - West 2
+plot(rast8, axes = T, reset = F, main = viz_files$region[8])
 plot(sheds, axes = T, add = T)
 
 # Clean up environment
