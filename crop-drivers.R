@@ -73,9 +73,6 @@ for(k in 1:file_total){
 rast <- terra::rast(file.path(path, "raw-driver-data",  file_all$driver_id[k],
                               "russia-east", file_all$files[k]))
 
-# Check extent
-terra::ext(rast)
-
 # Define desired extent
 bbox <- terra::ext(143, 172, 60, 73)
 
@@ -164,9 +161,8 @@ for(driver in unique(file_all$driver_id)){
 (file_total <- nrow(file_all))
 
 # For each file
-# for(k in 1:file_total){
-for(k in 1:3){
-  
+for(k in 1:file_total){
+
   # Read in that raster
   rast <- terra::rast(file.path(path, "raw-driver-data",  file_all$driver_id[k],
                                 file_all$region[k], file_all$files[k]))
