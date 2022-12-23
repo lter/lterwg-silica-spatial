@@ -47,7 +47,7 @@ file_list <- list()
 
 # Identify files for each region
 for(region in c("north-america-usa", "north-america-arctic", "puerto-rico",
-                "russia-west", "russia-west-2", "russia-upper",
+                "russia-west", "russia-west-2",
                 "russia-center", "cropped-russia-east", "scandinavia")){
   
   # Identify files in that folder
@@ -107,8 +107,6 @@ rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v0
                                viz_files$region[6], viz_files$files[6]))
 rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[7], viz_files$files[7]))
-rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
-                               viz_files$region[8], viz_files$files[8]))
 
 # Plot each "tile" of data against the watersheds polygons
 ## Russia East (Cropped)
@@ -127,20 +125,12 @@ plot(sheds, axes = T, add = T)
 plot(rast4, axes = T, reset = F, main = viz_files$region[4])
 plot(sheds, axes = T, add = T)
 
-## Russia - Center
-plot(rast5, axes = T, reset = F, main = viz_files$region[5])
-plot(sheds, axes = T, add = T)
-
-## Russia - Upper
-plot(rast6, axes = T, reset = F, main = viz_files$region[6])
-plot(sheds, axes = T, add = T)
-
-## Russia - West
-plot(rast7, axes = T, reset = F, main = viz_files$region[7])
-plot(sheds, axes = T, add = T)
-
-## Russia - West 2
-plot(rast8, axes = T, reset = F, main = viz_files$region[8])
+## Russia COMPOSITE
+frame_rast <- terra::rast(terra::ext(55, 140, 45, 80))
+suppressWarnings(plot(frame_rast, axes = T, reset = F, main = "Russia COMPOSITE"))
+plot(rast5, axes = T, add = T)
+plot(rast6, axes = T, add = T)
+plot(rast7, axes = T, add = T)
 plot(sheds, axes = T, add = T)
 
 # Clean up environment
