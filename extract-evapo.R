@@ -46,9 +46,10 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 file_list <- list()
 
 # Identify files for each region
-for(region in c("north-america-usa", "north-america-arctic", "puerto-rico",
-                "russia-west", "russia-west-2",
-                "russia-center", "cropped-russia-east", "scandinavia")){
+for(region in c("north-america-usa", "north-america-arctic",
+                "cropped-russia-west", "cropped-russia-west-2",
+                "cropped-russia-center", "cropped-russia-east",
+                "puerto-rico", "scandinavia")){
   
   # Identify files in that folder
   file_df <- data.frame("region" = region,
@@ -107,30 +108,36 @@ rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v0
                                viz_files$region[6], viz_files$files[6]))
 rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
                                viz_files$region[7], viz_files$files[7]))
+rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+                               viz_files$region[8], viz_files$files[8]))
 
 # Plot each "tile" of data against the watersheds polygons
-## Russia East (Cropped)
-plot(rast1, axes = T, reset = F, main = viz_files$region[1])
+## Russia Composite (Cropped)
+frame_rast <- terra::rast(terra::ext(55, 140, 45, 80))
+suppressWarnings(plot(frame_rast, axes = T, reset = F, main = "Russia COMPOSITE"))
+plot(rast1, axes = T, add = T)
+plot(rast3, axes = T, add = T)
+plot(rast4, axes = T, add = T)
 plot(sheds, axes = T, add = T)
 
-## North America Arctic
+## Russia East (Cropped)
 plot(rast2, axes = T, reset = F, main = viz_files$region[2])
 plot(sheds, axes = T, add = T)
 
+## North America Arctic
+plot(rast5, axes = T, reset = F, main = viz_files$region[5])
+plot(sheds, axes = T, add = T)
+
 ## USA
-plot(rast3, axes = T, reset = F, main = viz_files$region[3])
+plot(rast6, axes = T, reset = F, main = viz_files$region[6])
 plot(sheds, axes = T, add = T)
 
 ## Puerto Rico
-plot(rast4, axes = T, reset = F, main = viz_files$region[4])
+plot(rast7, axes = T, reset = F, main = viz_files$region[7])
 plot(sheds, axes = T, add = T)
 
-## Russia COMPOSITE
-frame_rast <- terra::rast(terra::ext(55, 140, 45, 80))
-suppressWarnings(plot(frame_rast, axes = T, reset = F, main = "Russia COMPOSITE"))
-plot(rast5, axes = T, add = T)
-plot(rast6, axes = T, add = T)
-plot(rast7, axes = T, add = T)
+## Scandinavia
+plot(rast8, axes = T, reset = F, main = viz_files$region[8])
 plot(sheds, axes = T, add = T)
 
 # Clean up environment
@@ -177,10 +184,6 @@ for(day_num in unique(file_all$doy)){
                                             progress = FALSE) %>%
       # Unlist to dataframe
       purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-      # Average within river_id
-      dplyr::group_by(river_id) %>%
-      dplyr::summarize(mean_val = mean(value, na.rm = T)) %>%
-      dplyr::ungroup() %>%
       # Create some other useful columns
       dplyr::mutate(year = as.numeric(very_simp_df$year),
                     day_of_year = as.numeric(day_num),
@@ -195,7 +198,11 @@ for(day_num in unique(file_all$doy)){
   # Wrangle the output of the within-day of year extraction
   full_data <- doy_list %>%
     # Unlist to dataframe
-    purrr::map_dfr(.f = dplyr::select, dplyr::everything())
+    purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+    # Average within river_id
+    dplyr::group_by(river_id) %>%
+    dplyr::summarize(mean_val = mean(value, na.rm = T)) %>%
+    dplyr::ungroup()
   
   # Add this to a second, larger list
   full_out[[day_num]] <- full_data
