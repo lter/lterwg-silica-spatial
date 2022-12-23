@@ -151,7 +151,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 full_out <- list()
 
 # Extract all possible information from each
-## Note this results in *many* NAs for pixels outside of each bounding box's extent
+## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
 # for(day_num in "001") {
 for(day_num in unique(file_all$doy)){
   
@@ -160,23 +160,19 @@ for(day_num in unique(file_all$doy)){
   
   # File dataframe of files to just that doy
   simp_df <- dplyr::filter(file_all, doy == day_num)
-
+  
   # Make an empty list
   doy_list <- list()
   
   # Now read in & extract each raster of that day of year
-  for(focal_region in unique(simp_df$region)){
-    
+  for(j in 1:nrow(simp_df)){
+  
     # Starting message
-    message("Begun for region: ", focal_region)
-    
-    # Subset simp_df to that region
-    very_simp_df <- simp_df %>% 
-      dplyr::filter(region == focal_region)
+    message("Begun for file ", j, " of ", nrow(simp_df))
     
     # Read in raster
     et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
-                                     very_simp_df$region, very_simp_df$files))
+                                     simp_df$region[j], simp_df$files[j]))
     
     # Extract all possible information from that dataframe
     ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds, 
@@ -184,29 +180,41 @@ for(day_num in unique(file_all$doy)){
                                             progress = FALSE) %>%
       # Unlist to dataframe
       purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-      # Create some other useful columns
-      dplyr::mutate(year = as.numeric(very_simp_df$year),
-                    day_of_year = as.numeric(day_num),
+      # Drop coverage fraction column
+      dplyr::select(-coverage_fraction) %>%
+      # Drop NA values that were "extracted"
+      ## I.e., those that are outside of the current raster bounding nox
+      dplyr::filter(!is.na(value)) %>%
+      # Make new relevant columns
+      dplyr::mutate(year = as.numeric(simp_df$year[j]),
+                    doy = as.numeric(simp_df$doy[j]),
                     .after = river_id)
     
+    # Handle the summarization within region for contiguous regions
+    if(simp_df$region[j] %in% c("north-america-usa", "north-america-arctic",
+                                "cropped-russia-east", "puerto-rico",
+                                "scandinavia")){
+      
+      # The above regions can be summarized without extracting from other regions
+      ex_data <- ex_data %>%
+        dplyr::group_by(river_id, year, doy) %>%
+        dplyr::summarize(value = mean(value, na.rm = T)) %>%
+        dplyr::ungroup() }
+    
     # Add this dataframe to the list we made within the larger for loop
-    doy_list[[focal_region]] <- ex_data
+    doy_list[[j]] <- ex_data
     
     # End message
-    message("Finished region: ", focal_region) }
+    message("Finished extracting raster ", j, " of ", nrow(simp_df)) }
   
   # Wrangle the output of the within-day of year extraction
   full_data <- doy_list %>%
     # Unlist to dataframe
-    purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
-    # Average within river_id
-    dplyr::group_by(river_id) %>%
-    dplyr::summarize(mean_val = mean(value, na.rm = T)) %>%
-    dplyr::ungroup()
+    purrr::map_dfr(.f = dplyr::select, dplyr::everything())
   
   # Add this to a second, larger list
   full_out[[day_num]] <- full_data
-    
+  
   # Ending message
   message("Processing ended for day of year: ", day_num) }
 
@@ -219,8 +227,11 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'full_out')))
 # Unlist that list
 out_df <- full_out %>%
   purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-  # Drop any possible duplicate rows
-  unique()
+  # Summarize again to average across bounding boxes 
+  ## Necessary because of GRO sites crossing multiple rasters
+  dplyr::group_by(river_id, year, doy) %>%
+  dplyr::summarize(mean_val = mean(value, na.rm = T)) %>%
+  dplyr::ungroup()
   
 # Glimpse it
 dplyr::glimpse(out_df)
@@ -246,18 +257,18 @@ dplyr::glimpse(year_df)
 month_v1 <- out_df %>%
   # Get months
   dplyr::mutate(month = dplyr::case_when(
-    day_of_year <= 31 ~ "jan", # 31 days in January
-    day_of_year > 31 & day_of_year <= 59 ~ "feb", # +28 in Feb (note ignored leap days...)
-    day_of_year > 59 & day_of_year <= 90 ~ "mar", # +31
-    day_of_year > 90 & day_of_year <= 120 ~ "apr", # +30
-    day_of_year > 120 & day_of_year <= 151 ~ "may", # +31
-    day_of_year > 151 & day_of_year <= 181 ~ "jun", # +30 
-    day_of_year > 181 & day_of_year <= 212 ~ "jul", # +31
-    day_of_year > 212 & day_of_year <= 243 ~ "aug", # +31
-    day_of_year > 243 & day_of_year <= 273 ~ "sep", # +30
-    day_of_year > 273 & day_of_year <= 304 ~ "oct", # +31
-    day_of_year > 304 & day_of_year <= 334 ~ "nov", # +30 
-    day_of_year > 334 ~ "dec"))
+    doy <= 31 ~ "jan", # 31 days in January
+    doy > 31 & doy <= 59 ~ "feb", # +28 in Feb (note ignored leap days...)
+    doy > 59 & doy <= 90 ~ "mar", # +31
+    doy > 90 & doy <= 120 ~ "apr", # +30
+    doy > 120 & doy <= 151 ~ "may", # +31
+    doy > 151 & doy <= 181 ~ "jun", # +30 
+    doy > 181 & doy <= 212 ~ "jul", # +31
+    doy > 212 & doy <= 243 ~ "aug", # +31
+    doy > 243 & doy <= 273 ~ "sep", # +30
+    doy > 273 & doy <= 304 ~ "oct", # +31
+    doy > 304 & doy <= 334 ~ "nov", # +30 
+    doy > 334 ~ "dec"))
 
 # Check that each month is (roughly) equivalent in number of 8 day samples
 month_v1 %>%
