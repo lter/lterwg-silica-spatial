@@ -147,97 +147,140 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
             # Evapotranspiration - Extract ----
 ## ------------------------------------------------------- ##
 
-# Make a list to house extracted information
-full_out <- list()
+# Silence `dplyr::summarize` preemptively
+options(dplyr.summarise.inform = F)
+
+# Create folder to export to
+dir.create(path = file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+                            "_partial-extracted"),
+           showWarnings = F)
+
+# Identify files we've already extracted from
+done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", 
+                                                 "raw-evapo-modis16a2-v006",
+                                                 "_partial-extracted"))) %>%
+  tidyr::separate(col = files, remove = F,
+                  into = c("junk", "junk2", "year", "doy", "file_ext"))
+
+# Remove completed files from the set of all possible files
+not_done <- dplyr::filter(file_all, !year %in% done_files$year)
+
+# Create a definitive object of files to extract
+file_set <- not_done
+# file_set <- file_all # Uncomment if want to do all new extractions
 
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
-# for(day_num in "001") {
-for(day_num in unique(file_all$doy)){
+# for(annum in "2001"){
+for(annum in unique(file_set$year)){
   
-  # Starting message
-  message("Processing begun for day of year: ", day_num)
+  # Start message
+  message("Processing begun for year: ", annum)
   
-  # File dataframe of files to just that doy
-  simp_df <- dplyr::filter(file_all, doy == day_num)
-  
-  # Make an empty list
-  doy_list <- list()
-  
-  # Now read in & extract each raster of that day of year
-  for(j in 1:nrow(simp_df)){
-  
+  # Subset to one year
+  one_year <- dplyr::filter(file_set, year == annum)
+
+  # Loop across day-of-year within year
+  # for(day_num in "001") {
+  for(day_num in unique(one_year$doy)){
+    
     # Starting message
-    message("Begun for file ", j, " of ", nrow(simp_df))
+    message("Processing begun for day of year: ", day_num)
     
-    # Read in raster
-    et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
-                                     simp_df$region[j], simp_df$files[j]))
+    # Assemble a file name for this extraction
+    (export_name <- paste0("evapotrans_extract_", annum, "_", day_num, ".csv"))
     
-    # Extract all possible information from that dataframe
-    ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds, 
-                                            include_cols = c("river_id"),
-                                            progress = FALSE) %>%
-      # Unlist to dataframe
-      purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-      # Drop coverage fraction column
-      dplyr::select(-coverage_fraction) %>%
-      # Drop NA values that were "extracted"
-      ## I.e., those that are outside of the current raster bounding nox
-      dplyr::filter(!is.na(value)) %>%
-      # Make new relevant columns
-      dplyr::mutate(year = as.numeric(simp_df$year[j]),
-                    doy = as.numeric(simp_df$doy[j]),
-                    .after = river_id)
+    # File dataframe of files to just that doy
+    simp_df <- dplyr::filter(one_year, doy == day_num)
     
-    # Handle the summarization within region for contiguous regions
-    if(simp_df$region[j] %in% c("north-america-usa", "north-america-arctic",
-                                "cropped-russia-east", "puerto-rico",
-                                "scandinavia")){
+    # Make an empty list
+    doy_list <- list()
+    
+    # Now read in & extract each raster of that day of year
+    for(j in 1:nrow(simp_df)){
       
-      # The above regions can be summarized without extracting from other regions
-      ex_data <- ex_data %>%
-        dplyr::group_by(river_id, year, doy) %>%
-        dplyr::summarize(value = mean(value, na.rm = T)) %>%
-        dplyr::ungroup() }
+      # Starting message
+      message("Begun for file ", j, " of ", nrow(simp_df))
+      
+      # Read in raster
+      et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+                                       simp_df$region[j], simp_df$files[j]))
+      
+      # Extract all possible information from that dataframe
+      ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds, 
+                                              include_cols = c("river_id"),
+                                              progress = FALSE) %>%
+        # Unlist to dataframe
+        purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+        # Drop coverage fraction column
+        dplyr::select(-coverage_fraction) %>%
+        # Drop NA values that were "extracted"
+        ## I.e., those that are outside of the current raster bounding nox
+        dplyr::filter(!is.na(value)) %>%
+        # Make new relevant columns
+        dplyr::mutate(year = as.numeric(simp_df$year[j]),
+                      doy = as.numeric(simp_df$doy[j]),
+                      .after = river_id)
+      
+      # Add this dataframe to the list we made within the larger for loop
+      doy_list[[j]] <- ex_data
+      
+      # End message
+      message("Finished extracting raster ", j, " of ", nrow(simp_df)) }
     
-    # Add this dataframe to the list we made within the larger for loop
-    doy_list[[j]] <- ex_data
+    # Wrangle the output of the within-day of year extraction
+    full_data <- doy_list %>%
+      # Unlist to dataframe
+      purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+      # Handle the summarization within river (potentially across multiple rasters' pixels)
+      dplyr::group_by(river_id, year, doy) %>%
+      dplyr::summarize(value = mean(value, na.rm = T)) %>%
+      dplyr::ungroup()
     
-    # End message
-    message("Finished extracting raster ", j, " of ", nrow(simp_df)) }
-  
-  # Wrangle the output of the within-day of year extraction
-  full_data <- doy_list %>%
-    # Unlist to dataframe
-    purrr::map_dfr(.f = dplyr::select, dplyr::everything())
-  
-  # Add this to a second, larger list
-  full_out[[day_num]] <- full_data
+    # Export this file for a given day
+    write.csv(x = full_data, row.names = F, na = '',
+              file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006",
+                               "_partial-extracted", export_name))
+    
+    # Ending message
+    message("Processing ended for day of year: ", day_num) } # Close day-of-year loop
   
   # Ending message
-  message("Processing ended for day of year: ", day_num) }
+  message("Processing ended year: ", annum) } # Close year loop
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'full_out')))
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
             # Evapotranspiration - Summarize ----
 ## ------------------------------------------------------- ##
+
+# Identify extracted data
+done_files <- dir(file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted"))
+
+# Make an empty list
+full_out <- list()
+
+# Read all of these files in
+for(k in 1:length(done_files)){
+  
+  # Read in the kth file
+  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted", done_files[k]))
+  
+  # Finish
+  message("Retrieved file ", k, " of ", length(done_files))}
+
 # Unlist that list
 out_df <- full_out %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-  # Summarize again to average across bounding boxes 
-  ## Necessary because of GRO sites crossing multiple rasters
-  dplyr::group_by(river_id, year, doy) %>%
-  dplyr::summarize(mean_val = mean(value, na.rm = T)) %>%
-  dplyr::ungroup()
+  purrr::map_dfr(dplyr::select, dplyr::everything())
   
 # Glimpse it
 dplyr::glimpse(out_df)
 
 # Summarize within month across years
 year_df <- out_df %>%
+  # Rename value column in data
+  dplyr::rename(mean_val = value) %>%
   # Do summarization
   dplyr::group_by(river_id, year) %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
@@ -277,6 +320,8 @@ month_v1 %>%
 
 # Finish averaging within "month"
 month_df <- month_v1 %>%
+  # Rename value column in data
+  dplyr::rename(mean_val = value) %>%
   # Average within month / river
   dplyr::group_by(river_id, month) %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
