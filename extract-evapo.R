@@ -160,10 +160,14 @@ done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
                                                  "raw-evapo-modis16a2-v006",
                                                  "_partial-extracted"))) %>%
   tidyr::separate(col = files, remove = F,
-                  into = c("junk", "junk2", "year", "doy", "file_ext"))
+                  into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
+  # Make a year-day column
+  dplyr::mutate(year_day = paste0(year, "_", doy))
 
 # Remove completed files from the set of all possible files
-not_done <- dplyr::filter(file_all, !year %in% done_files$year)
+not_done <- file_all %>%
+  dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
+  dplyr::filter(!year_day %in% done_files$year_day)
 
 # Create a definitive object of files to extract
 file_set <- not_done
