@@ -170,8 +170,8 @@ not_done <- file_all %>%
   dplyr::filter(!year_day %in% done_files$year_day)
 
 # Create a definitive object of files to extract
-file_set <- not_done
-# file_set <- file_all # Uncomment if want to do all new extractions
+file_set <- not_done # Uncomment if want to only do only undone extractions
+# file_set <- file_all # Uncomment if want to do all extractions
 
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
