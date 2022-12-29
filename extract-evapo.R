@@ -301,7 +301,7 @@ year_df <- out_df %>%
 dplyr::glimpse(year_df)
 
 # Need to convert day of year into months to get a monthly value
-month_v1 <- out_df %>%
+month_df <- out_df %>%
   # Get months
   dplyr::mutate(month = dplyr::case_when(
     doy <= 31 ~ "jan", # 31 days in January
@@ -315,15 +315,7 @@ month_v1 <- out_df %>%
     doy > 243 & doy <= 273 ~ "sep", # +30
     doy > 273 & doy <= 304 ~ "oct", # +31
     doy > 304 & doy <= 334 ~ "nov", # +30 
-    doy > 334 ~ "dec"))
-
-# Check that each month is (roughly) equivalent in number of 8 day samples
-month_v1 %>%
-  dplyr::group_by(month) %>%
-  summarize(count = n())
-
-# Finish averaging within "month"
-month_df <- month_v1 %>%
+    doy > 334 ~ "dec")) %>%
   # Rename value column in data
   dplyr::rename(mean_val = value) %>%
   # Average within month / river
