@@ -23,7 +23,7 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 ## ------------------------------------------------------- ##
-                # List Files - Russia East ----
+              # List Raw Files - Russia East ----
 ## ------------------------------------------------------- ##
 
 # The bounding box for the "russia-east" appEEARS data extends slightly too far west
@@ -55,23 +55,56 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'file_all')))
 
 ## ------------------------------------------------------- ##
+         # Identify Cropped Files - Russia East ----
+## ------------------------------------------------------- ##
+
+# Make an empty list
+crop_list <- list()
+
+# Identify all tiles of this region for each driver
+for(driver in c("raw-evapo-modis16a2-v006")){
+  
+  # Identify files
+  crop_df <- data.frame("driver_id" = driver,
+                        "files" = dir(path = file.path(path, "raw-driver-data", 
+                                                       driver, "cropped-russia-east")))
+  
+  # Add to list
+  crop_list[[driver]] <- crop_df }
+
+# Wrangle the list
+crop_all <- crop_list %>%
+  # Unlist the loop's output
+  purrr::map_dfr(.f = dplyr::select, dplyr::everything())
+
+# Glimpse it
+dplyr::glimpse(crop_all)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'file_all', 'crop_all')))
+
+## ------------------------------------------------------- ##
                   # Crop - Russia East ----
 ## ------------------------------------------------------- ##
 
+# Identify undone files
+undone <- file_all %>%
+  dplyr::filter(! files %in% crop_all$files)
+
 # Create needed export folders
-for(driver in unique(file_all$driver_id)){
+for(driver in unique(undone$driver_id)){
   dir.create(path = file.path(path, "raw-driver-data", driver, "cropped-russia-east"),
              showWarnings = F) }
 
 # Identify number of files to crop
-(file_total <- length(unique(file_all$files)))
+(file_total <- length(unique(undone$files)))
 
 # For each file
 for(k in 1:file_total){
 
 # Read in that raster
-rast <- terra::rast(file.path(path, "raw-driver-data",  file_all$driver_id[k],
-                              "russia-east", file_all$files[k]))
+rast <- terra::rast(file.path(path, "raw-driver-data",  undone$driver_id[k],
+                              "russia-east", undone$files[k]))
 
 # Define desired extent
 bbox <- terra::ext(143, 172, 60, 73)
@@ -81,8 +114,8 @@ cropped_rast <- terra::crop(x = rast, y = bbox)
 
 # Write that raster out
 terra::writeRaster(x = cropped_rast, overwrite = T,
-                   filename = file.path(path, "raw-driver-data",  file_all$driver_id[k],
-                                        "cropped-russia-east", file_all$files[k]))
+                   filename = file.path(path, "raw-driver-data",  undone$driver_id[k],
+                                        "cropped-russia-east", undone$files[k]))
 
 # Completion message
 message("Completed processing for file ", k, " of ", file_total) }
@@ -101,7 +134,7 @@ plot(sheds, axes = T, add = T)
 rm(list = setdiff(ls(), c('path')))
 
 ## ------------------------------------------------------- ##
-          # List Files - Russia West & Center ----
+    # List Raw Files - Russia West, West 2 & Center ----
 ## ------------------------------------------------------- ##
 
 # Had to download several separate bounding boxes to get Russian GRO rivers
@@ -138,7 +171,9 @@ for(driver in c("raw-evapo-modis16a2-v006")){
 # Wrangle the list
 file_all <- file_list %>%
   # Unlist the loop's output
-  purrr::map_dfr(.f = dplyr::select, dplyr::everything())
+  purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+  # Make a combination column of region + file name
+  dplyr::mutate(id = paste0(region, "_", files))
 
 # Glimpse it
 dplyr::glimpse(file_all)
@@ -147,47 +182,97 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'file_all')))
 
 ## ------------------------------------------------------- ##
-              # Crop - Russia West & Center ----
+ # Identify Cropped Files - Russia West, West 2 & Center ----
 ## ------------------------------------------------------- ##
 
+# Make an empty list
+crop_list <- list()
+
+# Identify all tiles of this region for each driver
+for(driver in c("raw-evapo-modis16a2-v006")){
+  
+  # Identify files for each region
+  crop_west_df <- data.frame("driver_id" = driver,
+                        "region" = "russia-west",
+                        "files" = dir(path = file.path(path, "raw-driver-data", 
+                                                       driver, "cropped-russia-west")))
+  crop_west2_df <- data.frame("driver_id" = driver,
+                         "region" = "russia-west-2",
+                         "files" = dir(path = file.path(path, "raw-driver-data", 
+                                                        driver, "cropped-russia-west-2")))
+  crop_ctr_df <- data.frame("driver_id" = driver,
+                       "region" = "russia-center",
+                       "files" = dir(path = file.path(path, "raw-driver-data", 
+                                                      driver, "cropped-russia-center")))
+  
+  # Bind them together
+  crop_df <- crop_west_df %>%
+    dplyr::bind_rows(y = crop_west2_df) %>%
+    dplyr::bind_rows(y = crop_ctr_df)
+  
+  # Add to list
+  crop_list[[driver]] <- crop_df }
+
+# Wrangle the list
+crop_all <- crop_list %>%
+  # Unlist the loop's output
+  purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+  # Make a combination column of region + file name
+  dplyr::mutate(id = paste0(region, "_", files))
+
+# Glimpse it
+dplyr::glimpse(crop_all)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'file_all', 'crop_all')))
+
+## ------------------------------------------------------- ##
+          # Crop - Russia West, West 2 & Center ----
+## ------------------------------------------------------- ##
+
+# Identify undone files
+undone <- file_all %>%
+  dplyr::filter(!id %in% crop_all$id)
+
 # Create needed export folders
-for(driver in unique(file_all$driver_id)){
-  for(reg in unique(file_all$region)){
+for(driver in unique(undone$driver_id)){
+  for(reg in unique(undone$region)){
   dir.create(path = file.path(path, "raw-driver-data", driver,
                               paste0("cropped-", reg)),
              showWarnings = F) } }
 
 # Identify number of files to crop
-(file_total <- nrow(file_all))
+(file_total <- nrow(undone))
 
 # For each file
 for(k in 1:file_total){
 
   # Read in that raster
-  rast <- terra::rast(file.path(path, "raw-driver-data",  file_all$driver_id[k],
-                                file_all$region[k], file_all$files[k]))
+  rast <- terra::rast(file.path(path, "raw-driver-data",  undone$driver_id[k],
+                                undone$region[k], undone$files[k]))
   
   # Define desired extent
-  if(file_all$region[k] == "russia-west"){ bbox <- terra::ext(57, 87, 46, 73) }
-  if(file_all$region[k] == "russia-west-2"){ bbox <- terra::ext(87, 122, 46, 73) }
-  if(file_all$region[k] == "russia-center"){ bbox <- terra::ext(122, 142, 46, 73) }
+  if(undone$region[k] == "russia-west"){ bbox <- terra::ext(57, 87, 46, 73) }
+  if(undone$region[k] == "russia-west-2"){ bbox <- terra::ext(87, 122, 46, 73) }
+  if(undone$region[k] == "russia-center"){ bbox <- terra::ext(122, 142, 46, 73) }
   
   # Crop using that bounding box
   cropped_rast <- terra::crop(x = rast, y = bbox)
   
   # Write that raster out
   terra::writeRaster(x = cropped_rast, overwrite = T,
-                     filename = file.path(path, "raw-driver-data", file_all$driver_id[k],
-                                          paste0("cropped-", file_all$region[k]),
-                                          file_all$files[k]))
+                     filename = file.path(path, "raw-driver-data", undone$driver_id[k],
+                                          paste0("cropped-", undone$region[k]),
+                                          undone$files[k]))
   
   # Completion message
   message("Completed processing for file ", k, " of ", file_total) }
 
-# Identify one of each of the new ones
+# Identify one file for each region we just cropped
 test_files <- file_all %>%
   dplyr::group_by(driver_id, region) %>%
-  dplyr::summarize(files = dplyr::first(files))
+  dplyr::summarize(files = dplyr::first(files)) %>%
+  dplyr::ungroup()
 
 # Read in one of each raster
 ## Uncropped
