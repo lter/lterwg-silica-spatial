@@ -62,7 +62,7 @@ rm(list = setdiff(ls(), c('path', 'file_all')))
 crop_list <- list()
 
 # Identify all tiles of this region for each driver
-for(driver in c("raw-evapo-modis16a2-v006")){
+for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006")){
   
   # Identify files
   crop_df <- data.frame("driver_id" = driver,
@@ -89,7 +89,7 @@ rm(list = setdiff(ls(), c('path', 'file_all', 'crop_all')))
 
 # Identify undone files
 undone <- file_all %>%
-  dplyr::filter(! files %in% crop_all$files)
+  dplyr::filter(!files %in% crop_all$files)
 
 # Create needed export folders
 for(driver in unique(undone$driver_id)){
