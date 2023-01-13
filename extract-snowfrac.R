@@ -8,17 +8,8 @@
 ## Using the watershed shapefiles created in "id-watershed-polygons.R"
 ## Extract the following data: SNOW FRACTION
 
-
-
-# NOTE:
-## Not updated to actually do snow (yet)
-## Copy/pasted from `extract-evapo.R` as data come from same source / need same processing
-## Updates to stop doing ET are coming soon
-
-
-
 ## ------------------------------------------------------- ##
-# Housekeeping ----
+                      # Housekeeping ----
 ## ------------------------------------------------------- ##
 
 # Read needed libraries
@@ -48,11 +39,17 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-# MODIS16A2 (v. 061) - Identify Files ----
+        # Snow Fraction - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
 file_list <- list()
+
+# Specify driver
+focal_driver <- "raw-snow-modis10a2-v006"
+
+# Specify file pattern
+file_pattern <- "MOD10A2.006_Eight_Day_Snow_Cover_"
 
 # Identify files for each region
 for(region in c("north-america-usa", "north-america-arctic",
@@ -63,8 +60,8 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-evapo-modis16a2-v006", region),
-                                      pattern = "MOD16A2.006_ET_500m_"))
+                                                       focal_driver, region),
+                                      pattern = file_pattern))
   
   # Add that set of files to the list
   file_list[[region]] <- file_df }
@@ -91,7 +88,7 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Bounding Box Check ----
+        # Snow Fraction - Bounding Box Check ----
 ## ------------------------------------------------------- ##
 # Let's check to make sure each of my manual bounding boxes fits the sites for that region
 
@@ -103,21 +100,21 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
    dplyr::ungroup() )
 
 # Read in one raster of each region
-rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[1], viz_files$files[1]))
-rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[2], viz_files$files[2]))
-rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[3], viz_files$files[3]))
-rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[4], viz_files$files[4]))
-rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[5], viz_files$files[5]))
-rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[6], viz_files$files[6]))
-rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[7], viz_files$files[7]))
-rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[8], viz_files$files[8]))
 
 # Plot each "tile" of data against the watersheds polygons
