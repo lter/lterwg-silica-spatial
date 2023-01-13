@@ -150,20 +150,24 @@ plot(sheds, axes = T, add = T)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Extract ----
+                # Snow Fraction - Extract ----
 ## ------------------------------------------------------- ##
 
 # Silence `dplyr::summarize` preemptively
 options(dplyr.summarise.inform = F)
 
+# Specify driver
+focal_driver <- "raw-snow-modis10a2-v006"
+
+# Make a short name for that driver
+driver_short <- "snow"
+
 # Create folder to export to
-dir.create(path = file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
-                            "_partial-extracted"),
+dir.create(path = file.path(path, "raw-driver-data",  focal_driver, "_partial-extracted"),
            showWarnings = F)
 
 # Identify files we've already extracted from
-done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", 
-                                                 "raw-evapo-modis16a2-v006",
+done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", focal_driver,
                                                  "_partial-extracted"))) %>%
   tidyr::separate(col = files, remove = F,
                   into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
@@ -177,7 +181,7 @@ not_done <- file_all %>%
 
 # Create a definitive object of files to extract
 file_set <- not_done # Uncomment if want to only do only undone extractions
-# file_set <- file_all # Uncomment if want to do all extractions
+# file_set <- file_all # Uncomment if want to (re-)do all extractions
 
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
@@ -198,7 +202,7 @@ for(annum in unique(file_set$year)){
     message("Processing begun for day of year: ", day_num)
     
     # Assemble a file name for this extraction
-    (export_name <- paste0("evapotrans_extract_", annum, "_", day_num, ".csv"))
+    (export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv"))
     
     # File dataframe of files to just that doy
     simp_df <- dplyr::filter(one_year, doy == day_num)
@@ -213,7 +217,7 @@ for(annum in unique(file_set$year)){
       message("Begun for file ", j, " of ", nrow(simp_df))
       
       # Read in raster
-      et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+      et_rast <- terra::rast(file.path(path, "raw-driver-data",  focal_driver,
                                        simp_df$region[j], simp_df$files[j]))
       
       # Extract all possible information from that dataframe
@@ -249,7 +253,7 @@ for(annum in unique(file_set$year)){
     
     # Export this file for a given day
     write.csv(x = full_data, row.names = F, na = '',
-              file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006",
+              file = file.path(path, "raw-driver-data", focal_driver,
                                "_partial-extracted", export_name))
     
     # Ending message
@@ -266,7 +270,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
 
 # Identify extracted data
-done_files <- dir(file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted"))
+done_files <- dir(file.path(path, "raw-driver-data", focal_driver, "_partial-extracted"))
 
 # Make an empty list
 full_out <- list()
@@ -275,7 +279,7 @@ full_out <- list()
 for(k in 1:length(done_files)){
   
   # Read in the kth file
-  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted", done_files[k]))
+  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", focal_driver, "_partial-extracted", done_files[k]))
   
   # Finish
   message("Retrieved file ", k, " of ", length(done_files))}
