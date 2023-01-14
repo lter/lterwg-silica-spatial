@@ -59,28 +59,57 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # }
 
 ## ------------------------------------------------------- ##
-#.      MCD12Q2 (v. 061) - Reproject Rasters ----
+#.         MCD12Q2 (v. 061) - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # List all the tif files
 tif_files <- dir(file.path(path, "raw-driver-data", "converted-greenup-data"), pattern = ".tif$")
 
-# Make an empty list
-raster_list <- list()
-
-# Convert each raster from the MODIS Sinusoidal coordinate system to WGS84
-for (i in 1:10){
-  original_raster <- terra::rast(file.path(path, "raw-driver-data", "converted-greenup-data", tif_files[i]))
-  reprojected_raster <- terra::project(original_raster, "+proj=longlat +datum=WGS84")
-  raster_list[[i]] <- reprojected_raster
-  
-}
+file_all <- data.frame("files" = dir(path = file.path(path, "raw-driver-data", "converted-greenup-data"),
+                                     pattern = ".tif$")) %>%
+  # Identify date from file name
+  dplyr::mutate(date_raw = stringr::str_extract(string = files, 
+                                                pattern = "[[:digit:]]{7}")) %>%
+  dplyr::mutate(year = stringr::str_sub(string = date_raw, start = 1, end = 4))
 
 
 ## ------------------------------------------------------- ##
-#          Greenup Day - Extract ----
+#              Greenup Day - Extract ----
 ## ------------------------------------------------------- ##
 
 # Make a list to house extracted information
-full_out <- list()
 
+for (a_year in "2001"){
+  # Subset to one year
+  one_year_data <- dplyr::filter(file_all, year == a_year)
+  
+  # Make an empty list
+  year_list <- list()
+  
+  for (i in 1:nrow(one_year_data)){
+    # Read in the raster
+    original_raster <- terra::rast(file.path(path, "raw-driver-data", "converted-greenup-data", one_year_data$files[[i]]))
+    
+    # Convert each raster from the MODIS Sinusoidal coordinate system to WGS84
+    reprojected_raster <- terra::project(original_raster, "+proj=longlat +datum=WGS84")
+    
+    # Rename the 2 layers
+    names(reprojected_raster) <- c("Onset_Greenness_Increase1", "Onset_Greenness_Increase2")
+    
+    ex_data <- exactextractr::exact_extract(x = reprojected_raster, y = sheds, 
+                                            include_cols = c("river_id"),
+                                            progress = FALSE)%>%
+    # Unlist to dataframe
+    purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+    # Drop coverage fraction column
+    dplyr::select(-coverage_fraction) %>%         
+    # Make new relevant columns
+    dplyr::mutate(year = a_year,
+                  .after = river_id)
+    
+    
+    year_list[[i]] <- ex_data
+    
+  }
+
+}
