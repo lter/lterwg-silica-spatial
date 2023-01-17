@@ -8,17 +8,8 @@
 ## Using the watershed shapefiles created in "id-watershed-polygons.R"
 ## Extract the following data: SNOW FRACTION
 
-
-
-# NOTE:
-## Not updated to actually do snow (yet)
-## Copy/pasted from `extract-evapo.R` as data come from same source / need same processing
-## Updates to stop doing ET are coming soon
-
-
-
 ## ------------------------------------------------------- ##
-# Housekeeping ----
+                      # Housekeeping ----
 ## ------------------------------------------------------- ##
 
 # Read needed libraries
@@ -48,11 +39,17 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-# MODIS16A2 (v. 061) - Identify Files ----
+          # Snow Fraction - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
 file_list <- list()
+
+# Specify driver
+focal_driver <- "raw-snow-modis10a2-v006"
+
+# Specify file pattern
+file_pattern <- "MOD10A2.006_Eight_Day_Snow_Cover_"
 
 # Identify files for each region
 for(region in c("north-america-usa", "north-america-arctic",
@@ -63,8 +60,8 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-evapo-modis16a2-v006", region),
-                                      pattern = "MOD16A2.006_ET_500m_"))
+                                                       focal_driver, region),
+                                      pattern = file_pattern))
   
   # Add that set of files to the list
   file_list[[region]] <- file_df }
@@ -91,7 +88,7 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Bounding Box Check ----
+        # Snow Fraction - Bounding Box Check ----
 ## ------------------------------------------------------- ##
 # Let's check to make sure each of my manual bounding boxes fits the sites for that region
 
@@ -103,21 +100,21 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
    dplyr::ungroup() )
 
 # Read in one raster of each region
-rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[1], viz_files$files[1]))
-rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[2], viz_files$files[2]))
-rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[3], viz_files$files[3]))
-rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[4], viz_files$files[4]))
-rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[5], viz_files$files[5]))
-rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[6], viz_files$files[6]))
-rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[7], viz_files$files[7]))
-rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-snow-modis10a2-v006",
                                viz_files$region[8], viz_files$files[8]))
 
 # Plot each "tile" of data against the watersheds polygons
@@ -153,20 +150,24 @@ plot(sheds, axes = T, add = T)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Extract ----
+                # Snow Fraction - Extract ----
 ## ------------------------------------------------------- ##
 
 # Silence `dplyr::summarize` preemptively
 options(dplyr.summarise.inform = F)
 
+# Specify driver
+focal_driver <- "raw-snow-modis10a2-v006"
+
+# Make a short name for that driver
+driver_short <- "snow"
+
 # Create folder to export to
-dir.create(path = file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
-                            "_partial-extracted"),
+dir.create(path = file.path(path, "raw-driver-data",  focal_driver, "_partial-extracted"),
            showWarnings = F)
 
 # Identify files we've already extracted from
-done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", 
-                                                 "raw-evapo-modis16a2-v006",
+done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", focal_driver,
                                                  "_partial-extracted"))) %>%
   tidyr::separate(col = files, remove = F,
                   into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
@@ -180,7 +181,7 @@ not_done <- file_all %>%
 
 # Create a definitive object of files to extract
 file_set <- not_done # Uncomment if want to only do only undone extractions
-# file_set <- file_all # Uncomment if want to do all extractions
+# file_set <- file_all # Uncomment if want to (re-)do all extractions
 
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
@@ -201,7 +202,7 @@ for(annum in unique(file_set$year)){
     message("Processing begun for day of year: ", day_num)
     
     # Assemble a file name for this extraction
-    (export_name <- paste0("evapotrans_extract_", annum, "_", day_num, ".csv"))
+    (export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv"))
     
     # File dataframe of files to just that doy
     simp_df <- dplyr::filter(one_year, doy == day_num)
@@ -216,11 +217,11 @@ for(annum in unique(file_set$year)){
       message("Begun for file ", j, " of ", nrow(simp_df))
       
       # Read in raster
-      et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+      snow_rast <- terra::rast(file.path(path, "raw-driver-data",  focal_driver,
                                        simp_df$region[j], simp_df$files[j]))
       
       # Extract all possible information from that dataframe
-      ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds, 
+      ex_data <- exactextractr::exact_extract(x = snow_rast, y = sheds, 
                                               include_cols = c("river_id"),
                                               progress = FALSE) %>%
         # Unlist to dataframe
@@ -252,7 +253,7 @@ for(annum in unique(file_set$year)){
     
     # Export this file for a given day
     write.csv(x = full_data, row.names = F, na = '',
-              file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006",
+              file = file.path(path, "raw-driver-data", focal_driver,
                                "_partial-extracted", export_name))
     
     # Ending message
@@ -262,14 +263,14 @@ for(annum in unique(file_set$year)){
   message("Processing ended year: ", annum) } # Close year loop
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'focal_driver', 'file_all')))
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Summarize ----
+                # Snow Fraction - Summarize ----
 ## ------------------------------------------------------- ##
 
 # Identify extracted data
-done_files <- dir(file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted"))
+done_files <- dir(file.path(path, "raw-driver-data", focal_driver, "_partial-extracted"))
 
 # Make an empty list
 full_out <- list()
@@ -278,17 +279,35 @@ full_out <- list()
 for(k in 1:length(done_files)){
   
   # Read in the kth file
-  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted", done_files[k]))
+  data_file <- read.csv(file = file.path(path, "raw-driver-data", focal_driver, "_partial-extracted", done_files[k]))
   
-  # Finish
+  # If the file is empty, make a dummy file instead
+  ## Some of these rasters are totally blank (an error on MODIS/AppEEARS side, not ours)
+  if(nrow(data_file) == 0){ 
+    data_file <- data.frame("river_id" = "xxx",
+                            "year" = 999,
+                            "doy" = 999,
+                            "value" = 999.9) }
+  
+  # Add it to the list
+  full_out[[k]] <- data_file
+  
+  # Print 'done' message
   message("Retrieved file ", k, " of ", length(done_files))}
 
 # Unlist that list
 out_df <- full_out %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything())
+  purrr::map(dplyr::mutate, river_id = as.character(river_id)) %>%
+  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+  # And drop the placeholder dataframes when the extracted file is empty
+  ## Again, only happens because of an unsolvable issue with the raw data
+  dplyr::filter(river_id != "xxx")
 
 # Glimpse it
 dplyr::glimpse(out_df)
+
+# Assign column prefix to match this driver
+col_prefix <- "snow"
 
 # Summarize within month across years
 year_df <- out_df %>%
@@ -299,7 +318,7 @@ year_df <- out_df %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0("evapotrans_", year, "_kg_m2")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", year, "_kg_m2")) %>%
   # Drop simple year column
   dplyr::select(-year) %>%
   # Pivot to wide format
@@ -332,7 +351,7 @@ month_df <- out_df %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0("evapotrans_", month, "_kg_m2")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", month, "_kg_m2")) %>%
   # Drop simple month column
   dplyr::select(-month) %>%
   # Pivot to wide format
@@ -343,37 +362,39 @@ month_df <- out_df %>%
 dplyr::glimpse(month_df)
 
 # Combine these dataframes
-et_actual <- year_df %>%
+snow_actual <- year_df %>%
   dplyr::left_join(y = month_df, by = "river_id")
 
 # Glimpse again
-dplyr::glimpse(et_actual)
+dplyr::glimpse(snow_actual)
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Export ----
+                 # Snow Fraction - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-et_export <- sites %>%
+snow_export <- sites %>%
   # Join the rock data
-  dplyr::left_join(y = et_actual, by = c("river_id"))
+  dplyr::left_join(y = snow_actual, by = c("river_id"))
 
 # Check it out
-dplyr::glimpse(et_export)
+dplyr::glimpse(snow_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
-write.csv(x = et_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_evapo.csv"))
+write.csv(x = snow_export, na = '', row.names = F,
+          file = file.path(path, "extracted-data", 
+                           paste0("si-extract_", col_prefix, ".csv")))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_evapo.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", 
+                                            paste0("si-extract_", col_prefix, ".csv")),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
 ## ------------------------------------------------------- ##
-# Combine Extracted Data ----
+              # Combine Extracted Data ----
 ## ------------------------------------------------------- ##
 # Clear environment
 rm(list = setdiff(ls(), c('path', 'sites')))
