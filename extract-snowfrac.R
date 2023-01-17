@@ -39,7 +39,7 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-        # Snow Fraction - Identify Files ----
+          # Snow Fraction - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
@@ -263,10 +263,10 @@ for(annum in unique(file_set$year)){
   message("Processing ended year: ", annum) } # Close year loop
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'focal_driver', 'file_all')))
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Summarize ----
+                # Snow Fraction - Summarize ----
 ## ------------------------------------------------------- ##
 
 # Identify extracted data
@@ -279,17 +279,35 @@ full_out <- list()
 for(k in 1:length(done_files)){
   
   # Read in the kth file
-  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", focal_driver, "_partial-extracted", done_files[k]))
+  data_file <- read.csv(file = file.path(path, "raw-driver-data", focal_driver, "_partial-extracted", done_files[k]))
   
-  # Finish
+  # If the file is empty, make a dummy file instead
+  ## Some of these rasters are totally blank (an error on MODIS/AppEEARS side, not ours)
+  if(nrow(data_file) == 0){ 
+    data_file <- data.frame("river_id" = "xxx",
+                            "year" = 999,
+                            "doy" = 999,
+                            "value" = 999.9) }
+  
+  # Add it to the list
+  full_out[[k]] <- data_file
+  
+  # Print 'done' message
   message("Retrieved file ", k, " of ", length(done_files))}
 
 # Unlist that list
 out_df <- full_out %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything())
+  purrr::map(dplyr::mutate, river_id = as.character(river_id)) %>%
+  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+  # And drop the placeholder dataframes when the extracted file is empty
+  ## Again, only happens because of an unsolvable issue with the raw data
+  dplyr::filter(river_id != "xxx")
 
 # Glimpse it
 dplyr::glimpse(out_df)
+
+# Assign column prefix to match this driver
+col_prefix <- "snow"
 
 # Summarize within month across years
 year_df <- out_df %>%
@@ -300,7 +318,7 @@ year_df <- out_df %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0("evapotrans_", year, "_kg_m2")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", year, "_kg_m2")) %>%
   # Drop simple year column
   dplyr::select(-year) %>%
   # Pivot to wide format
@@ -333,7 +351,7 @@ month_df <- out_df %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0("evapotrans_", month, "_kg_m2")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", month, "_kg_m2")) %>%
   # Drop simple month column
   dplyr::select(-month) %>%
   # Pivot to wide format
@@ -344,37 +362,39 @@ month_df <- out_df %>%
 dplyr::glimpse(month_df)
 
 # Combine these dataframes
-et_actual <- year_df %>%
+snow_actual <- year_df %>%
   dplyr::left_join(y = month_df, by = "river_id")
 
 # Glimpse again
-dplyr::glimpse(et_actual)
+dplyr::glimpse(snow_actual)
 
 ## ------------------------------------------------------- ##
-# Evapotranspiration - Export ----
+                 # Snow Fraction - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-et_export <- sites %>%
+snow_export <- sites %>%
   # Join the rock data
-  dplyr::left_join(y = et_actual, by = c("river_id"))
+  dplyr::left_join(y = snow_actual, by = c("river_id"))
 
 # Check it out
-dplyr::glimpse(et_export)
+dplyr::glimpse(snow_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
 write.csv(x = et_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_evapo.csv"))
+          file = file.path(path, "extracted-data", 
+                           paste0("si-extract_", col_prefix, ".csv")))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_evapo.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", 
+                                            paste0("si-extract_", col_prefix, ".csv")),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
 ## ------------------------------------------------------- ##
-# Combine Extracted Data ----
+              # Combine Extracted Data ----
 ## ------------------------------------------------------- ##
 # Clear environment
 rm(list = setdiff(ls(), c('path', 'sites')))
