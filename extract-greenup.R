@@ -136,3 +136,50 @@ for (a_year in c("2001", "2002")){
             file = file.path(path, "raw-driver-data", "converted-greenup-data",
                              "_partial-extracted", export_name))
 }
+
+## ------------------------------------------------------- ##
+#              Greenup Day - Export ----
+## ------------------------------------------------------- ##
+
+# Identify extracted data
+done_files <- dir(file.path(path, "raw-driver-data", "converted-greenup-data", "_partial-extracted"))
+
+# Make an empty list
+full_out <- list()
+
+# Read all of these files in
+for(k in 1:length(done_files)){
+  
+  # Read in the kth file
+  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "converted-greenup-data", "_partial-extracted", done_files[k]))
+  
+  # Finish
+  message("Retrieved file ", k, " of ", length(done_files))
+  }
+
+# Unlist that list
+out_df <- full_out %>%
+  purrr::reduce(dplyr::left_join, by = 'river_id')
+
+# Glimpse it
+dplyr::glimpse(out_df)
+
+# Let's get ready to export
+greenup_export <- sites %>%
+  # Join the rock data
+  dplyr::left_join(y = out_df, by = "river_id")
+
+# Check it out
+dplyr::glimpse(greenup_export)
+
+# Create folder to export to
+dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
+
+# Export the summarized greenup data
+write.csv(x = greenup_export, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "si-extract_greenup.csv"))
+
+# Upload to GoogleDrive
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup.csv"),
+                          overwrite = T,
+                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
