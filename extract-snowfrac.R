@@ -217,11 +217,11 @@ for(annum in unique(file_set$year)){
       message("Begun for file ", j, " of ", nrow(simp_df))
       
       # Read in raster
-      et_rast <- terra::rast(file.path(path, "raw-driver-data",  focal_driver,
+      snow_rast <- terra::rast(file.path(path, "raw-driver-data",  focal_driver,
                                        simp_df$region[j], simp_df$files[j]))
       
       # Extract all possible information from that dataframe
-      ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds, 
+      ex_data <- exactextractr::exact_extract(x = snow_rast, y = sheds, 
                                               include_cols = c("river_id"),
                                               progress = FALSE) %>%
         # Unlist to dataframe
@@ -383,7 +383,7 @@ dplyr::glimpse(snow_export)
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
-write.csv(x = et_export, na = '', row.names = F,
+write.csv(x = snow_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", 
                            paste0("si-extract_", col_prefix, ".csv")))
 
