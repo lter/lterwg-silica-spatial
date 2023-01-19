@@ -77,7 +77,7 @@ file_all <- data.frame("files" = dir(path = file.path(path, "raw-driver-data", "
 #              Greenup Day - Extract ----
 ## ------------------------------------------------------- ##
 
-for (a_year in c("2001", "2002")){
+for (a_year in unique(file_all$year)){
   # Subset to one year
   one_year_data <- dplyr::filter(file_all, year == a_year)
   
@@ -135,6 +135,10 @@ for (a_year in c("2001", "2002")){
   write.csv(x = full_data, row.names = F, na = '',
             file = file.path(path, "raw-driver-data", "converted-greenup-data",
                              "_partial-extracted", export_name))
+  
+  # End message
+  message("Finished wrangling output for ", a_year) 
+  
 }
 
 ## ------------------------------------------------------- ##
