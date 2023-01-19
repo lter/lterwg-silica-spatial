@@ -150,14 +150,20 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 # Silence `dplyr::summarize` preemptively
 options(dplyr.summarise.inform = F)
 
+# Specify driver
+focal_driver <- "raw-evapo-modis16a2-v006"
+
+# Make a short name for that driver
+driver_short <- "evapotrans"
+
 # Create folder to export to
-dir.create(path = file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+dir.create(path = file.path(path, "raw-driver-data", focal_driver,
                             "_partial-extracted"),
            showWarnings = F)
 
 # Identify files we've already extracted from
 done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", 
-                                                 "raw-evapo-modis16a2-v006",
+                                                 focal_driver,
                                                  "_partial-extracted"))) %>%
   tidyr::separate(col = files, remove = F,
                   into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
@@ -192,7 +198,7 @@ for(annum in unique(file_set$year)){
     message("Processing begun for day of year: ", day_num)
     
     # Assemble a file name for this extraction
-    (export_name <- paste0("evapotrans_extract_", annum, "_", day_num, ".csv"))
+    (export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv"))
     
     # File dataframe of files to just that doy
     simp_df <- dplyr::filter(one_year, doy == day_num)
@@ -207,7 +213,7 @@ for(annum in unique(file_set$year)){
       message("Begun for file ", j, " of ", nrow(simp_df))
       
       # Read in raster
-      et_rast <- terra::rast(file.path(path, "raw-driver-data",  "raw-evapo-modis16a2-v006",
+      et_rast <- terra::rast(file.path(path, "raw-driver-data",  focal_driver,
                                        simp_df$region[j], simp_df$files[j]))
       
       # Extract all possible information from that dataframe
@@ -243,7 +249,7 @@ for(annum in unique(file_set$year)){
     
     # Export this file for a given day
     write.csv(x = full_data, row.names = F, na = '',
-              file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006",
+              file = file.path(path, "raw-driver-data", focal_driver,
                                "_partial-extracted", export_name))
     
     # Ending message
@@ -253,14 +259,14 @@ for(annum in unique(file_set$year)){
   message("Processing ended year: ", annum) } # Close year loop
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all', 'focal_driver')))
 
 ## ------------------------------------------------------- ##
             # Evapotranspiration - Summarize ----
 ## ------------------------------------------------------- ##
 
 # Identify extracted data
-done_files <- dir(file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted"))
+done_files <- dir(file.path(path, "raw-driver-data", focal_driver, "_partial-extracted"))
 
 # Make an empty list
 full_out <- list()
@@ -269,7 +275,8 @@ full_out <- list()
 for(k in 1:length(done_files)){
   
   # Read in the kth file
-  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-evapo-modis16a2-v006", "_partial-extracted", done_files[k]))
+  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", focal_driver,
+                                             "_partial-extracted", done_files[k]))
   
   # Finish
   message("Retrieved file ", k, " of ", length(done_files))}
@@ -328,7 +335,14 @@ month_df <- out_df %>%
   dplyr::select(-month) %>%
   # Pivot to wide format
   tidyr::pivot_wider(names_from = name,
-                     values_from = value)
+                     values_from = value)%>%
+  # Reorder months into chronological order
+  dplyr::select(river_id, dplyr::contains("_jan_"), dplyr::contains("_feb_"),
+                dplyr::contains("_mar_"), dplyr::contains("_apr_"),
+                dplyr::contains("_may_"), dplyr::contains("_jun_"),
+                dplyr::contains("_jul_"), dplyr::contains("_aug_"),
+                dplyr::contains("_sep_"), dplyr::contains("_oct_"),
+                dplyr::contains("_nov_"), dplyr::contains("_dec_"))
 
 # Glimpse this
 dplyr::glimpse(month_df)
