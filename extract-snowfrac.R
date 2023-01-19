@@ -356,7 +356,14 @@ month_df <- out_df %>%
   dplyr::select(-month) %>%
   # Pivot to wide format
   tidyr::pivot_wider(names_from = name,
-                     values_from = value)
+                     values_from = value) %>%
+  # Reorder months into chronological order
+  dplyr::select(river_id, dplyr::contains("_jan_"), dplyr::contains("_feb_"),
+                dplyr::contains("_mar_"), dplyr::contains("_apr_"),
+                dplyr::contains("_may_"), dplyr::contains("_jun_"),
+                dplyr::contains("_jul_"), dplyr::contains("_aug_"),
+                dplyr::contains("_sep_"), dplyr::contains("_oct_"),
+                dplyr::contains("_nov_"), dplyr::contains("_dec_"))
 
 # Glimpse this
 dplyr::glimpse(month_df)
