@@ -166,6 +166,11 @@ driver_short <- "snow"
 dir.create(path = file.path(path, "raw-driver-data",  focal_driver, "_partial-extracted"),
            showWarnings = F)
 
+# Read in reference table that converts integers to snow days
+snow_reftable <- read.csv(file = file.path(path, "raw-driver-data", 
+                                           focal_driver, "snow_integer_codes.csv"))
+dplyr::glimpse(snow_reftable)
+
 # Identify files we've already extracted from
 done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", focal_driver,
                                                  "_partial-extracted"))) %>%
@@ -185,7 +190,7 @@ file_set <- not_done # Uncomment if want to only do only undone extractions
 
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
-# for(annum in "2001"){
+# for(annum in "2002"){
 for(annum in unique(file_set$year)){
   
   # Start message
@@ -195,7 +200,7 @@ for(annum in unique(file_set$year)){
   one_year <- dplyr::filter(file_set, year == annum)
   
   # Loop across day-of-year within year
-  # for(day_num in "001") {
+  # for(day_num in "009") {
   for(day_num in unique(one_year$doy)){
     
     # Starting message
@@ -234,7 +239,9 @@ for(annum in unique(file_set$year)){
         # Make new relevant columns
         dplyr::mutate(year = as.numeric(simp_df$year[j]),
                       doy = as.numeric(simp_df$doy[j]),
-                      .after = river_id)
+                      .after = river_id) %>%
+        # Attach the reference table for understanding the 'value' integer
+        dplyr::left_join(y = snow_reftable, by = "value")
       
       # Add this dataframe to the list we made within the larger for loop
       doy_list[[j]] <- ex_data
@@ -248,7 +255,16 @@ for(annum in unique(file_set$year)){
       purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
       # Handle the summarization within river (potentially across multiple rasters' pixels)
       dplyr::group_by(river_id, year, doy) %>%
-      dplyr::summarize(value = mean(value, na.rm = T)) %>%
+      dplyr::summarize(
+        total_snow_days = mean(snow_days, na.rm = T),
+        snow_pres_day_1 = mean(day_1_snow_pres, na.rm = T),
+        snow_pres_day_2 = mean(day_2_snow_pres, na.rm = T),
+        snow_pres_day_3 = mean(day_3_snow_pres, na.rm = T),
+        snow_pres_day_4 = mean(day_4_snow_pres, na.rm = T),
+        snow_pres_day_5 = mean(day_5_snow_pres, na.rm = T),
+        snow_pres_day_6 = mean(day_6_snow_pres, na.rm = T),
+        snow_pres_day_7 = mean(day_7_snow_pres, na.rm = T),
+        snow_pres_day_8 = mean(day_8_snow_pres, na.rm = T)) %>%
       dplyr::ungroup()
     
     # Export this file for a given day
@@ -287,7 +303,15 @@ for(k in 1:length(done_files)){
     data_file <- data.frame("river_id" = "xxx",
                             "year" = 999,
                             "doy" = 999,
-                            "value" = 999.9) }
+                            "total_snow_days" = 999.9,
+                            "snow_pres_day_1" = 999.9,
+                            "snow_pres_day_2" = 999.9,
+                            "snow_pres_day_3" = 999.9,
+                            "snow_pres_day_4" = 999.9,
+                            "snow_pres_day_5" = 999.9,
+                            "snow_pres_day_6" = 999.9,
+                            "snow_pres_day_7" = 999.9,
+                            "snow_pres_day_8" = 999.9) }
   
   # Add it to the list
   full_out[[k]] <- data_file
@@ -311,14 +335,12 @@ col_prefix <- "snow"
 
 # Summarize within month across years
 year_df <- out_df %>%
-  # Rename value column in data
-  dplyr::rename(mean_val = value) %>%
-  # Do summarization
+  # Sum snow days per 8 day period within year
   dplyr::group_by(river_id, year) %>%
-  dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
+  dplyr::summarize(value = sum(total_snow_days, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0(col_prefix, "_", year, "_kg_m2")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", year, "_days")) %>%
   # Drop simple year column
   dplyr::select(-year) %>%
   # Pivot to wide format
@@ -330,6 +352,20 @@ dplyr::glimpse(year_df)
 
 # Need to convert day of year into months to get a monthly value
 month_df <- out_df %>%
+  # Drop unwanted columns
+  dplyr::select(-year, -total_snow_days) %>%
+  # Pivot longer
+  tidyr::pivot_longer(cols = dplyr::starts_with("snow_pres_day_")) %>%
+  # Wrangle the 'name' column
+  dplyr::mutate(name_simp = gsub(pattern = "snow_pres_day_", replacement = "", name)) %>%
+  # Subtract one from the name column so the first day (i.e., what's in the DOY column) is 0
+  dplyr::mutate(sub_doy = as.numeric(name_simp) - 1) %>%
+  # Add the sub DOY to the DOY to get each row as an actual (non-relative) day of year
+  dplyr::mutate(doy_actual = (doy + sub_doy), .after = doy) %>%
+  # Drop intermediary columns
+  dplyr::select(-name, -name_simp, -sub_doy, -doy) %>%
+  # Rename doy_actual more simply
+  dplyr::rename(doy = doy_actual) %>%
   # Get months
   dplyr::mutate(month = dplyr::case_when(
     doy <= 31 ~ "jan", # 31 days in January
@@ -351,7 +387,7 @@ month_df <- out_df %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0(col_prefix, "_", month, "_kg_m2")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", month, "_days")) %>%
   # Drop simple month column
   dplyr::select(-month) %>%
   # Pivot to wide format
