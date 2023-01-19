@@ -149,7 +149,7 @@ year_df <- full_out_df %>%
   dplyr::summarize(value = mean(avg_mm_precip_per_day, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0("precip_", year, "_mm")) %>%
+  dplyr::mutate(name = paste0("precip_", year, "_mm_per_day")) %>%
   # Drop simple year column
   dplyr::select(-year) %>%
   # Pivot to wide format
@@ -180,12 +180,19 @@ month_df <- full_out_df %>%
     month == "11" ~ "nov",
     month == "12" ~ "dec")) %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0("precip_", month_simp, "_mm")) %>%
+  dplyr::mutate(name = paste0("precip_", month_simp, "_mm_per_day")) %>%
   # Drop simple month column
   dplyr::select(-month, -month_simp) %>%
   # Pivot to wide format
   tidyr::pivot_wider(names_from = name,
-                     values_from = value)
+                     values_from = value) %>%
+  # Reorder months into chronological order
+  dplyr::select(river_id, dplyr::contains("_jan_"), dplyr::contains("_feb_"),
+                dplyr::contains("_mar_"), dplyr::contains("_apr_"),
+                dplyr::contains("_may_"), dplyr::contains("_jun_"),
+                dplyr::contains("_jul_"), dplyr::contains("_aug_"),
+                dplyr::contains("_sep_"), dplyr::contains("_oct_"),
+                dplyr::contains("_nov_"), dplyr::contains("_dec_"))
 
 # Glimpse this
 dplyr::glimpse(month_df)
