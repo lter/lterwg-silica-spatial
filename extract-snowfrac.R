@@ -325,7 +325,9 @@ out_df <- full_out %>%
   purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
   # And drop the placeholder dataframes when the extracted file is empty
   ## Again, only happens because of an unsolvable issue with the raw data
-  dplyr::filter(river_id != "xxx")
+  dplyr::filter(river_id != "xxx") %>%
+  # Also drop 2001 because only one 8-day period is included
+  dplyr::filter(year > 2001)
 
 # Glimpse it
 dplyr::glimpse(out_df)
@@ -380,11 +382,14 @@ month_df <- out_df %>%
     doy > 273 & doy <= 304 ~ "oct", # +31
     doy > 304 & doy <= 334 ~ "nov", # +30 
     doy > 334 ~ "dec")) %>%
-  # Rename value column in data
-  dplyr::rename(mean_val = value) %>%
+  # Average across the same day of year of each month across years
+  dplyr::group_by(river_id, month, doy) %>%
+  dplyr::summarize(mean_val = mean(value, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Now sum across the days of year within each month
   # Average within month / river
   dplyr::group_by(river_id, month) %>%
-  dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
+  dplyr::summarize(value = sum(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative month column
   dplyr::mutate(name = paste0(col_prefix, "_", month, "_num_days")) %>%
