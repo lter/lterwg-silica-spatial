@@ -340,7 +340,7 @@ year_df <- out_df %>%
   dplyr::summarize(value = sum(total_snow_days, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0(col_prefix, "_", year, "_days")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", year, "_num_days")) %>%
   # Drop simple year column
   dplyr::select(-year) %>%
   # Pivot to wide format
@@ -387,7 +387,7 @@ month_df <- out_df %>%
   dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0(col_prefix, "_", month, "_days")) %>%
+  dplyr::mutate(name = paste0(col_prefix, "_", month, "_num_days")) %>%
   # Drop simple month column
   dplyr::select(-month) %>%
   # Pivot to wide format
