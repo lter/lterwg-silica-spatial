@@ -39,39 +39,108 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-#.    MCD12Q2 (v. 061) - Convert Files to Rasters ----
+#          MCD12Q2 (v. 061) - Identify Files ----
 ## ------------------------------------------------------- ##
 
-# Only need to run this section once - (DONE)
+# Make an empty list
+file_list <- list()
 
-# List all the raw hdf files
-# files <- dir(file.path(path, "raw-driver-data", "raw-greenup-data"), pattern = ".hdf")
-# 
-# # Make new filenames for the converted files
-# tif_filenames <- substr(files,1,41)
-# tif_filenames <- paste0(tif_filenames, ".tif")
-# tif_filenames
-# 
-# # Convert hdf files to rasters 
-# # The Greenup layer is the second layer so sd_index = 2
-# for (i in 1:length(files)){
-#   gdal_translate(src_dataset = file.path(path, "raw-driver-data", "raw-greenup-data", files[i]), dst_dataset = file.path(path, "raw-driver-data", "converted-greenup-data", tif_filenames[i]), sd_index = 2)
-# }
+# Identify files for each region
+for(region in c("north-america-usa", "north-america-arctic",
+                "cropped-russia-west", "cropped-russia-west-2",
+                "cropped-russia-center", "cropped-russia-east",
+                "puerto-rico", "scandinavia")){
+  
+  # Identify files in that folder
+  file_df <- data.frame("region" = region,
+                        "files" = dir(path = file.path(path, "raw-driver-data", 
+                                                       "raw-greenup", region),
+                                      pattern = "MCD12Q2.006_Greenup_"))
+  
+  # Add that set of files to the list
+  file_list[[region]] <- file_df }
 
-## ------------------------------------------------------- ##
-#.         MCD12Q2 (v. 061) - Identify Files ----
-## ------------------------------------------------------- ##
-
-# List all the tif files
-tif_files <- dir(file.path(path, "raw-driver-data", "converted-greenup-data"), pattern = ".tif$")
-
-file_all <- data.frame("files" = dir(path = file.path(path, "raw-driver-data", "converted-greenup-data"),
-                                     pattern = ".tif$")) %>%
+# Wrangle the list
+file_all <- file_list %>%
+  # Unlist the loop's output
+  purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
   # Identify date from file name
   dplyr::mutate(date_raw = stringr::str_extract(string = files, 
-                                                pattern = "[[:digit:]]{7}")) %>%
-  dplyr::mutate(year = stringr::str_sub(string = date_raw, start = 1, end = 4))
+                                                pattern = "_doy[[:digit:]]{7}")) %>%
+  # Simplify that column
+  dplyr::mutate(date = gsub(pattern = "_doy", replacement = "", x = date_raw)) %>%
+  # Identify day of year & year
+  dplyr::mutate(year = stringr::str_sub(string = date, start = 1, end = 4)) %>%
+  # Drop 'raw' version
+  dplyr::select(-date_raw)
 
+# Glimpse it
+dplyr::glimpse(file_all)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+
+## ------------------------------------------------------- ##
+#     .       Greenup - Bounding Box Check ----
+## ------------------------------------------------------- ##
+# Let's check to make sure each of my manual bounding boxes fits the sites for that region
+
+# Filter to only one row per 'region'
+(viz_files <- file_all %>% 
+   # Find first file per region
+   dplyr::group_by(region) %>%
+   dplyr::summarize(files = dplyr::first(x = files)) %>%
+   dplyr::ungroup() )
+
+# Read in one raster of each region
+rast1 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[1], viz_files$files[1]))
+rast2 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[2], viz_files$files[2]))
+rast3 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[3], viz_files$files[3]))
+rast4 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[4], viz_files$files[4]))
+rast5 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[5], viz_files$files[5]))
+rast6 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[6], viz_files$files[6]))
+rast7 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[7], viz_files$files[7]))
+rast8 <- terra::rast(file.path(path, "raw-driver-data",  "raw-greenup",
+                               viz_files$region[8], viz_files$files[8]))
+
+# Plot each "tile" of data against the watersheds polygons
+## Russia Composite (Cropped)
+frame_rast <- terra::rast(terra::ext(55, 140, 45, 80))
+suppressWarnings(plot(frame_rast, axes = T, reset = F, main = "Russia COMPOSITE"))
+plot(rast1, axes = T, add = T)
+plot(rast3, axes = T, add = T)
+plot(rast4, axes = T, add = T)
+plot(sheds, axes = T, add = T)
+
+## Russia East (Cropped)
+plot(rast2, axes = T, reset = F, main = viz_files$region[2])
+plot(sheds, axes = T, add = T)
+
+## North America Arctic
+plot(rast5, axes = T, reset = F, main = viz_files$region[5])
+plot(sheds, axes = T, add = T)
+
+## USA
+plot(rast6, axes = T, reset = F, main = viz_files$region[6])
+plot(sheds, axes = T, add = T)
+
+## Puerto Rico
+plot(rast7, axes = T, reset = F, main = viz_files$region[7])
+plot(sheds, axes = T, add = T)
+
+## Scandinavia
+plot(rast8, axes = T, reset = F, main = viz_files$region[8])
+plot(sheds, axes = T, add = T)
+
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
 #              Greenup Day - Extract ----
