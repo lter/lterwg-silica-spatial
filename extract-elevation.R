@@ -1,20 +1,21 @@
 ## ------------------------------------------------------- ##
-      # Silica WG - Extract Spatial Data - Land Cover
+       # Silica WG - Extract Spatial Data - Elevation
 ## ------------------------------------------------------- ##
 # Written by:
 ## Nick J Lyon
 
 # Purpose:
 ## Using the watershed shapefiles created in "id-watershed-polygons.R"
-## Extract the following data: LAND COVER
+## Extract the following data: ELEVATION
 
 ## ------------------------------------------------------- ##
-                    # Housekeeping ----
+                      # Housekeeping ----
 ## ------------------------------------------------------- ##
 
 # Read needed libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, googledrive)
+librarian::shelf(tidyverse, sf, stars, terra, exactextractr,
+                 NCEAS/scicomptools, googledrive)
 
 # Clear environment
 rm(list = ls())
@@ -38,135 +39,66 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-              # Land Cover - Extract ----
+              # Elevation - Extract ----
 ## ------------------------------------------------------- ##
 
 # Read in dataset
-lulc_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-glcc-landcover-data",
-                                      "global-glcc-wgs84", "gblulcgeo20.tif"))
+elev_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-elevation", 
+                                      "wc2.1_30s_elev.tif"))
 
 # Exploratory plot for overlap
-plot(lulc_raw, axes = T, reset = F)
+plot(elev_raw, axes = T, reset = F)
 plot(sheds, axes = T, add = T)
 
 # Strip out land cover for our polygons
-land_out <- exactextractr::exact_extract(x = lulc_raw, y = sheds,
-                                          include_cols = c("river_id")) %>%
+elev_out <- exactextractr::exact_extract(x = elev_raw, y = sheds,
+                                         include_cols = c("river_id")) %>%
   # Above returns a list so switch it to a dataframe
   purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
   # Filter out NAs
-  dplyr::filter(!is.na(value)) %>%
-  # Summarize to count number of pixels per category
-  dplyr::group_by(river_id, value) %>%
-  dplyr::summarize(pixel_ct = dplyr::n()) %>%
-  dplyr::ungroup()
-
+  dplyr::filter(!is.na(value))
+  
 # Check that dataframe
-dplyr::glimpse(land_out)
+dplyr::glimpse(elev_out)
 
 ## ------------------------------------------------------- ##
-                # Land Cover - Summarize ----
+                  # Elevation - Summarize ----
 ## ------------------------------------------------------- ##
-
-# Load index
-lulc_index <- read.csv(file = file.path(path, "raw-driver-data",
-                                        "raw-glcc-landcover-data", "LULC_index.csv")) %>%
-  # Rename the integer code column to match the extracted data
-  dplyr::rename(value = lulc_code)
 
 # Wrangle extracted data
-land_v2 <- land_out %>%
-  # Attach index information
-  dplyr::left_join(y = lulc_index, by = "value") %>%
-  # Simplify data now that descriptive categories are included
-  dplyr::select(-value) %>%
-  dplyr::relocate(lulc_category, .after = river_id) %>%
-  dplyr::mutate(lulc_category = tolower(gsub(pattern = " |-", 
-                                             replacement = "_", 
-                                             x = lulc_category))) %>%
-  # Streamline category information
-  dplyr::mutate(lulc_category = dplyr::case_when(
-    lulc_category %in% c("dryland_cropland_and_pasture", 
-                         "irrigated_cropland_and_pasture",
-                         "cropland/grassland_mosaic",
-                         "cropland/woodland_mosaic") ~ "cropland",
-    lulc_category %in% c("herbaceous_wetland", "wooded_wetland") ~ "wetland",
-    lulc_category %in% c("bare_ground_tundra", "wooded_tundra",
-                         "mixed_tundra") ~ "tundra",
-    lulc_category %in% c("shrubland", "grassland", "savanna", 
-                         "mixed_shrubland/grassland") ~ "shrubland_grassland",
-    TRUE ~ lulc_category)) %>%
-  # Drop unwanted categories
-  dplyr::filter(!lulc_category %in% c("snow_or_ice", "water_bodies")) %>%
-  # Summarize again with simplified categories
-  dplyr::group_by(river_id, lulc_category) %>%
-  dplyr::summarize(land_total = sum(pixel_ct, na.rm = T)) %>%
-  dplyr::ungroup() %>%
-  # Get total pixel count per river (across category)
+elev_actual <- elev_out %>%
+  # Summarize elevation within river ID
   dplyr::group_by(river_id) %>%
-  dplyr::mutate(total_pixels = sum(land_total, na.rm = T)) %>%
-  dplyr::ungroup() %>%
-  # Calculate percent of total
-  dplyr::mutate(perc_total = ((land_total / total_pixels) * 100)) %>%
-  # Drop pixel count columns
-  dplyr::select(-land_total, -total_pixels)
+  dplyr::summarize(elevation_median_m = stats::median(value, na.rm = T),
+                   elevation_mean_m = mean(value, na.rm = T),
+                   elevation_min_m = min(value, na.rm = T),
+                   elevation_max_m = max(value, na.rm = T)) %>%
+  dplyr::ungroup()
 
-# Check remaining categories  
-sort(unique(land_v2$lulc_category))
-
-# Glimpse this object
-dplyr::glimpse(land_v2)
-
-# Make a version of this that is wide
-land_wide <- land_v2 %>%
-  # Add "land" to each of these before they become columns
-  dplyr::mutate(lulc_category = paste0("land_", lulc_category)) %>%
-  # Now pivot wider
-  tidyr::pivot_wider(names_from = lulc_category,
-                     values_from = perc_total)
-
-# Also identify the dominant land cover type(s) in each river's polygon
-land_major <- land_v2 %>%
-  # Filter to only max of each rock type per river
-  dplyr::group_by(river_id) %>%
-  dplyr::filter(perc_total == max(perc_total, na.rm = T)) %>%
-  dplyr::ungroup() %>%
-  # Remove the percent total
-  dplyr::select(-perc_total) %>%
-  # Pivot back to wide format
-  tidyr::pivot_wider(names_from = lulc_category,
-                     values_from = lulc_category) %>%
-  # Paste all the non-NAs (i.e., the dominant rocks) into a single column
-  tidyr::unite(col = major_land, -river_id, na.rm = T, sep = "; ")
-
-# Combine major with per-category
-land_actual <- land_wide %>%
-  dplyr::left_join(y = land_major, by = "river_id") %>%
-  dplyr::relocate(major_land, .after = river_id)
-
-# Glimpse it
-dplyr::glimpse(land_actual)
+# Glimpse this
+dplyr::glimpse(elev_actual)
 
 ## ------------------------------------------------------- ##
-                # Land Cover - Export ----
+                  # Elevation - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-land_export <- sites %>%
+elev_export <- sites %>%
   # Join the rock data
-  dplyr::left_join(y = land_actual, by = c("river_id"))
+  dplyr::left_join(y = elev_actual, by = c("river_id"))
 
 # Check it out
-dplyr::glimpse(land_export)
+dplyr::glimpse(elev_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
-write.csv(x = land_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_landcover.csv"))
+write.csv(x = elev_export, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "si-extract_elevation.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_landcover.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", 
+                                            "si-extract_elevation.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
 
