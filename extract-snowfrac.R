@@ -337,17 +337,35 @@ col_prefix <- "snow"
 
 # Summarize within month across years
 year_df <- out_df %>%
-  # Sum snow days per 8 day period within year
-  dplyr::group_by(river_id, year) %>%
-  dplyr::summarize(value = sum(total_snow_days, na.rm = T)) %>%
+  # Pivot to long format
+  tidyr::pivot_longer(cols = dplyr::starts_with("snow_pres_day_")) %>%
+  # Summarize within day of year
+  dplyr::group_by(river_id, year, doy) %>%
+  dplyr::summarize(
+  ## Pick first 'total snow days' (i.e., number of snow days for that 8-day period)
+  total_snow_days = dplyr::first(total_snow_days),
+  ## And average across 'value' (i.e., prop landscape with snow)
+  snow_frac_8day = mean(value, na.rm = T) ) %>%
   dplyr::ungroup() %>%
+  # Now summarize across days of year within year
+  ## Sum total days and get maximum snow fraction
+  dplyr::group_by(river_id, year) %>%
+  dplyr::summarize(snow_days = sum(total_snow_days, na.rm = T),
+                   snow_frac = max(snow_frac_8day, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Pivot even longer
+  tidyr::pivot_longer(cols = dplyr::starts_with("snow_")) %>%
   # Make more informative year column
-  dplyr::mutate(name = paste0(col_prefix, "_", year, "_num_days")) %>%
-  # Drop simple year column
-  dplyr::select(-year) %>%
+  dplyr::mutate(new_name = ifelse(test = (name == "snow_days"),
+                                  yes = paste0(col_prefix, "_", year, "_num_days"),
+                                  no = paste0(col_prefix, "_", year, "_max_prop_area"))) %>%
+  # Drop simple year column and simple name column
+  dplyr::select(-year, -name) %>%
   # Pivot to wide format
-  tidyr::pivot_wider(names_from = name,
-                     values_from = value)
+  tidyr::pivot_wider(names_from = new_name,
+                     values_from = value) %>%
+  # Reorder columns
+  dplyr::select(river_id, dplyr::contains("_num_days"), dplyr::contains("_max_prop_area"))
 
 # Glimpse this
 dplyr::glimpse(year_df)
@@ -389,14 +407,19 @@ month_df <- out_df %>%
   # Now sum across the days of year within each month
   # Average within month / river
   dplyr::group_by(river_id, month) %>%
-  dplyr::summarize(value = sum(mean_val, na.rm = T)) %>%
+  dplyr::summarize(snow_total = sum(mean_val, na.rm = T),
+                   snow_avg = mean(mean_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
+  # Pivot even longer
+  tidyr::pivot_longer(cols = dplyr::starts_with("snow_")) %>%
   # Make more informative month column
-  dplyr::mutate(name = paste0(col_prefix, "_", month, "_num_days")) %>%
-  # Drop simple month column
-  dplyr::select(-month) %>%
+  dplyr::mutate(new_name = ifelse(test = (name == "snow_total"),
+                                  yes = paste0(col_prefix, "_", month, "_num_days"),
+                                  no = paste0(col_prefix, "_", month, "_avg_prop_area"))) %>%
+  # Drop simple month column and simple name column
+  dplyr::select(-month, -name) %>%
   # Pivot to wide format
-  tidyr::pivot_wider(names_from = name,
+  tidyr::pivot_wider(names_from = new_name,
                      values_from = value) %>%
   # Reorder months into chronological order
   dplyr::select(river_id, dplyr::contains("_jan_"), dplyr::contains("_feb_"),
@@ -404,7 +427,9 @@ month_df <- out_df %>%
                 dplyr::contains("_may_"), dplyr::contains("_jun_"),
                 dplyr::contains("_jul_"), dplyr::contains("_aug_"),
                 dplyr::contains("_sep_"), dplyr::contains("_oct_"),
-                dplyr::contains("_nov_"), dplyr::contains("_dec_"))
+                dplyr::contains("_nov_"), dplyr::contains("_dec_")) %>%
+  # And reorder again to group by column units
+  dplyr::select(river_id, dplyr::contains("_num_days"), dplyr::contains("_prop_area"))
 
 # Glimpse this
 dplyr::glimpse(month_df)
@@ -448,7 +473,7 @@ googledrive::drive_upload(media = file.path(path, "extracted-data",
 rm(list = setdiff(ls(), c('path', 'sites')))
 
 # List current extracted data
-extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU")) %>%
+extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"), pattern = ".csv") %>%
   dplyr::filter(name != "all-data_si-extract.csv")
 
 # Make an empty list
