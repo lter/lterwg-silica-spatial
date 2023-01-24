@@ -69,10 +69,15 @@ file_all <- file_list %>%
                                                 pattern = "_doy[[:digit:]]{7}")) %>%
   # Simplify that column
   dplyr::mutate(date = gsub(pattern = "_doy", replacement = "", x = date_raw)) %>%
-  # Identify day of year & year
+  # Identify year
   dplyr::mutate(year = stringr::str_sub(string = date, start = 1, end = 4)) %>%
   # Drop 'raw' version
-  dplyr::select(-date_raw)
+  dplyr::select(-date_raw) %>%
+  # Identify greenup cycle
+  dplyr::mutate(cycle = stringr::str_extract(string = files, 
+                                             pattern = "_[[:digit:]]{1}_")) %>%
+  # Simplify that column
+  dplyr::mutate(cycle = gsub(pattern = "_", replacement = "", x = cycle))
 
 # Glimpse it
 dplyr::glimpse(file_all)
@@ -143,30 +148,55 @@ plot(sheds, axes = T, add = T)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-#              Greenup Day - Extract ----
-## ------------------------------------------------------- ##
+#           Greenup Day - Extract Cycle 0 ----
+## ------------------------------------------------------- ##\
 
-for (a_year in unique(file_all$year)){
+# Silence `dplyr::summarize` preemptively
+options(dplyr.summarise.inform = F)
+
+# Specify driver
+focal_driver <- "raw-greenup"
+
+# Identify files we've already extracted from
+done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
+                                                  focal_driver,
+                                                  "_partial-extracted"))) %>%
+   tidyr::separate(col = files, remove = F,
+                   into = c("junk", "junk2", "year", "cycle", "file_ext")) %>%
+  dplyr::mutate(cycle = gsub(pattern = "[[:alpha:]]", replacement = "", x = cycle)) %>%
+  # Make a year-cycle column
+   dplyr::mutate(year_cycle = paste0(year, "_", cycle))
+
+# Remove completed files from the set of all possible files
+not_done <- file_all %>%
+   dplyr::mutate(year_cycle = paste0(year, "_", cycle)) %>%
+   dplyr::filter(!year_cycle %in% done_files$year_cycle)
+
+# Create a definitive object of files to extract
+file_set <- not_done # Uncomment if want to only do only undone extractions
+# file_set <- file_all # Uncomment if want to do all extractions
+
+cycle0_files <- file_set %>%
+  dplyr::filter(cycle == 0)
+
+cycle1_files <- file_set %>%
+  dplyr::filter(cycle == 1)
+
+for (a_year in "2001"){
   # Subset to one year
-  one_year_data <- dplyr::filter(file_all, year == a_year)
+  one_year_data <- dplyr::filter(cycle0_files, year == a_year)
   
   # Make a list to house extracted information for a year
   year_list <- list()
   
-    for (i in 1:nrow(one_year_data)){
-      # Read in the raster
-      original_raster <- terra::rast(file.path(path, "raw-driver-data", "converted-greenup-data", one_year_data$files[i]))
-      
-      # Convert each raster from the MODIS Sinusoidal coordinate system to WGS84
-      reprojected_raster <- terra::project(original_raster, "+proj=longlat +datum=WGS84")
-      
-      # Rename the 2 layers
-      names(reprojected_raster) <- c("Onset_Greenness_Increase1", "Onset_Greenness_Increase2")
-      
-      # Extract all possible information from that dataframe
-      ex_data <- exactextractr::exact_extract(x = reprojected_raster, y = sheds, 
-                                              include_cols = c("river_id"),
-                                              progress = FALSE) %>%
+  for (i in 1:nrow(one_year_data)){
+    # Read in the raster
+    gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup", one_year_data$region[i], one_year_data$files[i]))
+    
+    # Extract all possible information from that dataframe
+    ex_data <- exactextractr::exact_extract(x = gr_raster, y = sheds, 
+                                            include_cols = c("river_id"),
+                                            progress = FALSE) %>%
       # Unlist to dataframe
       purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
       # Drop coverage fraction column
@@ -174,16 +204,16 @@ for (a_year in unique(file_all$year)){
       # Make new relevant columns
       dplyr::mutate(year = a_year,
                     .after = river_id)
-      
-      # Add this dataframe to the list we made 
-      year_list[[i]] <- ex_data
-      
-      # End message
-      message("Finished extracting raster ", i, " of ", nrow(one_year_data)) 
-    }
-  
+    
+    # Add this dataframe to the list we made 
+    year_list[[i]] <- ex_data
+    
+    # End message
+    message("Finished extracting raster ", i, " of ", nrow(one_year_data)) 
+  }
+
   # Assemble a file name for this extraction
-  export_name <- paste0("greenup_extract_", a_year, ".csv")
+  export_name <- paste0("greenup_extract_", a_year, "_cycle0", ".csv")
   
   # Wrangle the output of the within-year extraction
   full_data <- year_list %>%
@@ -191,24 +221,109 @@ for (a_year in unique(file_all$year)){
     purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
     dplyr::group_by(river_id, year) %>%
-    dplyr::summarize(mean1 = mean(Onset_Greenness_Increase1, na.rm = T),
-                     mean2 = mean(Onset_Greenness_Increase2, na.rm = T)) %>%
+    dplyr::summarize(greenup_cycle0_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
     dplyr::ungroup() %>%
-    # Drop the year column
-    dplyr::select(-year) %>%
-    # Rename the columns
-    dplyr::rename_with(.fn = ~paste0("greenup_cycle1_", a_year, "_days_since_jan1_1970"), .cols = mean1) %>%
-    dplyr::rename_with(.fn = ~paste0("greenup_cycle2_", a_year, "_days_since_jan1_1970"), .cols = mean2) 
-  
+    dplyr::mutate(greenup_cycle0_YYYYMMDD = lubridate::as_date(greenup_cycle0_days_since_jan1_1970, origin ="1970-01-01")) %>%
+    dplyr::select(-year, -greenup_cycle0_days_since_jan1_1970)
+    
   # Export this file for a given year
   write.csv(x = full_data, row.names = F, na = '',
-            file = file.path(path, "raw-driver-data", "converted-greenup-data",
+            file = file.path(path, "raw-driver-data", "raw-greenup",
                              "_partial-extracted", export_name))
   
   # End message
   message("Finished wrangling output for ", a_year) 
-  
 }
+
+## ------------------------------------------------------- ##
+#           Greenup Day - Extract Cycle 1 ----
+## ------------------------------------------------------- ##\
+
+# Silence `dplyr::summarize` preemptively
+options(dplyr.summarise.inform = F)
+
+# Specify driver
+focal_driver <- "raw-greenup"
+
+# Identify files we've already extracted from
+done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
+                                                 focal_driver,
+                                                 "_partial-extracted"))) %>%
+  tidyr::separate(col = files, remove = F,
+                  into = c("junk", "junk2", "year", "cycle", "file_ext")) %>%
+  dplyr::mutate(cycle = gsub(pattern = "[[:alpha:]]", replacement = "", x = cycle)) %>%
+  # Make a year-cycle column
+  dplyr::mutate(year_cycle = paste0(year, "_", cycle))
+
+# Remove completed files from the set of all possible files
+not_done <- file_all %>%
+  dplyr::mutate(year_cycle = paste0(year, "_", cycle)) %>%
+  dplyr::filter(!year_cycle %in% done_files$year_cycle)
+
+# Create a definitive object of files to extract
+file_set <- not_done # Uncomment if want to only do only undone extractions
+# file_set <- file_all # Uncomment if want to do all extractions
+
+cycle0_files <- file_set %>%
+  dplyr::filter(cycle == 0)
+
+cycle1_files <- file_set %>%
+  dplyr::filter(cycle == 1)
+
+for (a_year in "2001"){
+  # Subset to one year
+  one_year_data <- dplyr::filter(cycle1_files, year == a_year)
+  
+  # Make a list to house extracted information for a year
+  year_list <- list()
+  
+  for (i in 1:nrow(one_year_data)){
+    # Read in the raster
+    gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup", one_year_data$region[i], one_year_data$files[i]))
+    
+    # Extract all possible information from that dataframe
+    ex_data <- exactextractr::exact_extract(x = gr_raster, y = sheds, 
+                                            include_cols = c("river_id"),
+                                            progress = FALSE) %>%
+      # Unlist to dataframe
+      purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+      # Drop coverage fraction column
+      dplyr::select(-coverage_fraction) %>%         
+      # Make new relevant columns
+      dplyr::mutate(year = a_year,
+                    .after = river_id)
+    
+    # Add this dataframe to the list we made 
+    year_list[[i]] <- ex_data
+    
+    # End message
+    message("Finished extracting raster ", i, " of ", nrow(one_year_data)) 
+  }
+  
+  # Assemble a file name for this extraction
+  export_name <- paste0("greenup_extract_", a_year, "_cycle0", ".csv")
+  
+  # Wrangle the output of the within-year extraction
+  full_data <- year_list %>%
+    # Unlist to dataframe
+    purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+    # Handle the summarization within river (potentially across multiple rasters' pixels)
+    dplyr::group_by(river_id, year) %>%
+    dplyr::summarize(greenup_cycle0_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(greenup_cycle0_YYYYMMDD = lubridate::as_date(greenup_cycle0_days_since_jan1_1970, origin ="1970-01-01")) %>%
+    dplyr::select(-year, -greenup_cycle0_days_since_jan1_1970)
+  
+  # Export this file for a given year
+  write.csv(x = full_data, row.names = F, na = '',
+            file = file.path(path, "raw-driver-data", "raw-greenup",
+                             "_partial-extracted", export_name))
+  
+  # End message
+  message("Finished wrangling output for ", a_year) 
+}
+
+
 
 ## ------------------------------------------------------- ##
 #              Greenup Day - Export ----
