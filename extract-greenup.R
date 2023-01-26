@@ -176,13 +176,14 @@ not_done <- file_all %>%
 file_set <- not_done # Uncomment if want to only do only undone extractions
 # file_set <- file_all # Uncomment if want to do all extractions
 
+# Split the files into cycle 0 and cycle 1 files
 cycle0_files <- file_set %>%
   dplyr::filter(cycle == 0)
 
 cycle1_files <- file_set %>%
   dplyr::filter(cycle == 1)
 
-for (a_year in "2001"){
+for (a_year in unique(cycle0_files$year)){
   # Subset to one year
   one_year_data <- dplyr::filter(cycle0_files, year == a_year)
   
@@ -223,7 +224,9 @@ for (a_year in "2001"){
     dplyr::group_by(river_id, year) %>%
     dplyr::summarize(greenup_cycle0_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
     dplyr::ungroup() %>%
+    # Convert the days since Jan 1, 1970 to the actual date
     dplyr::mutate(greenup_cycle0_YYYYMMDD = lubridate::as_date(greenup_cycle0_days_since_jan1_1970, origin ="1970-01-01")) %>%
+    # Drop unnecessary columns
     dplyr::select(-year, -greenup_cycle0_days_since_jan1_1970)
     
   # Export this file for a given year
@@ -264,13 +267,14 @@ not_done <- file_all %>%
 file_set <- not_done # Uncomment if want to only do only undone extractions
 # file_set <- file_all # Uncomment if want to do all extractions
 
+# Split the files into cycle 0 and cycle 1 files
 cycle0_files <- file_set %>%
   dplyr::filter(cycle == 0)
 
 cycle1_files <- file_set %>%
   dplyr::filter(cycle == 1)
 
-for (a_year in "2001"){
+for (a_year in unique(cycle1_files$year)){
   # Subset to one year
   one_year_data <- dplyr::filter(cycle1_files, year == a_year)
   
@@ -301,7 +305,7 @@ for (a_year in "2001"){
   }
   
   # Assemble a file name for this extraction
-  export_name <- paste0("greenup_extract_", a_year, "_cycle0", ".csv")
+  export_name <- paste0("greenup_extract_", a_year, "_cycle1", ".csv")
   
   # Wrangle the output of the within-year extraction
   full_data <- year_list %>%
@@ -311,7 +315,9 @@ for (a_year in "2001"){
     dplyr::group_by(river_id, year) %>%
     dplyr::summarize(greenup_cycle0_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
     dplyr::ungroup() %>%
+    # Convert the days since Jan 1, 1970 to the actual date
     dplyr::mutate(greenup_cycle0_YYYYMMDD = lubridate::as_date(greenup_cycle0_days_since_jan1_1970, origin ="1970-01-01")) %>%
+    # Drop unnecessary columns
     dplyr::select(-year, -greenup_cycle0_days_since_jan1_1970)
   
   # Export this file for a given year
@@ -329,33 +335,95 @@ for (a_year in "2001"){
 #              Greenup Day - Export ----
 ## ------------------------------------------------------- ##
 
-# Identify extracted data
-done_files <- dir(file.path(path, "raw-driver-data", "converted-greenup-data", "_partial-extracted"))
+# Identify the extracted cycle 0 data
+done_cycle0 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle0") 
 
-# Make an empty list
-full_out <- list()
+# Identify the extracted cycle 1 data
+done_cycle1 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle1") 
+
+# Make an empty list to store our cycle 0 tables --------------------------------------------------------------------------------
+full_out_cycle0 <- list()
 
 # Read all of these files in
-for(k in 1:length(done_files)){
+for(k in 1:length(done_cycle0)){
   
   # Read in the kth file
-  full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "converted-greenup-data", "_partial-extracted", done_files[k]))
+  full_out_cycle0[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle0[k]))
   
   # Finish
-  message("Retrieved file ", k, " of ", length(done_files))
+  message("Retrieved file ", k, " of ", length(done_cycle0))
   }
 
 # Unlist that list
-out_df <- full_out %>%
-  purrr::reduce(dplyr::left_join, by = 'river_id')
+out_df_cycle0 <- full_out_cycle0 %>%
+  purrr::reduce(dplyr::left_join, by = 'river_id') 
+
+# Rename columns
+names(out_df_cycle0) <- c("river_id", "greenup_cycle0_2001MMDD", "greenup_cycle0_2002MMDD", "greenup_cycle0_2003MMDD",
+                          "greenup_cycle0_2004MMDD", "greenup_cycle0_2005MMDD", "greenup_cycle0_2006MMDD", "greenup_cycle0_2007MMDD",
+                          "greenup_cycle0_2008MMDD", "greenup_cycle0_2009MMDD", "greenup_cycle0_2010MMDD", "greenup_cycle0_2011MMDD",
+                          "greenup_cycle0_2012MMDD", "greenup_cycle0_2013MMDD", "greenup_cycle0_2014MMDD", "greenup_cycle0_2015MMDD",
+                          "greenup_cycle0_2016MMDD", "greenup_cycle0_2017MMDD", "greenup_cycle0_2018MMDD", "greenup_cycle0_2019MMDD")
 
 # Glimpse it
-dplyr::glimpse(out_df)
+dplyr::glimpse(out_df_cycle0)
+
+# Make an empty list to store our cycle 1 tables --------------------------------------------------------------------------------
+full_out_cycle1 <- list()
+
+# Read all of these files in
+for(k in 1:length(done_cycle1)){
+  
+  # Read in the kth file
+  full_out_cycle1[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle1[k]))
+  
+  # Finish
+  message("Retrieved file ", k, " of ", length(done_cycle1))
+}
+
+# Unlist that list
+out_df_cycle1 <- full_out_cycle1 %>%
+  purrr::reduce(dplyr::left_join, by = 'river_id')
+
+# Rename columns
+names(out_df_cycle1) <- c("river_id", "greenup_cycle1_2001MMDD", "greenup_cycle1_2002MMDD", "greenup_cycle1_2003MMDD",
+                          "greenup_cycle1_2004MMDD", "greenup_cycle1_2005MMDD", "greenup_cycle1_2006MMDD", "greenup_cycle1_2007MMDD",
+                          "greenup_cycle1_2008MMDD", "greenup_cycle1_2009MMDD", "greenup_cycle1_2010MMDD", "greenup_cycle1_2011MMDD",
+                          "greenup_cycle1_2012MMDD", "greenup_cycle1_2013MMDD", "greenup_cycle1_2014MMDD", "greenup_cycle1_2015MMDD",
+                          "greenup_cycle1_2016MMDD", "greenup_cycle1_2017MMDD", "greenup_cycle1_2018MMDD", "greenup_cycle1_2019MMDD")
+
+# Glimpse it
+dplyr::glimpse(out_df_cycle1)
+
+# Join cycle 0 and cycle 1 tables together -------------------------------------------------------------------------------------
+out_df <- dplyr::left_join(out_df_cycle0, out_df_cycle1)
+
+# Move columns around
+out_df_v2 <- out_df %>% 
+  dplyr::relocate(contains("2001"), .after = river_id) %>%
+  dplyr::relocate(contains("2002"), .after = greenup_cycle1_2001MMDD) %>%
+  dplyr::relocate(contains("2003"), .after = greenup_cycle1_2002MMDD) %>%
+  dplyr::relocate(contains("2004"), .after = greenup_cycle1_2003MMDD) %>%
+  dplyr::relocate(contains("2005"), .after = greenup_cycle1_2004MMDD) %>%
+  dplyr::relocate(contains("2006"), .after = greenup_cycle1_2005MMDD) %>%
+  dplyr::relocate(contains("2007"), .after = greenup_cycle1_2006MMDD) %>%
+  dplyr::relocate(contains("2008"), .after = greenup_cycle1_2007MMDD) %>%
+  dplyr::relocate(contains("2009"), .after = greenup_cycle1_2008MMDD) %>%
+  dplyr::relocate(contains("2010"), .after = greenup_cycle1_2009MMDD) %>%
+  dplyr::relocate(contains("2011"), .after = greenup_cycle1_2010MMDD) %>%
+  dplyr::relocate(contains("2012"), .after = greenup_cycle1_2011MMDD) %>%
+  dplyr::relocate(contains("2013"), .after = greenup_cycle1_2012MMDD) %>%
+  dplyr::relocate(contains("2014"), .after = greenup_cycle1_2013MMDD) %>%
+  dplyr::relocate(contains("2015"), .after = greenup_cycle1_2014MMDD) %>%
+  dplyr::relocate(contains("2016"), .after = greenup_cycle1_2015MMDD) %>%
+  dplyr::relocate(contains("2017"), .after = greenup_cycle1_2016MMDD) %>%
+  dplyr::relocate(contains("2018"), .after = greenup_cycle1_2017MMDD) 
+  
 
 # Let's get ready to export
 greenup_export <- sites %>%
-  # Join the rock data
-  dplyr::left_join(y = out_df, by = "river_id")
+  # Join the greenup data
+  dplyr::left_join(y = out_df_v2, by = "river_id")
 
 # Check it out
 dplyr::glimpse(greenup_export)
@@ -368,6 +436,6 @@ write.csv(x = greenup_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_greenup.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup.csv"),
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+# googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup.csv"),
+#                          overwrite = T,
+#                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
