@@ -33,7 +33,7 @@ rm(list = ls())
 file_list <- list()
 
 # Identify all tiles of this region for each driver
-for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006", "raw-greenup")){
+for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006", "raw-greenup", "raw-npp")){
 
 # Identify files
 file_df <- data.frame("driver_id" = driver,
@@ -62,7 +62,7 @@ rm(list = setdiff(ls(), c('path', 'file_all')))
 crop_list <- list()
 
 # Identify all tiles of this region for each driver
-for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006")){
+for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006", "raw-greenup")){
   
   # Identify files
   crop_df <- data.frame("driver_id" = driver,
@@ -144,7 +144,7 @@ rm(list = setdiff(ls(), c('path')))
 file_list <- list()
 
 # Identify all tiles of this region for each driver
-for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006", "raw-greenup")){
+for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006", "raw-greenup", "raw-npp")){
   
   # Identify files for each region
   west_df <- data.frame("driver_id" = driver,
@@ -189,7 +189,7 @@ rm(list = setdiff(ls(), c('path', 'file_all')))
 crop_list <- list()
 
 # Identify all tiles of this region for each driver
-for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006")){
+for(driver in c("raw-evapo-modis16a2-v006", "raw-snow-modis10a2-v006", "raw-greenup")){
   
   # Identify files for each region
   crop_west_df <- data.frame("driver_id" = driver,
