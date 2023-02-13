@@ -277,8 +277,7 @@ rm(list = setdiff(ls(), c('path', 'sites')))
 
 # List current extracted data
 extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"), pattern = ".csv") %>%
-  dplyr::filter(name != "all-data_si-extract.csv") %>%
-  dplyr::filter(name != "si-extract_greenup.csv")
+  dplyr::filter(name != "all-data_si-extract.csv") 
 
 # Make an empty list
 data_list <- list()
