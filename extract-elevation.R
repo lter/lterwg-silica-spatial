@@ -100,7 +100,7 @@ write.csv(x = elev_export, na = '', row.names = F,
 googledrive::drive_upload(media = file.path(path, "extracted-data", 
                                             "si-extract_elevation.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
 
 ## ------------------------------------------------------- ##
               # Combine Extracted Data ----
@@ -109,7 +109,7 @@ googledrive::drive_upload(media = file.path(path, "extracted-data",
 rm(list = setdiff(ls(), c('path', 'sites')))
 
 # List current extracted data
-extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"), pattern = ".csv") %>%
+extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"), pattern = ".csv") %>%
   dplyr::filter(name != "all-data_si-extract.csv")
 
 # Make an empty list
@@ -166,6 +166,6 @@ write.csv(x = out_df, na = '', row.names = F,
 # And upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
 
 # End ----

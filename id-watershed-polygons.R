@@ -27,7 +27,7 @@ rm(list = ls())
 ## ------------------------------------------------------- ##
 
 # Grab ID of the GoogleSheet with site coordinates
-ref_id <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1HQtpWYoq_YQwj_bDNNbv8D-0swi00o_s")) %>%
+ref_id <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
   dplyr::filter(name == "WRTDS_Reference_Table")
 
 # Download ref table (overwriting previous downloads)

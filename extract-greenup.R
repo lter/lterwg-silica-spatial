@@ -438,4 +438,6 @@ write.csv(x = greenup_export, na = '', row.names = F,
 # Upload to GoogleDrive
 # googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup.csv"),
 #                          overwrite = T,
-#                          path = googledrive::as_id("https://drive.google.com/drive/folders/1-X0WjsBg-BTS_ows1jj6n_UehSVE9zwU"))
+#                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+
+# End ----
