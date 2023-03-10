@@ -349,8 +349,12 @@ for(k in 1:length(done_cycle1)){
   # Read in the kth file
   file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle1[k]))
   
+  # Drop empty years
+  non_empty_years <- file %>%
+    dplyr::filter(nchar(greenup_cycle1_YYYYMMDD) != 0)
+    
   # Identify the year
-  file_year <- stringr::str_sub(string = file$greenup_cycle0_YYYYMMDD[1],
+  file_year <- stringr::str_sub(string = non_empty_years$greenup_cycle1_YYYYMMDD[1],
                                 start = 1, end = 4)
   
   # Rename the data column
@@ -362,22 +366,9 @@ for(k in 1:length(done_cycle1)){
   # Finish
   message("Retrieved file ", k, " of ", length(done_cycle1)) }
 
-
-
-
-
-
-
 # Unlist that list
 out_df_cycle1 <- full_out_cycle1 %>%
   purrr::reduce(dplyr::left_join, by = 'river_id')
-
-# Rename columns
-# names(out_df_cycle1) <- c("river_id", "greenup_cycle1_2001MMDD", "greenup_cycle1_2002MMDD", "greenup_cycle1_2003MMDD",
-#                           "greenup_cycle1_2004MMDD", "greenup_cycle1_2005MMDD", "greenup_cycle1_2006MMDD", "greenup_cycle1_2007MMDD",
-#                           "greenup_cycle1_2008MMDD", "greenup_cycle1_2009MMDD", "greenup_cycle1_2010MMDD", "greenup_cycle1_2011MMDD",
-#                           "greenup_cycle1_2012MMDD", "greenup_cycle1_2013MMDD", "greenup_cycle1_2014MMDD", "greenup_cycle1_2015MMDD",
-#                           "greenup_cycle1_2016MMDD", "greenup_cycle1_2017MMDD", "greenup_cycle1_2018MMDD", "greenup_cycle1_2019MMDD")
 
 # Glimpse it
 dplyr::glimpse(out_df_cycle1)
@@ -387,29 +378,20 @@ dplyr::glimpse(out_df_cycle1)
 ## ------------------------------------------------------- ##
 
 # Join cycle 0 and cycle 1 tables together
-out_df <- dplyr::left_join(out_df_cycle0, out_df_cycle1)
+out_df <- out_df_cycle0 %>%
+  dplyr::left_join(out_df_cycle1, by = "river_id") %>%
+  # Move columns around
+  dplyr::relocate(contains("2001"), contains("2002"), contains("2003"),
+                  contains("2004"), contains("2005"), contains("2006"),
+                  contains("2007"), contains("2008"), contains("2009"),
+                  contains("2010"), contains("2011"), contains("2012"),
+                  contains("2013"), contains("2014"), contains("2015"),
+                  contains("2016"), contains("2017"), contains("2018"),
+                  contains("2019"),
+                  .after = river_id)
 
-# Move columns around
-out_df_v2 <- out_df %>% 
-  dplyr::relocate(contains("2001"), .after = river_id) %>%
-  dplyr::relocate(contains("2002"), .after = greenup_cycle1_2001MMDD) %>%
-  dplyr::relocate(contains("2003"), .after = greenup_cycle1_2002MMDD) %>%
-  dplyr::relocate(contains("2004"), .after = greenup_cycle1_2003MMDD) %>%
-  dplyr::relocate(contains("2005"), .after = greenup_cycle1_2004MMDD) %>%
-  dplyr::relocate(contains("2006"), .after = greenup_cycle1_2005MMDD) %>%
-  dplyr::relocate(contains("2007"), .after = greenup_cycle1_2006MMDD) %>%
-  dplyr::relocate(contains("2008"), .after = greenup_cycle1_2007MMDD) %>%
-  dplyr::relocate(contains("2009"), .after = greenup_cycle1_2008MMDD) %>%
-  dplyr::relocate(contains("2010"), .after = greenup_cycle1_2009MMDD) %>%
-  dplyr::relocate(contains("2011"), .after = greenup_cycle1_2010MMDD) %>%
-  dplyr::relocate(contains("2012"), .after = greenup_cycle1_2011MMDD) %>%
-  dplyr::relocate(contains("2013"), .after = greenup_cycle1_2012MMDD) %>%
-  dplyr::relocate(contains("2014"), .after = greenup_cycle1_2013MMDD) %>%
-  dplyr::relocate(contains("2015"), .after = greenup_cycle1_2014MMDD) %>%
-  dplyr::relocate(contains("2016"), .after = greenup_cycle1_2015MMDD) %>%
-  dplyr::relocate(contains("2017"), .after = greenup_cycle1_2016MMDD) %>%
-  dplyr::relocate(contains("2018"), .after = greenup_cycle1_2017MMDD) 
-  
+# Glimpse this too
+dplyr::glimpse(out_df)
 
 # Let's get ready to export
 greenup_export <- sites %>%
@@ -427,8 +409,8 @@ write.csv(x = greenup_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_greenup.csv"))
 
 # Upload to GoogleDrive
-# googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup.csv"),
-#                          overwrite = T,
-#                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup.csv"),
+                         overwrite = T,
+                         path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
 
 # End ----
