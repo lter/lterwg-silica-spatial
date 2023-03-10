@@ -1,5 +1,5 @@
 ## ------------------------------------------------------- ##
-#       Silica WG - Extract Spatial Data - Greenup
+        # Silica WG - Extract Spatial Data - Greenup
 ## ------------------------------------------------------- ##
 # Written by:
 ## Angel Chen
@@ -9,7 +9,7 @@
 ## Extract the following data: GREENUP
 
 ## ------------------------------------------------------- ##
-#                    Housekeeping ----
+                       # Housekeeping ----
 ## ------------------------------------------------------- ##
 
 # Read needed libraries
@@ -39,7 +39,7 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-#          MCD12Q2 (v. 061) - Identify Files ----
+           # MCD12Q2 (v. 061) - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
@@ -86,7 +86,7 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-#     .       Greenup - Bounding Box Check ----
+              # Greenup - Bounding Box Check ----
 ## ------------------------------------------------------- ##
 # Let's check to make sure each of my manual bounding boxes fits the sites for that region
 
@@ -148,8 +148,8 @@ plot(sheds, axes = T, add = T)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-#           Greenup Day - Extract Cycle 0 ----
-## ------------------------------------------------------- ##\
+                # Greenup Day - Extract Prep ----
+## ------------------------------------------------------- ##
 
 # Silence `dplyr::summarize` preemptively
 options(dplyr.summarise.inform = F)
@@ -183,6 +183,11 @@ cycle0_files <- file_set %>%
 cycle1_files <- file_set %>%
   dplyr::filter(cycle == 1)
 
+## ------------------------------------------------------- ##
+            # Greenup Day - Extract Cycle 0 ----
+## ------------------------------------------------------- ##
+
+# For each cycle 0 year
 for (a_year in unique(cycle0_files$year)){
   # Subset to one year
   one_year_data <- dplyr::filter(cycle0_files, year == a_year)
@@ -235,45 +240,13 @@ for (a_year in unique(cycle0_files$year)){
                              "_partial-extracted", export_name))
   
   # End message
-  message("Finished wrangling output for ", a_year) 
-}
+  message("Finished wrangling output for ", a_year) }
 
 ## ------------------------------------------------------- ##
-#           Greenup Day - Extract Cycle 1 ----
-## ------------------------------------------------------- ##\
+            # Greenup Day - Extract Cycle 1 ----
+## ------------------------------------------------------- ##
 
-# Silence `dplyr::summarize` preemptively
-options(dplyr.summarise.inform = F)
-
-# Specify driver
-focal_driver <- "raw-greenup"
-
-# Identify files we've already extracted from
-done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
-                                                 focal_driver,
-                                                 "_partial-extracted"))) %>%
-  tidyr::separate(col = files, remove = F,
-                  into = c("junk", "junk2", "year", "cycle", "file_ext")) %>%
-  dplyr::mutate(cycle = gsub(pattern = "[[:alpha:]]", replacement = "", x = cycle)) %>%
-  # Make a year-cycle column
-  dplyr::mutate(year_cycle = paste0(year, "_", cycle))
-
-# Remove completed files from the set of all possible files
-not_done <- file_all %>%
-  dplyr::mutate(year_cycle = paste0(year, "_", cycle)) %>%
-  dplyr::filter(!year_cycle %in% done_files$year_cycle)
-
-# Create a definitive object of files to extract
-file_set <- not_done # Uncomment if want to only do only undone extractions
-# file_set <- file_all # Uncomment if want to do all extractions
-
-# Split the files into cycle 0 and cycle 1 files
-cycle0_files <- file_set %>%
-  dplyr::filter(cycle == 0)
-
-cycle1_files <- file_set %>%
-  dplyr::filter(cycle == 1)
-
+# Extract cycle 1 too
 for (a_year in unique(cycle1_files$year)){
   # Subset to one year
   one_year_data <- dplyr::filter(cycle1_files, year == a_year)
@@ -301,8 +274,7 @@ for (a_year in unique(cycle1_files$year)){
     year_list[[i]] <- ex_data
     
     # End message
-    message("Finished extracting raster ", i, " of ", nrow(one_year_data)) 
-  }
+    message("Finished extracting raster ", i, " of ", nrow(one_year_data)) }
   
   # Assemble a file name for this extraction
   export_name <- paste0("greenup_extract_", a_year, "_cycle1", ".csv")
@@ -313,12 +285,12 @@ for (a_year in unique(cycle1_files$year)){
     purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
     dplyr::group_by(river_id, year) %>%
-    dplyr::summarize(greenup_cycle0_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
+    dplyr::summarize(greenup_cycle1_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
     dplyr::ungroup() %>%
     # Convert the days since Jan 1, 1970 to the actual date
-    dplyr::mutate(greenup_cycle0_YYYYMMDD = lubridate::as_date(greenup_cycle0_days_since_jan1_1970, origin ="1970-01-01")) %>%
+    dplyr::mutate(greenup_cycle1_YYYYMMDD = lubridate::as_date(greenup_cycle1_days_since_jan1_1970, origin ="1970-01-01")) %>%
     # Drop unnecessary columns
-    dplyr::select(-year, -greenup_cycle0_days_since_jan1_1970)
+    dplyr::select(-year, -greenup_cycle1_days_since_jan1_1970)
   
   # Export this file for a given year
   write.csv(x = full_data, row.names = F, na = '',
@@ -326,13 +298,13 @@ for (a_year in unique(cycle1_files$year)){
                              "_partial-extracted", export_name))
   
   # End message
-  message("Finished wrangling output for ", a_year) 
-}
+  message("Finished wrangling output for ", a_year) }
 
-
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-#              Greenup Day - Export ----
+            # Greenup Day - Process Extraction ----
 ## ------------------------------------------------------- ##
 
 # Identify the extracted cycle 0 data
@@ -341,61 +313,80 @@ done_cycle0 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-e
 # Identify the extracted cycle 1 data
 done_cycle1 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle1") 
 
-# Make an empty list to store our cycle 0 tables --------------------------------------------------------------------------------
+# Make an empty list to store our cycle 0 tables
 full_out_cycle0 <- list()
+full_out_cycle1 <- list()
 
 # Read all of these files in
 for(k in 1:length(done_cycle0)){
   
   # Read in the kth file
-  full_out_cycle0[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle0[k]))
+  file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle0[k]))
+  
+  # Identify the year
+  file_year <- stringr::str_sub(string = file$greenup_cycle0_YYYYMMDD[1],
+                                start = 1, end = 4)
+  
+  # Rename the data column
+  names(file) <- c("river_id", paste0("greenup_cycle0_", file_year, "MMDD"))
+  
+  # Add it to the list
+  full_out_cycle0[[k]] <- file
   
   # Finish
-  message("Retrieved file ", k, " of ", length(done_cycle0))
-  }
+  message("Retrieved file ", k, " of ", length(done_cycle0)) }
 
 # Unlist that list
 out_df_cycle0 <- full_out_cycle0 %>%
   purrr::reduce(dplyr::left_join, by = 'river_id') 
 
-# Rename columns
-names(out_df_cycle0) <- c("river_id", "greenup_cycle0_2001MMDD", "greenup_cycle0_2002MMDD", "greenup_cycle0_2003MMDD",
-                          "greenup_cycle0_2004MMDD", "greenup_cycle0_2005MMDD", "greenup_cycle0_2006MMDD", "greenup_cycle0_2007MMDD",
-                          "greenup_cycle0_2008MMDD", "greenup_cycle0_2009MMDD", "greenup_cycle0_2010MMDD", "greenup_cycle0_2011MMDD",
-                          "greenup_cycle0_2012MMDD", "greenup_cycle0_2013MMDD", "greenup_cycle0_2014MMDD", "greenup_cycle0_2015MMDD",
-                          "greenup_cycle0_2016MMDD", "greenup_cycle0_2017MMDD", "greenup_cycle0_2018MMDD", "greenup_cycle0_2019MMDD")
-
 # Glimpse it
 dplyr::glimpse(out_df_cycle0)
 
-# Make an empty list to store our cycle 1 tables --------------------------------------------------------------------------------
-full_out_cycle1 <- list()
-
-# Read all of these files in
+# Read in all of the cycle 1 files
 for(k in 1:length(done_cycle1)){
   
   # Read in the kth file
-  full_out_cycle1[[k]] <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle1[k]))
+  file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle1[k]))
+  
+  # Identify the year
+  file_year <- stringr::str_sub(string = file$greenup_cycle0_YYYYMMDD[1],
+                                start = 1, end = 4)
+  
+  # Rename the data column
+  names(file) <- c("river_id", paste0("greenup_cycle1_", file_year, "MMDD"))
+  
+  # Add it to the list
+  full_out_cycle1[[k]] <- file
   
   # Finish
-  message("Retrieved file ", k, " of ", length(done_cycle1))
-}
+  message("Retrieved file ", k, " of ", length(done_cycle1)) }
+
+
+
+
+
+
 
 # Unlist that list
 out_df_cycle1 <- full_out_cycle1 %>%
   purrr::reduce(dplyr::left_join, by = 'river_id')
 
 # Rename columns
-names(out_df_cycle1) <- c("river_id", "greenup_cycle1_2001MMDD", "greenup_cycle1_2002MMDD", "greenup_cycle1_2003MMDD",
-                          "greenup_cycle1_2004MMDD", "greenup_cycle1_2005MMDD", "greenup_cycle1_2006MMDD", "greenup_cycle1_2007MMDD",
-                          "greenup_cycle1_2008MMDD", "greenup_cycle1_2009MMDD", "greenup_cycle1_2010MMDD", "greenup_cycle1_2011MMDD",
-                          "greenup_cycle1_2012MMDD", "greenup_cycle1_2013MMDD", "greenup_cycle1_2014MMDD", "greenup_cycle1_2015MMDD",
-                          "greenup_cycle1_2016MMDD", "greenup_cycle1_2017MMDD", "greenup_cycle1_2018MMDD", "greenup_cycle1_2019MMDD")
+# names(out_df_cycle1) <- c("river_id", "greenup_cycle1_2001MMDD", "greenup_cycle1_2002MMDD", "greenup_cycle1_2003MMDD",
+#                           "greenup_cycle1_2004MMDD", "greenup_cycle1_2005MMDD", "greenup_cycle1_2006MMDD", "greenup_cycle1_2007MMDD",
+#                           "greenup_cycle1_2008MMDD", "greenup_cycle1_2009MMDD", "greenup_cycle1_2010MMDD", "greenup_cycle1_2011MMDD",
+#                           "greenup_cycle1_2012MMDD", "greenup_cycle1_2013MMDD", "greenup_cycle1_2014MMDD", "greenup_cycle1_2015MMDD",
+#                           "greenup_cycle1_2016MMDD", "greenup_cycle1_2017MMDD", "greenup_cycle1_2018MMDD", "greenup_cycle1_2019MMDD")
 
 # Glimpse it
 dplyr::glimpse(out_df_cycle1)
 
-# Join cycle 0 and cycle 1 tables together -------------------------------------------------------------------------------------
+## ------------------------------------------------------- ##
+                    # Greenup Day - Export ----
+## ------------------------------------------------------- ##
+
+# Join cycle 0 and cycle 1 tables together
 out_df <- dplyr::left_join(out_df_cycle0, out_df_cycle1)
 
 # Move columns around
