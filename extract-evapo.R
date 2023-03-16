@@ -281,20 +281,50 @@ for(k in 1:length(done_files)){
   # Finish
   message("Retrieved file ", k, " of ", length(done_files))}
 
-# Unlist that list
+# Wrangle output
 out_df <- full_out %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything())
-  
+  # Unlist that list
+  purrr::list_rbind() %>%
+  # Get a daily value
+  dplyr::mutate(daily_val = value / 8) %>%
+  # Drop old column
+  dplyr::select(-value)
+
 # Glimpse it
 dplyr::glimpse(out_df)
 
+# Make an empty list
+next_list <- list()
+
+# Now we need to get that daily value attached too all days in that 8-day increment
+for(i in 1:7){
+  
+  # Increase all days of year by 1
+  next_day <- out_df %>%
+    dplyr::mutate(doy = doy + i)
+  
+  # Add to list
+  next_list[[i]] <- next_day
+  
+  # Add success message
+  message("Day ", i + 1, " dataframe created") }
+
+# Unbind the list
+out_df_v2 <- next_list %>%
+  purrr::list_rbind() %>%
+  # Attach the first day of each 8-day period (original value)
+  dplyr::bind_rows(y = out_df) %>%
+  # Remove extra days created by adding too much to the final 8-day increment (not truly 8 days)
+  dplyr::filter(doy <= 365)
+
+# Glimpse this as well
+dplyr::glimpse(out_df_v2)
+
 # Summarize within month across years
-year_df <- out_df %>%
-  # Rename value column in data
-  dplyr::rename(mean_val = value) %>%
+year_df <- out_df_v2 %>%
   # Do summarization
   dplyr::group_by(river_id, year) %>%
-  dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
+  dplyr::summarize(value = sum(daily_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative year column
   dplyr::mutate(name = paste0("evapotrans_", year, "_kg_m2")) %>%
@@ -323,11 +353,9 @@ month_df <- out_df %>%
     doy > 273 & doy <= 304 ~ "oct", # +31
     doy > 304 & doy <= 334 ~ "nov", # +30 
     doy > 334 ~ "dec")) %>%
-  # Rename value column in data
-  dplyr::rename(mean_val = value) %>%
   # Average within month / river
   dplyr::group_by(river_id, month) %>%
-  dplyr::summarize(value = mean(mean_val, na.rm = T)) %>%
+  dplyr::summarize(value = sum(daily_val, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Make more informative month column
   dplyr::mutate(name = paste0("evapotrans_", month, "_kg_m2")) %>%
