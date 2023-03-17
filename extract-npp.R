@@ -39,7 +39,7 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-#          MCD12Q2 (v. 061) - Identify Files ----
+#          MOD17A3HGF v006 - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
