@@ -227,6 +227,8 @@ for(annum in unique(file_set$year)){
         # Drop NA values that were "extracted"
         ## I.e., those that are outside of the current raster bounding nox
         dplyr::filter(!is.na(value)) %>%
+        # Drop invalid values (per product documentation page)
+        dplyr::filter(value >= -32767 & value <= 32700) %>%
         # Make new relevant columns
         dplyr::mutate(year = as.numeric(simp_df$year[j]),
                       doy = as.numeric(simp_df$doy[j]),
@@ -285,10 +287,15 @@ for(k in 1:length(done_files)){
 out_df <- full_out %>%
   # Unlist that list
   purrr::list_rbind() %>%
-  # Get a daily value
-  dplyr::mutate(daily_val = value / 8) %>%
+  # Account for scaler value
+  ## See "Layers" dropdown here: https://lpdaac.usgs.gov/products/mod16a2v006/
+  dplyr::mutate(unscaled_val = value * 0.1) %>%
+  # Get a daily value (divide by 8 for all but last composite period and by 5 for that one)
+  dplyr::mutate(daily_val = ifelse(test = (doy == 361),
+                                   yes = (unscaled_val / 5),
+                                   no = (unscaled_val / 8)) ) %>%
   # Drop old column
-  dplyr::select(-value)
+  dplyr::select(-unscaled_val, -value)
 
 # Glimpse it
 dplyr::glimpse(out_df)
