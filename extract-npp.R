@@ -185,7 +185,12 @@ for (a_year in "2021"){
         # Unlist to dataframe
         purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
         # Drop coverage fraction column
-        dplyr::select(-coverage_fraction) %>%         
+        dplyr::select(-coverage_fraction) %>%
+        # Drop NA values that were "extracted"
+        ## I.e., those that are outside of the current raster bounding nox
+        dplyr::filter(!is.na(value)) %>%
+        # Drop invalid values (per product documentation page)
+        dplyr::filter(value >= -30000 & value <= 32700) %>%
         # Make new relevant columns
         dplyr::mutate(year = a_year,
                       .after = river_id)
@@ -204,9 +209,12 @@ for (a_year in "2021"){
   full_data <- year_list %>%
     # Unlist to dataframe
     purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+    # Apply scaler value
+    ## See "Layers" dropdown here: https://lpdaac.usgs.gov/products/mod17a3hgfv061/
+    dplyr::mutate(descaled_val = value * 0.0001) %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
     dplyr::group_by(river_id, year) %>%
-    dplyr::summarize(npp = round(mean(value, na.rm = T))) %>%
+    dplyr::summarize(npp = mean(descaled_val, na.rm = T)) %>%
     dplyr::ungroup() %>%
     # Drop unnecessary columns
     dplyr::select(-year) %>% 
