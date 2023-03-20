@@ -30,7 +30,10 @@ sites <- read.csv(file = file.path(path, "site-coordinates", 'silica-coords_ACTU
 dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
-sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
+## Uncropped polygons (direct from HydroSHEDS)
+# sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
+## Cropped polygons (HydroSHEDS polygons cropped to expert-defined bounding boxes)
+sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "CROPPED-silica-watersheds.shp"))
 
 # Check that out
 dplyr::glimpse(sheds)
