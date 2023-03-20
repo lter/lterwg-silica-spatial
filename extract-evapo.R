@@ -278,7 +278,8 @@ for(k in 1:length(done_files)){
   
   # Read in the kth file
   full_out[[k]] <- read.csv(file = file.path(path, "raw-driver-data", focal_driver,
-                                             "_partial-extracted", done_files[k]))
+                                             "_partial-extracted", done_files[k])) %>%
+    dplyr::mutate(river_id = as.character(river_id))
   
   # Finish
   message("Retrieved file ", k, " of ", length(done_files))}
