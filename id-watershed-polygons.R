@@ -375,4 +375,82 @@ dplyr::glimpse(sites_final)
 write.csv(sites_final, row.names = F, na = "",
           file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv') )
 
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro_out', 'coord_df', 'poly_actual', 'sites_final')))
+
+## ------------------------------------------------------- ##
+                # Crop to Bounding Box ----
+## ------------------------------------------------------- ##
+# We may want to crop drainage basins to their expert-defined lat/long maxima
+
+# Attach bounding box values to final sites object
+bbox_coords <- sites_final %>%
+  dplyr::left_join(y = coord_df, by = c("LTER", "Stream_Name", "Discharge_File_Name")) %>%
+  # Pare down columns
+  dplyr::select(river_id, Min_Long, Max_Long, Min_Lat, Max_Lat) %>%
+  # Keep only one row per river_id
+  dplyr::distinct()
+
+# Check that out
+dplyr::glimpse(bbox_coords)
+
+# Make an empty list
+crop_list <- list()
+
+# For each polygon
+for(river in unique(bbox_coords$river_id)){
+  
+  # Filter the bbox_coords object to just one river
+  river_bbox_coords <- dplyr::filter(bbox_coords, river_id == river)
+  
+  # If we have a complete bounding box...
+  if(!is.na(river_bbox_coords$Min_Long) & !is.na(river_bbox_coords$Max_Long) & 
+     !is.na(river_bbox_coords$Min_Lat) & !is.na(river_bbox_coords$Max_Lat)){
+    
+    # Strip out the coordinates of the bounding box
+    bbox_vec = c("xmin" = river_bbox_coords$Min_Long,
+                 "xmax" = river_bbox_coords$Max_Long,
+                 "ymin" = river_bbox_coords$Min_Lat,
+                 "ymax" = river_bbox_coords$Max_Lat)
+    
+    # Filter the polygon `sf` object to just this river
+    poly_sub <- poly_actual %>%
+      dplyr::filter(river_id == river) %>%
+      # Now crop using the named vector
+      sf::st_crop(y = bbox_vec)
+    
+    # Add this to the list
+    crop_list[[river]] <- poly_sub
+    
+    # Print success message
+    message("River ID '", river, "' cropped to bounding box") 
+    
+    # If we *do not* have the bounding box...
+  } else {
+    # If any part of the bounding box is unknown, skip cropping of this watershed
+    message("Bounding box for river ID '", river, "' incomplete or entirely missing") 
+  } 
+}
+
+# Unlist the output 
+cropped_out <- crop_list %>%
+  purrr::list_rbind()
+
+# Remove all cropped rivers from the uncropped river object
+uncropped <- poly_actual %>%
+  dplyr::filter(!river_id %in% cropped_out$river_id)
+
+# Exploratory plot to confirm
+## Pre-cropping polygon (for the Andrews rivers)
+plot(dplyr::filter(poly_actual, river_id == "7000435790")["river_id"], axes = T)
+plot(dplyr::filter(cropped_out, river_id == "7000435790")["river_id"], axes = T)
+
+# Combine the cropped rivers with the rivers we couldn't crop due to missing bounding boxes
+final_sf <- cropped_out %>%
+  dplyr::bind_rows(uncropped)
+
+# Save out this object as a shapefile
+st_write(obj = poly_actual, delete_layer = T,
+         dsn = file.path(path, "site-coordinates", "CROPPED-silica-watersheds.shp"))
+
 # End ----
