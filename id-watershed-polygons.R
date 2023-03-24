@@ -249,7 +249,7 @@ if(length(unk_polys) != 0){
 
 # Unlist the list
 hydro_out <- id_list %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything())
+  purrr::list_rbind()
 
 # Check the structure
 dplyr::glimpse(hydro_out)
@@ -285,6 +285,29 @@ hydro_poly <- hydro_out %>%
 
 # Check structure
 str(hydro_poly)
+
+# Quick diagnostic check: identify number of HydroSHEDS polygons that get fused into each river's watershed shapefile
+poly_ct <- hydro_out %>%
+  # Group by focal polygon and count number of unique HYBAS IDs
+  dplyr::group_by(focal_poly) %>%
+  dplyr::summarize(hydrosheds_polygon_ct = dplyr::n()) %>%
+  dplyr::ungroup() %>%
+  # Attach drainage area sums from the hydro_poly object and rename that column descriptively
+  dplyr::left_join(y = sf::st_drop_geometry(hydro_poly), by = "focal_poly") %>%
+  dplyr::rename(hydrosheds_area_km2 = drainSqKm) %>%
+  # Rename "focal_poly"
+  dplyr::rename(HYBAS_ID = focal_poly) %>%
+  # Attach other site information (like more descriptive names)
+  dplyr::left_join(y = sites_actual, by = "HYBAS_ID") %>%
+  # Pare down columns and reorder remaining ones
+  dplyr::select(LTER:Discharge_File_Name, hydrosheds_polygon_ct, hydrosheds_area_km2)
+
+# Glimpse that
+dplyr::glimpse(poly_ct)
+
+# Export as a CSV
+write.csv(x = poly_ct, file = file.path(path, "hydrosheds_polygon_count.csv"),
+          row.names = F, na = '')
 
 # Get a dataframe version of this + site information for later use
 hydro_poly_df <- sites_actual %>%
