@@ -486,4 +486,84 @@ plot(final_sf, axes = T)
 st_write(obj = poly_actual, delete_layer = T,
          dsn = file.path(path, "site-coordinates", "CROPPED-silica-watersheds.shp"))
 
+## ------------------------------------------------------- ##
+                # Assess Shapefile Area ----
+## ------------------------------------------------------- ##
+
+# Triple check no rivers are lost
+supportR::diff_check(old = unique(poly_actual$river_id),
+                     new = unique(final_sf$river_id))
+
+# Empty list
+area_list <- list()
+
+# For each river:
+for(area_river in unique(poly_actual$river_id)){
+  
+  # Subset both the uncropped and cropped areas to this river
+  sub_uncrop_sf <- dplyr::filter(poly_actual, river_id == area_river)
+  sub_crop_sf <- dplyr::filter(final_sf, river_id == area_river)
+  
+  # Calculate shapefile area (in km2) for both
+  sub_uncrop_area <- sub_uncrop_sf %>%
+    sf::st_area() %>%
+    units::set_units(x = ., km^2)
+  sub_crop_area <- sub_crop_sf %>%
+    sf::st_area() %>%
+    units::set_units(x = ., km^2)
+
+  # Assemble dataframe
+  sub_area_df <- data.frame("river_id" = as.character(area_river), 
+                            "hydrosheds_area_km2" = as.numeric(sub_uncrop_area),
+                            "cropped_area_km2" = as.numeric(sub_crop_area))
+  
+  # Add to list
+  area_list[[area_river]] <- sub_area_df
+  
+  # Message
+  message("Area calculated for river ", area_river) }
+
+# Unlist output
+area_actual <- area_list %>%
+  purrr::list_rbind(x = .)
+
+# Glimpse it
+dplyr::glimpse(area_actual)
+
+# Wrangle a final area checking object for ease of evaluation of this method
+glimpse(coord_df)
+
+# Begin with raw reference table object
+area_export <- coord_df %>%
+  # Drop any rivers that lack coordinates
+  dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
+  # Also remove McMurdo because HydroSHEDS doesn't work for those sites
+  dplyr::filter(LTER != "MCM") %>%
+  # Pare down to only needed columns and rename one more informatively
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, expert_area_km2 = drainSqKm) %>%
+  # Bind on the final sites information so we can get the HydroSHEDS river IDs
+  dplyr::left_join(sites_final, c("LTER", "Stream_Name", "Discharge_File_Name")) %>%
+  # Pare down the columns again
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, river_id, expert_area_km2) %>%
+  # Drop duplicate rows
+  dplyr::distinct() %>%
+  # Attach area information
+  dplyr::left_join(area_actual, by = "river_id") %>%
+  # Rename a column more intuitively
+  dplyr::rename(hydrosheds_id = river_id) %>%
+  # Drop duplicate rows (again)
+  dplyr::distinct() %>%
+  # Collapse duplicate 'chemistry steam names' within 'discharge stream names'
+  dplyr::group_by(LTER, Discharge_File_Name, hydrosheds_id, 
+                  expert_area_km2, hydrosheds_area_km2, cropped_area_km2) %>%
+  dplyr::summarize(Stream_Name = paste(Stream_Name, collapse = " / ")) %>%
+  dplyr::ungroup() %>%
+  # Move stream name back to where it belongs
+  dplyr::relocate(Stream_Name, .after = Discharge_File_Name)
+
+# Check this out
+dplyr::glimpse(area_export)
+
+
+
 # End ----
