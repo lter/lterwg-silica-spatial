@@ -564,6 +564,11 @@ area_export <- coord_df %>%
 # Check this out
 dplyr::glimpse(area_export)
 
+# Export locally
+write.csv(area_export, file = file.path(path, "hydrosheds_shape_area_check.csv"),
+          row.names = F, na = '')
 
+# Upload to Drive
+googledrive::drive_upload(media = file.path(path, "hydrosheds_shape_area_check.csv"), path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7"), overwrite = T)
 
 # End ----
