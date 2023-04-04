@@ -309,6 +309,9 @@ dplyr::glimpse(poly_ct)
 write.csv(x = poly_ct, file = file.path(path, "hydrosheds_polygon_count.csv"),
           row.names = F, na = '')
 
+# Upload to Drive too
+googledrive::drive_upload(media = file.path(path, "hydrosheds_polygon_count.csv"), path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7"), overwrite = T)
+
 # Get a dataframe version of this + site information for later use
 hydro_poly_df <- sites_actual %>%
   # Drop geometry
