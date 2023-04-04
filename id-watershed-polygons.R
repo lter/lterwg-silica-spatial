@@ -14,7 +14,7 @@
 
 # Read needed libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, googledrive, sf, terra, nngeo, NCEAS/scicomptools)
+librarian::shelf(tidyverse, magrittr, googledrive, sf, terra, nngeo, NCEAS/scicomptools)
 
 # Clear environment
 rm(list = ls())
@@ -411,6 +411,8 @@ bbox_coords <- sites_final %>%
   dplyr::left_join(y = coord_df, by = c("LTER", "Stream_Name", "Discharge_File_Name")) %>%
   # Pare down columns
   dplyr::select(river_id, Min_Long, Max_Long, Min_Lat, Max_Lat) %>%
+  # Filter to only rivers with bounding boxes
+  dplyr::filter(!is.na(Min_Long) & !is.na(Max_Long) & !is.na(Min_Lat) & !is.na(Max_Lat)) %>%
   # Keep only one row per river_id
   dplyr::distinct()
 
@@ -455,22 +457,30 @@ for(river in unique(bbox_coords$river_id)){
   } 
 }
 
-# Unlist the output 
-cropped_out <- crop_list %>%
-  purrr::list_rbind()
-
 # Remove all cropped rivers from the uncropped river object
 uncropped <- poly_actual %>%
-  dplyr::filter(!river_id %in% cropped_out$river_id)
+  dplyr::filter(!river_id %in% names(crop_list))
 
 # Exploratory plot to confirm
 ## Pre-cropping polygon (for the Andrews rivers)
 plot(dplyr::filter(poly_actual, river_id == "7000435790")["river_id"], axes = T)
-plot(dplyr::filter(cropped_out, river_id == "7000435790")["river_id"], axes = T)
+plot(crop_list[["7000435790"]]["river_id"], axes = T)
 
-# Combine the cropped rivers with the rivers we couldn't crop due to missing bounding boxes
-final_sf <- cropped_out %>%
-  dplyr::bind_rows(uncropped)
+# Duplicate the uncropped object
+final_sf <- uncropped
+
+# For each cropped river:
+for(crop_river in names(crop_list)){
+
+  # Attach to larger object containing other rivers
+  final_sf %<>%
+    dplyr::bind_rows(crop_list[[crop_river]])
+  
+  # Success message
+  message("Added cropped river ", crop_river, " to all site sf object") }
+
+# Exploratory final plot
+plot(final_sf, axes = T)
 
 # Save out this object as a shapefile
 st_write(obj = poly_actual, delete_layer = T,
