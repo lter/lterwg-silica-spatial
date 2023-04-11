@@ -199,74 +199,92 @@ states <- sf::st_as_sf(maps::map(database = "state", plot = F, fill = T))
 borders <- dplyr::bind_rows(world, states) %>%
   dplyr::mutate(LTER = "aaa")
 
+# Make empty list to store outputs in
+map_list <- list()
+
 # For each LTER
-# for(focal_lter in sort(unique(all_shps$LTER))){
-focal_lter <- "HBR"
+for(focal_lter in sort(unique(all_shps$LTER))){
+  # focal_lter <- "HBR"
+  
+  # Start loop
+  message("Beginning plot creation for ", focal_lter, " watershed shapes")
+  
+  # Filter to one "LTER" (in quotes because includes non-LTERs)
+  sub_shp <- all_shps %>%
+    dplyr::filter(LTER == focal_lter)
+  
+  # Identify boundary of object
+  sub_bbox <- sf::st_bbox(obj = sub_shp)
+  
+  # Create (and wrangle) a dataframe version of this
+  sub_bound_df <- data.frame("corner" = names(sub_bbox),
+                             "lat_long" = stringr::str_sub(string = names(sub_bbox), 1, 1),
+                             "end" = stringr::str_sub(string = names(sub_bbox), 2, 4),
+                             "value" = as.numeric(sub_bbox)) %>%
+    # Identify range
+    dplyr::group_by(lat_long) %>%
+    dplyr::mutate(range = abs(max(value) - min(value))) %>%
+    dplyr::ungroup() %>%
+    # Replace if very small
+    dplyr::mutate(range = ifelse(range < 2, yes = 2, no = range)) %>%
+    # Add to actual values conditionally
+    dplyr::mutate(lims = dplyr::case_when(
+      value >= 0 & end == "min" ~ value - range,
+      value >= 0 & end == "max" ~ value + range,
+      value < 0 & end == "min" ~ value + range,
+      value < 0 & end == "max" ~ value - range)) %>%
+    # Add axis steps
+    dplyr::mutate(steps = dplyr::case_when(range <= 5 ~ 2,
+                                           range <= 10 ~ 2,
+                                           range <= 50 ~ 10,
+                                           range > 50 ~ 20))
+  
+  # Strip off relevant bit for each limits
+  sub_xlim <- sub_bound_df %>%
+    dplyr::filter(lat_long == "x") %>%
+    dplyr::pull(lims)
+  sub_ylim <- sub_bound_df %>%
+    dplyr::filter(lat_long == "y") %>%
+    dplyr::pull(lims)
+  
+  # Attach sub shape to borders
+  sub_all <- sub_shp %>%
+    dplyr::bind_rows(borders)
+  
+  # Crop palette to only relevant color(s)
+  sub_palette <- shed_palette[unique(sub_all$LTER)]
 
-# Filter to one "LTER" (in quotes because includes non-LTERs)
-sub_shp <- all_shps %>%
-  dplyr::filter(LTER == focal_lter)
+  # Make plot
+  sub_map <- sub_all %>%
+    ggplot(aes(fill = LTER)) +
+    geom_sf() +
+    # Set plot extents
+    coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, crs = st_crs(x = 4326)) +
+    # Customize theming / labels
+    scale_fill_manual(values = sub_palette) +
+    scale_x_continuous(limits = sub_xlim, breaks = seq(from = floor(min(sub_xlim)),
+                                                       to = ceiling(max(sub_xlim)),
+                                                       by = max(sub_bound_df$steps))) +
+    scale_y_continuous(limits = sub_ylim, breaks = seq(from = floor(min(sub_ylim)),
+                                                       to = ceiling(max(sub_ylim)),
+                                                       by = max(sub_bound_df$steps))) +
+    labs(x = "Longitude", y = "Latitude", 
+         title = paste0(focal_lter, " Map")) +
+    supportR::theme_lyon() +
+    theme(legend.position = "none",
+          axis.text.y = element_text(angle = 90, vjust = 1, hjust = 0.5))
+  
+  # Add to plot list
+  map_list[[focal_lter]] <- sub_map
+  
+  # Closing message
+  message("Finished with ", focal_lter) }
 
-# Identify boundary of object
-sub_bbox <- sf::st_bbox(obj = sub_shp)
+# Create multi-panel graph
+cowplot::plot_grid(plotlist = map_list, labels = "AUTO", nrow = 2)
 
-# Create (and wrangle) a dataframe version of this
-sub_bound_df <- data.frame("corner" = names(sub_bbox),
-                       "lat_long" = stringr::str_sub(string = names(sub_bbox), 1, 1),
-                       "end" = stringr::str_sub(string = names(sub_bbox), 2, 4),
-                       "value" = as.numeric(sub_bbox)) %>%
-  # Identify range
-  dplyr::group_by(lat_long) %>%
-  dplyr::mutate(range = abs(max(value) - min(value))) %>%
-  dplyr::ungroup() %>%
-  # Replace if very small
-  dplyr::mutate(range = ifelse(range < 2, yes = 2, no = range)) %>%
-  # Add to actual values conditionally
-  dplyr::mutate(lims = dplyr::case_when(
-    value >= 0 & end == "min" ~ value - range,
-    value >= 0 & end == "max" ~ value + range,
-    value < 0 & end == "min" ~ value + range,
-    value < 0 & end == "max" ~ value - range)) %>%
-  # Add axis steps
-  dplyr::mutate(steps = dplyr::case_when(range <= 5 ~ 2,
-                                         range <= 10 ~ 2,
-                                         range <= 50 ~ 10,
-                                         range > 50 ~ 20))
 
-# Strip off relevant bit for each limits
-sub_xlim <- sub_bound_df %>%
-  dplyr::filter(lat_long == "x") %>%
-  dplyr::pull(lims)
-sub_ylim <- sub_bound_df %>%
-  dplyr::filter(lat_long == "y") %>%
-  dplyr::pull(lims)
 
-# Crop palette to only relevant color(s)
-sub_palette <- shed_palette[unique(sub_all$LTER)]
-
-# Attach sub shape to borders
-sub_all <- sub_shp %>%
-  dplyr::bind_rows(borders)
-
-# Make plot
-sub_all %>%
-  ggplot(aes(fill = LTER)) +
-  geom_sf() +
-  # Set plot extents
-  coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, crs = st_crs(x = 4326)) +
-  # Customize theming / labels
-  scale_fill_manual(values = sub_palette) +
-  scale_x_continuous(limits = sub_xlim, breaks = seq(from = floor(min(sub_xlim)),
-                                                     to = ceiling(max(sub_xlim)),
-                                                     by = unique(sub_bound_df$steps))) +
-  scale_y_continuous(limits = sub_ylim, breaks = seq(from = floor(min(sub_ylim)),
-                                                     to = ceiling(max(sub_ylim)),
-                                                     by = unique(sub_bound_df$steps))) +
-  labs(x = "Longitude", y = "Latitude", 
-       title = paste0(focal_lter, " Map")) +
-  supportR::theme_lyon() +
-  theme(legend.position = "none",
-        axis.text.y = element_text(angle = 90, vjust = 1, hjust = 0.5))
 
 # Tidy up environment
 rm(list = setdiff(ls(), c("path", "coord_df", "all_shps")))
