@@ -14,7 +14,7 @@
 
 # Read needed libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, magrittr, googledrive, sf, terra, nngeo, NCEAS/scicomptools)
+librarian::shelf(tidyverse, magrittr, googledrive, sf, supportR, NCEAS/scicomptools, readxl)
 
 # Clear environment
 rm(list = ls())
@@ -129,7 +129,7 @@ plot(all_shps["Shapefile_Name"], axes = T, main = NULL)
 rm(list = setdiff(ls(), c("path", "coord_df", "all_shps")))
 
 ## ------------------------------------------------------- ##
-# Export Results ----
+                    # Export Results ----
 ## ------------------------------------------------------- ##
 
 # Export the combine shapefile for all rivers
@@ -159,5 +159,13 @@ write.csv(shps_df, file = file.path(path, "artisanal_shape_area_check.csv"),
 # Upload to Drive
 googledrive::drive_upload(media = file.path(path, "artisanal_shape_area_check.csv"), overwrite = T, 
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7"))
+
+## ------------------------------------------------------- ##
+                  # Exploratory Maps ----
+## ------------------------------------------------------- ##
+
+
+
+
 
 # End ----
