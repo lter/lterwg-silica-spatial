@@ -164,31 +164,32 @@ googledrive::drive_upload(media = file.path(path, "artisanal_shape_area_check.cs
                   # Exploratory Maps ----
 ## ------------------------------------------------------- ##
 
-# Identify color palette
-shed_palette <- c("aaa" = "gray95",
-                  "AND" = "",
-                  "ARC" = "", 
-                  "BcCZO" = "", 
-                  "BNZ" = "", 
-                  "Carey" = "", 
-                  "Catalina Jemez" = "", 
-                  "Coal Creek" = "", 
-                  "Finnish Environmental Institute" = "", 
-                  "GRO" = "", 
-                  "HBR" = "", 
-                  "KNZ" = "", 
-                  "KRR" = "", 
-                  "Krycklan" = "", 
-                  "LMP" = "", 
-                  "LUQ" = "", 
-                  "MCM" = "", 
-                  "NIVA" = "", 
-                  "NWT" = "", 
-                  "PIE" = "", 
-                  "Sagehen" = "", 
-                  "UMR" = "", 
-                  "USGS" = "", 
-                  "Walker Branch" = "")
+# Identify color palette per LTER
+shed_palette <- c("aaa" = "#ffffff", # placeholder
+                  ## North America (reds/oranges/yellows)
+                  "AND" = "#6a040f",
+                  "ARC" = "#9d0208", 
+                  "BNZ" = "#d00000", 
+                  "Catalina Jemez" = "#dc2f02", 
+                  "Coal Creek" = "#e85d04", 
+                  "HBR" = "#f48c06", 
+                  "KNZ" = "#faa307", 
+                  "KRR" = "#ffba08", 
+                  "LMP" = "#370617", 
+                  "NWT" = "#ff9b54", 
+                  "Sagehen" = "#ff7f51", 
+                  "UMR" = "#ce4257", 
+                  "USGS" = "#720026", 
+                  "Walker Branch" = "#4f000b",
+                  ## Carribbean
+                  "LUQ" = "#2b9348", 
+                  ## Europe
+                  "Finnish Environmental Institute" = "#0077b6", 
+                  "Krycklan" = "#00b4d8", 
+                  "NIVA" = "#ade8f4", 
+                  ## Arctic / Antarctica
+                  "GRO" = "#9d4edd", 
+                  "MCM" = "#c77dff")
 
 # Read in global & state borders
 world <- sf::st_as_sf(maps::map(database = "world", plot = F, fill = T))
@@ -240,6 +241,9 @@ sub_ylim <- sub_bound_df %>%
   dplyr::filter(lat_long == "y") %>%
   dplyr::pull(lims)
 
+# Crop palette to only relevant color(s)
+sub_palette <- shed_palette[unique(sub_all$LTER)]
+
 # Attach sub shape to borders
 sub_all <- sub_shp %>%
   dplyr::bind_rows(borders)
@@ -251,20 +255,18 @@ sub_all %>%
   # Set plot extents
   coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, crs = st_crs(x = 4326)) +
   # Customize theming / labels
-  scale_fill_manual(values = c("white", "red")) +
+  scale_fill_manual(values = sub_palette) +
   scale_x_continuous(limits = sub_xlim, breaks = seq(from = floor(min(sub_xlim)),
                                                      to = ceiling(max(sub_xlim)),
                                                      by = unique(sub_bound_df$steps))) +
   scale_y_continuous(limits = sub_ylim, breaks = seq(from = floor(min(sub_ylim)),
                                                      to = ceiling(max(sub_ylim)),
                                                      by = unique(sub_bound_df$steps))) +
-  labs(x = "Longitude", y = "Latitude") +
+  labs(x = "Longitude", y = "Latitude", 
+       title = paste0(focal_lter, " Map")) +
   supportR::theme_lyon() +
   theme(legend.position = "none",
         axis.text.y = element_text(angle = 90, vjust = 1, hjust = 0.5))
-
-
-
 
 # Tidy up environment
 rm(list = setdiff(ls(), c("path", "coord_df", "all_shps")))
