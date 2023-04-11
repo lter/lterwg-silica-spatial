@@ -23,28 +23,84 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 ## ------------------------------------------------------- ##
-# Site Coordinate Acquisition ----
+            # Reference Table Acquisition ----
 ## ------------------------------------------------------- ##
 
 # Grab ID of the GoogleSheet with site coordinates
-ref_id <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
-  dplyr::filter(name == "WRTDS_Reference_Table")
+googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
+  dplyr::filter(name == "WRTDS_Reference_Table") %>%
+  googledrive::drive_download(file = ., overwrite = T,
+                              path = file.path(path, "site-coordinates",
+                                               "silica-coords_RAW.xlsx"))
 
-# Download ref table (overwriting previous downloads)
-googledrive::drive_download(file = googledrive::as_id(ref_id), overwrite = T,
-                            path = file.path(path, "site-coordinates",
-                                             "silica-coords_RAW.xlsx"))
-
-# Read it in
-coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates", "silica-coords_RAW.xlsx"))
-
+# Read in site coordinates (i.e., ref table)
+coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
+                                                "silica-coords_RAW.xlsx")) %>%
+  ## Pare down to minimum needed columns
+  dplyr::select(LTER, Shapefile_Name, Latitude, Longitude) %>%
+  ## Drop duplicate rows (if any)
+  dplyr::distinct()
+  
 # Glimpse this
 dplyr::glimpse(coord_df)
 
+## ------------------------------------------------------- ##
+                # Combine Shapefiles ----
+## ------------------------------------------------------- ##
+
+# Identify shapefiles we already have
+raw_sheds <- dir(path = file.path(path, 'artisanal-shapefiles'), pattern = ".shp") %>%
+  ## Drop file extension to match with reference table
+  gsub(pattern = "\\.shp", replacement = "", x = .)
+
+# Compare shapefiles we have with those that are named in the reference table
+supportR::diff_check(old = unique(coord_df$Shapefile_Name), 
+                     new = unique(raw_sheds))
+## Any 'in old but not new' = shapefiles named in reference table but not on Aurora
+## Any 'in new but not old' = shapefiles in Aurora that aren't in the reference table
+
+# Wrangle river coordinates
+good_sheds <- coord_df %>%
+  # Filter to only shapefiles in ref. table & on Aurora
+  dplyr::filter(Shapefile_Name %in% raw_sheds) %>%
+  # Drop any non-unique rows (shouldn't be any but good to double check)
+  dplyr::distinct()
+
+# Check that out
+dplyr::glimpse(good_sheds)
+
+
+
+
+
+
+
+
+
+
+
+# Now we can use this to identify and combine all separate shapefiles
+
+
+
+
+
+
+
+
+
+# Grab the GRO watershed polygons
+gro_sheds <- sf::st_read(file.path(path, 'artisanal-shapefiles', 'GRO_Kolyma.shp'))
+
+
+
+# End ----
+
+
+
+
 # Do some necessary processing
 sites <- coord_df %>%
-  # Remove some unneeded columns
-  dplyr::select(LTER, Stream_Name, Discharge_File_Name, Latitude, Longitude) %>%
   # Drop missing coordinates
   dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
   # Remove McMurdo (Antarctica isn't included in Hydrosheds) and GRO (shapefiles too large)
