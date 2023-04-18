@@ -54,7 +54,7 @@ dplyr::glimpse(coord_df)
 shape_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1TLEFKLWUpTKwxKiZv9nqhdwccflPuF9g"))
 
 # Should we redownload?
-redownload <- TRUE
+redownload <- FALSE
 
 # If re-download is desired...
 if(redownload == TRUE){
