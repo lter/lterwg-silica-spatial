@@ -47,6 +47,26 @@ coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
 dplyr::glimpse(coord_df)
 
 ## ------------------------------------------------------- ##
+                  # Download Shapefiles ----
+## ------------------------------------------------------- ##
+
+# Grab all of their Drive IDs
+shape_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1TLEFKLWUpTKwxKiZv9nqhdwccflPuF9g"))
+
+# Should we redownload?
+redownload <- TRUE
+
+# If re-download is desired...
+if(redownload == TRUE){
+  # Loop across shape IDs...
+  for(k in 1:nrow(shape_ids)){
+    # Download each file
+    googledrive::drive_download(file = shape_ids[k,]$id, overwrite = T,
+                                path = file.path(path, 'artisanal-shapefiles',
+                                                 shape_ids[k,]$name))
+  } }
+
+## ------------------------------------------------------- ##
                 # Combine Shapefiles ----
 ## ------------------------------------------------------- ##
 
