@@ -64,7 +64,7 @@ if(redownload == TRUE){
     googledrive::drive_download(file = shape_ids[k,]$id, overwrite = T,
                                 path = file.path(path, 'artisanal-shapefiles',
                                                  shape_ids[k,]$name))
-  } }
+  } } else { message("Skipping re-download step") }
 
 ## ------------------------------------------------------- ##
                 # Combine Shapefiles ----
