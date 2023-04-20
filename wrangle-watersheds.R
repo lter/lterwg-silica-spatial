@@ -37,11 +37,12 @@ googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/fol
 coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
                                                 "silica-coords_RAW.xlsx")) %>%
   ## Pare down to minimum needed columns
-  dplyr::select(LTER, Shapefile_Name, drainSqKm, Latitude, Longitude) %>%
+  dplyr::select(LTER, Shapefile_Name, drainSqKm, Latitude, Longitude, Shapefile_CRS_EPSG) %>%
   ## Drop duplicate rows (if any)
   dplyr::distinct() %>%
-  ## Rename area column
-  dplyr::rename(expert_area_km2 = drainSqKm)
+  ## Rename some columns
+  dplyr::rename(expert_area_km2 = drainSqKm,
+                crs_code = Shapefile_CRS_EPSG)
   
 # Glimpse this
 dplyr::glimpse(coord_df)
