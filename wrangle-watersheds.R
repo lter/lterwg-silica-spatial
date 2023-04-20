@@ -64,8 +64,8 @@ if(redownload == TRUE){
     # Download each file
     googledrive::drive_download(file = shape_ids[k,]$id, overwrite = T,
                                 path = file.path(path, 'artisanal-shapefiles',
-                                                 shape_ids[k,]$name))
-  } } else { message("Skipping re-download step") }
+                                                 shape_ids[k,]$name)) } 
+  } else { message("Skipping re-download step") }
 
 ## ------------------------------------------------------- ##
                 # Combine Shapefiles ----
@@ -134,7 +134,15 @@ for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
                   shape_area_km2 = as.numeric(focal_area)) %>%
     ## Pare down to only this information (+ geometry)!
     ### This approach flexibly ignores whatever idiosyncratic columns may be in the raw object
-    dplyr::select(LTER, Shapefile_Name, expert_area_km2, shape_area_km2, geom)
+    dplyr::select(LTER, Shapefile_Name, expert_area_km2, shape_area_km2, geom) %>%
+    ## Keep only unique rows
+    dplyr::distinct() %>%
+    ## Filter to only the largest sub-shape (if there are more than one)
+    dplyr::filter(shape_area_km2 == max(shape_area_km2)) %>%
+    ## Drop Z/M axes (if they are included)
+    sf::st_zm(drop = TRUE, what = "ZM") %>%
+    ## Make sure this is a polygon
+    sf::st_cast("MULTIPOLYGON")
   
   # Attach this shape to the rest of them
   all_shps %<>%
@@ -154,8 +162,8 @@ rm(list = setdiff(ls(), c("path", "coord_df", "all_shps")))
 ## ------------------------------------------------------- ##
 
 # Export the combine shapefile for all rivers
-st_write(obj = all_shps, delete_layer = T,
-         dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
+sf::st_write(obj = all_shps, delete_layer = T,
+             dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
 
 # Process the shapefile object a bit to make a flat table variant
 shps_df <- all_shps %>%
