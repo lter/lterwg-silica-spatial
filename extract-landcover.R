@@ -14,7 +14,8 @@
 
 # Read needed libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, googledrive)
+librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, 
+                 googledrive, readxl)
 
 # Clear environment
 rm(list = ls())
@@ -23,13 +24,22 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 # Load in site names with lat/longs
-sites <- read.csv(file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv'))
-
+sites <- readxl::read_excel(path = file.path(path, "site-coordinates",
+                                             "silica-coords_RAW.xlsx")) %>%
+  ## Pare down to minimum needed columns
+  dplyr::select(LTER, Stream_Name, Discharge_Site_Name, Shapefile_Name) %>%
+  ## Drop duplicate rows (if any)
+  dplyr::distinct()
+  
 # Check it out
 dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
-sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
+sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp")) %>%
+  # Repair names
+  dplyr::rename(Shapefile_Name = Shpfl_N,
+                expert_area_km2 = expr__2,
+                shape_area_km2 = shp_r_2)
 
 # Check that out
 dplyr::glimpse(sheds)
@@ -47,17 +57,17 @@ lulc_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-glcc-landcov
 
 # Exploratory plot for overlap
 plot(lulc_raw, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
+plot(sheds["LTER"], axes = T, add = T)
 
 # Strip out land cover for our polygons
 land_out <- exactextractr::exact_extract(x = lulc_raw, y = sheds,
-                                          include_cols = c("river_id")) %>%
+                                          include_cols = c("LTER", "Shapefile_Name")) %>%
   # Above returns a list so switch it to a dataframe
   purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
   # Filter out NAs
   dplyr::filter(!is.na(value)) %>%
   # Summarize to count number of pixels per category
-  dplyr::group_by(river_id, value) %>%
+  dplyr::group_by(LTER, Shapefile_Name, value) %>%
   dplyr::summarize(pixel_ct = dplyr::n()) %>%
   dplyr::ungroup()
 
@@ -80,7 +90,7 @@ land_v2 <- land_out %>%
   dplyr::left_join(y = lulc_index, by = "value") %>%
   # Simplify data now that descriptive categories are included
   dplyr::select(-value) %>%
-  dplyr::relocate(lulc_category, .after = river_id) %>%
+  dplyr::relocate(lulc_category, .after = Shapefile_Name) %>%
   dplyr::mutate(lulc_category = tolower(gsub(pattern = " |-", 
                                              replacement = "_", 
                                              x = lulc_category))) %>%
@@ -99,11 +109,11 @@ land_v2 <- land_out %>%
   # Drop unwanted categories
   dplyr::filter(!lulc_category %in% c("snow_or_ice", "water_bodies")) %>%
   # Summarize again with simplified categories
-  dplyr::group_by(river_id, lulc_category) %>%
+  dplyr::group_by(LTER, Shapefile_Name, lulc_category) %>%
   dplyr::summarize(land_total = sum(pixel_ct, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Get total pixel count per river (across category)
-  dplyr::group_by(river_id) %>%
+  dplyr::group_by(LTER, Shapefile_Name) %>%
   dplyr::mutate(total_pixels = sum(land_total, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Calculate percent of total
@@ -128,21 +138,20 @@ land_wide <- land_v2 %>%
 # Also identify the dominant land cover type(s) in each river's polygon
 land_major <- land_v2 %>%
   # Filter to only max of each rock type per river
-  dplyr::group_by(river_id) %>%
+  dplyr::group_by(LTER, Shapefile_Name) %>%
   dplyr::filter(perc_total == max(perc_total, na.rm = T)) %>%
   dplyr::ungroup() %>%
   # Remove the percent total
   dplyr::select(-perc_total) %>%
-  # Pivot back to wide format
-  tidyr::pivot_wider(names_from = lulc_category,
-                     values_from = lulc_category) %>%
-  # Paste all the non-NAs (i.e., the dominant rocks) into a single column
-  tidyr::unite(col = major_land, -river_id, na.rm = T, sep = "; ")
+  # Collapse ties for 'major' into one row
+  dplyr::group_by(LTER, Shapefile_Name) %>%
+  dplyr::summarize(major_land = paste(lulc_category, collapse = "; ")) %>%
+  dplyr::ungroup()
 
 # Combine major with per-category
 land_actual <- land_wide %>%
-  dplyr::left_join(y = land_major, by = "river_id") %>%
-  dplyr::relocate(major_land, .after = river_id)
+  dplyr::left_join(y = land_major, by = c("LTER", "Shapefile_Name")) %>%
+  dplyr::relocate(major_land, .after = Shapefile_Name)
 
 # Glimpse it
 dplyr::glimpse(land_actual)
@@ -153,7 +162,7 @@ dplyr::glimpse(land_actual)
 # Let's get ready to export
 land_export <- sites %>%
   # Join the rock data
-  dplyr::left_join(y = land_actual, by = c("river_id"))
+  dplyr::left_join(y = land_actual, by = c("LTER", "Shapefile_Name"))
 
 # Check it out
 dplyr::glimpse(land_export)
