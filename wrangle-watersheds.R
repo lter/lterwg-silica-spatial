@@ -104,20 +104,35 @@ all_shps <- NULL
 # Turn off spherical processing
 sf::sf_use_s2(F)
 
+# Manually ID any corrupted/broken shapefiles
+corrupt_shapes <- c(
+  ## "Error: Cannot open <file>; The source could be corrupt or not supported. See `st_drivers()` for a list of supported formats."
+  ## "In addition: Warning message: In CPL_read_ogr(dsn, layer, query, as.character(options), quiet,  : GDAL Error 4: Unable to open <file>. Set SHAPE_RESTORE_SHX config option to YES to restore or create it."
+  "AMAR", "CANA", "FORK", "GRAF", "HAPP", "JUNC", "KEOS", "Polygon", "Polygon11", "Polygon12",
+  "Polygon19", "Polygon9", "PRAD", "VERN", "WASH", "WINN")
+
 # For each shapefile we have:
-for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
+for(focal_name in setdiff(sort(unique(good_sheds$Shapefile_Name)), corrupt_shapes)){
   
   # Read in the shapefile
   focal_shp_raw <- sf::st_read(file.path(path, "artisanal-shapefiles",
-                                         paste0(focal_name, ".shp")), quiet = T) %>%
-    ## Make sure CRS is WGS84 (EPSG code 4326)
+                                         paste0(focal_name, ".shp")), quiet = T)
+  
+  
+  # If CRS is missing (for some reason), manually set what the CRS *should* be
+  if(is.na(sf::st_crs(focal_shp_raw))){
+    sf::st_crs(focal_shp_raw) <- dplyr::filter(coord_df, Shapefile_Name == focal_name)$crs_code
+  }
+  
+  # Make sure CRS is WGS84 (EPSG code 4326)
+  focal_shp_wgs84 <- focal_shp_raw %>%
     sf::st_transform(crs = 4326)
   
   # Make sure the polygon geometry is consistently named
-  sf::st_geometry(obj = focal_shp_raw) <- "geom"
+  sf::st_geometry(obj = focal_shp_wgs84) <- "geom"
   
   # Calculate shapefile area
-  focal_area <- focal_shp_raw %>%
+  focal_area <- focal_shp_wgs84 %>%
     sf::st_area(x = .) %>%
     units::set_units(x = ., km^2)
   
@@ -126,7 +141,7 @@ for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
     dplyr::filter(Shapefile_Name == focal_name)
   
   # Wrangle raw shapfiles as needed
-  focal_shp <- focal_shp_raw %>%
+  focal_shp <- focal_shp_wgs84 %>%
     ## Attach relevant information into this object
     dplyr::mutate(LTER = focal_info$LTER,
                   Shapefile_Name = focal_info$Shapefile_Name,
@@ -180,6 +195,9 @@ shps_df <- all_shps %>%
 
 # Glimpse it
 dplyr::glimpse(shps_df)
+
+# Any files where area has mismatch with expert know-how?
+dplyr::filter(shps_df, area_diff_direction != "under 5% mismatch")
 
 # Export locally
 write.csv(shps_df, file = file.path(path, "artisanal_shape_area_check.csv"), 
