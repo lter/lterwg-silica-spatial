@@ -95,7 +95,13 @@ good_sheds <- coord_df %>%
   # Filter to only shapefiles in ref. table & on Aurora
   dplyr::filter(Shapefile_Name %in% raw_sheds) %>%
   # Drop any non-unique rows (shouldn't be any but good to double check)
-  dplyr::distinct()
+  dplyr::distinct() %>%
+  # Condense what remains to ensure no duplicates
+  dplyr::group_by(LTER, Shapefile_Name, crs_code) %>%
+  dplyr::summarize(expert_area_km2 = mean(expert_area_km2, na.rm = T),
+                   Latitude = dplyr::first(Latitude),
+                   Longitude = dplyr::first(Longitude)) %>%
+  dplyr::ungroup()
 
 # Check that out
 dplyr::glimpse(good_sheds)
@@ -105,6 +111,7 @@ good_sheds %>%
   dplyr::group_by(Shapefile_Name) %>%
   dplyr::summarize(name_ct = dplyr::n()) %>%
   dplyr::filter(name_ct != 1)
+# Kemijoen vesistöalue was duplicated four times but I think that's not a mistake
 
 # Create an empty object to store combined shapefiles
 all_shps <- NULL
@@ -112,20 +119,8 @@ all_shps <- NULL
 # Turn off spherical processing
 sf::sf_use_s2(F)
 
-# Manually ID any corrupted/broken shapefiles
-corrupt_shapes <- c(
-  ## "Error: Cannot open <file>; The source could be corrupt or not supported. See `st_drivers()` for a list of supported formats."
-  ## "In addition: Warning message: In CPL_read_ogr(dsn, layer, query, as.character(options), quiet,  : GDAL Error 4: Unable to open <file>. Set SHAPE_RESTORE_SHX config option to YES to restore or create it."
-  "AMAR", "CANA", "CN00.1M", "DURH", "ELKH", 
-  #"FORK", 
-  "GIVH", "GRAF", "GYPS"
-  # "HAPP", "JUNC", "KEOS", "Polygon", "Polygon11", "Polygon12",
-  # "Polygon19", "Polygon9", "PRAD", "VERN", "WASH", "WINN"
-  
-  )
-
 # For each shapefile we have:
-for(focal_name in setdiff(sort(unique(good_sheds$Shapefile_Name)), corrupt_shapes)){
+for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
   
   # Read in the shapefile
   focal_shp_raw <- sf::st_read(file.path(path, "artisanal-shapefiles",
