@@ -184,8 +184,18 @@ rm(list = setdiff(ls(), c("path", "coord_df", "all_shps")))
                     # Export Results ----
 ## ------------------------------------------------------- ##
 
+# Long column names get coerced into abbreviations if left alone
+final_shps <- all_shps %>%
+  # Rename the columns more succinctly
+  dplyr::rename(file_name = Shapefile_Name,
+                exp_area = expert_area_km2,
+                real_area = shape_area_km2)
+
+# Take one last look
+dplyr::glimpse(final_shps)
+
 # Export the combine shapefile for all rivers
-sf::st_write(obj = all_shps, delete_layer = T,
+sf::st_write(obj = final_shps, delete_layer = T,
              dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
 
 # Process the shapefile object a bit to make a flat table variant
