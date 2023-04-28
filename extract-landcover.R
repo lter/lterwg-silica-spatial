@@ -36,10 +36,10 @@ dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
 sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp")) %>%
-  # Repair names
-  dplyr::rename(Shapefile_Name = Shpfl_N,
-                expert_area_km2 = expr__2,
-                shape_area_km2 = shp_r_2)
+  # Expand names to what they were before
+  dplyr::rename(Shapefile_Name = file_name,
+                expert_area_km2 = exp_area,
+                shape_area_km2 = real_area)
 
 # Check that out
 dplyr::glimpse(sheds)
