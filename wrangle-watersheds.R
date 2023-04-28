@@ -51,28 +51,36 @@ dplyr::glimpse(coord_df)
                   # Download Shapefiles ----
 ## ------------------------------------------------------- ##
 
-# Grab all of their Drive IDs
-shape_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/folders/1TLEFKLWUpTKwxKiZv9nqhdwccflPuF9g"))
+# Identify all shapefiles currently in Aurora
+server_files <- data.frame("files" = dir(path = file.path(path, 'artisanal-shapefiles'))) %>%
+  # Split off file type
+  dplyr::mutate(file_type = stringr::str_sub(string = files, start = nchar(files) - 3,
+                                             nchar(files)))
 
-# Should we redownload?
-redownload <- FALSE
+# Check that out
+dplyr::glimpse(server_files)
 
-# If re-download is desired...
-if(redownload == TRUE){
-  # Loop across shape IDs...
-  for(k in 1:nrow(shape_ids)){
-    # Download each file
-    googledrive::drive_download(file = shape_ids[k,]$id, overwrite = T,
-                                path = file.path(path, 'artisanal-shapefiles',
-                                                 shape_ids[k,]$name)) } 
-  } else { message("Skipping re-download step") }
+# What file types are included?
+sort(unique(server_files$file_type))
+
+# Normally, `googledrive::drive_ls()` is the way we recommend to download files
+# Unfortunately, it doesn't work super well for >500 files
+# So, I've downloaded the watersheds manually and re-uploaded to Aurora
+# This will need to be re-done if any files change / more shapefiles are added
+
+# See Drive folder to download here:
+## https://drive.google.com/drive/folders/1TLEFKLWUpTKwxKiZv9nqhdwccflPuF9g
 
 ## ------------------------------------------------------- ##
                 # Combine Shapefiles ----
 ## ------------------------------------------------------- ##
 
-# Identify shapefiles we already have
-raw_sheds <- dir(path = file.path(path, 'artisanal-shapefiles'), pattern = ".shp") %>%
+# Identify just the .shp files
+raw_sheds <- server_files %>%
+  # Filter to only shp
+  dplyr::filter(file_type == ".shp") %>%
+  # Pull out just the name column
+  dplyr::pull(files) %>%
   ## Drop file extension to match with reference table
   gsub(pattern = "\\.shp", replacement = "", x = .)
 
@@ -108,8 +116,13 @@ sf::sf_use_s2(F)
 corrupt_shapes <- c(
   ## "Error: Cannot open <file>; The source could be corrupt or not supported. See `st_drivers()` for a list of supported formats."
   ## "In addition: Warning message: In CPL_read_ogr(dsn, layer, query, as.character(options), quiet,  : GDAL Error 4: Unable to open <file>. Set SHAPE_RESTORE_SHX config option to YES to restore or create it."
-  "AMAR", "CANA", "FORK", "GRAF", "HAPP", "JUNC", "KEOS", "Polygon", "Polygon11", "Polygon12",
-  "Polygon19", "Polygon9", "PRAD", "VERN", "WASH", "WINN")
+  "AMAR", "CANA", "CN00.1M", "DURH", "ELKH", 
+  #"FORK", 
+  "GIVH", "GRAF", "GYPS"
+  # "HAPP", "JUNC", "KEOS", "Polygon", "Polygon11", "Polygon12",
+  # "Polygon19", "Polygon9", "PRAD", "VERN", "WASH", "WINN"
+  
+  )
 
 # For each shapefile we have:
 for(focal_name in setdiff(sort(unique(good_sheds$Shapefile_Name)), corrupt_shapes)){
