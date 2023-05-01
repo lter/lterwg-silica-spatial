@@ -48,7 +48,7 @@ coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
 dplyr::glimpse(coord_df)
 
 ## ------------------------------------------------------- ##
-                  # Download Shapefiles ----
+                  # Acquire Shapefiles ----
 ## ------------------------------------------------------- ##
 
 # Identify all shapefiles currently in Aurora
@@ -204,8 +204,8 @@ shps_df <- all_shps %>%
   sf::st_drop_geometry(x = .) %>%
   # Calculate some area difference metrics
   dplyr::mutate(
-    area_diff_km2 = round((expert_area_km2 - shape_area_km2), digits = 2),
-    area_diff_perc = round(((expert_area_km2 - shape_area_km2) / expert_area_km2), digits = 2),
+    area_diff_km2 = round((shape_area_km2 - expert_area_km2), digits = 2),
+    area_diff_perc = round((area_diff_km2 / expert_area_km2) * 100, digits = 2),
     area_diff_direction = dplyr::case_when(
      abs(area_diff_perc) < 5 ~ "under 5% mismatch",
      area_diff_perc <= -5 ~ "underestimated",
@@ -214,8 +214,10 @@ shps_df <- all_shps %>%
 # Glimpse it
 dplyr::glimpse(shps_df)
 
-# Any files where area has mismatch with expert know-how?
-dplyr::filter(shps_df, area_diff_direction != "under 5% mismatch")
+# How many shapefiles where area has >5% mismatch with expert know-how?
+shps_df %>%
+  dplyr::group_by(area_diff_direction) %>%
+  dplyr::summarize(file_ct = dplyr::n())
 
 # Export locally
 write.csv(shps_df, file = file.path(path, "artisanal_shape_area_check.csv"), 
