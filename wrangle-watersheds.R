@@ -275,7 +275,7 @@ borders <- dplyr::bind_rows(world, states) %>%
 
 # For each LTER make map
 for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
-  # focal_lter <- "HBR"
+  # focal_lter <- "USGS"
   
   # Start loop
   message("Beginning plot creation for ", focal_lter, " watershed shapes")
@@ -328,9 +328,10 @@ for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
   # Make plot
   sub_map <- sub_all %>%
     ggplot(aes(fill = LTER)) +
-    geom_sf() +
+    geom_sf(alpha = 0.3) +
     # Set plot extents
-    coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, crs = st_crs(x = 4326)) +
+    coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, 
+             crs = st_crs(x = 4326)) +
     # Customize theming / labels
     scale_fill_manual(values = sub_palette) +
     scale_x_continuous(limits = sub_xlim, breaks = seq(from = floor(min(sub_xlim)),
