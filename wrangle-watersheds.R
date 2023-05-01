@@ -208,8 +208,9 @@ shps_df <- all_shps %>%
     area_diff_perc = round((area_diff_km2 / expert_area_km2) * 100, digits = 2),
     area_diff_direction = dplyr::case_when(
      abs(area_diff_perc) < 5 ~ "under 5% mismatch",
-     area_diff_perc <= -5 ~ "underestimated",
-     area_diff_perc >= 5 ~ "overestimated"))
+     abs(area_diff_perc) >= 5 & expert_area_km2 <= 5 ~ "mismatch but watershed tiny (<5km2)",
+     area_diff_perc <= -5 & expert_area_km2 > 5 ~ "underestimated",
+     area_diff_perc >= 5 & expert_area_km2 > 5 ~ "overestimated"))
 
 # Glimpse it
 dplyr::glimpse(shps_df)
