@@ -22,6 +22,9 @@ rm(list = ls())
 # Identify path to location of shared data
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
+# Define the Drive folder for exporting checks / diagnostics to
+check_folder <- googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7")
+
 ## ------------------------------------------------------- ##
             # Reference Table Acquisition ----
 ## ------------------------------------------------------- ##
@@ -178,7 +181,7 @@ for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
 plot(all_shps["Shapefile_Name"], axes = T, main = NULL)
 
 # Tidy up environment
-rm(list = setdiff(ls(), c("path", "coord_df", "all_shps")))
+rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
 
 ## ------------------------------------------------------- ##
                     # Export Results ----
@@ -226,7 +229,10 @@ write.csv(shps_df, file = file.path(path, "artisanal_shape_area_check.csv"),
 
 # Upload to Drive
 googledrive::drive_upload(media = file.path(path, "artisanal_shape_area_check.csv"), overwrite = T, 
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7"))
+                          path = check_folder)
+
+# Tidy up environment
+rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
 
 ## ------------------------------------------------------- ##
                   # Exploratory Maps ----
@@ -267,11 +273,8 @@ states <- sf::st_as_sf(maps::map(database = "state", plot = F, fill = T))
 borders <- dplyr::bind_rows(world, states) %>%
   dplyr::mutate(LTER = "aaa")
 
-# Make empty list to store outputs in
-map_list <- list()
-
-# For each LTER
-for(focal_lter in sort(unique(all_shps$LTER))){
+# For each LTER make map
+for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
   # focal_lter <- "HBR"
   
   # Start loop
@@ -342,19 +345,20 @@ for(focal_lter in sort(unique(all_shps$LTER))){
     theme(legend.position = "none",
           axis.text.y = element_text(angle = 90, vjust = 1, hjust = 0.5))
   
-  # Add to plot list
-  map_list[[focal_lter]] <- sub_map
+  # Make file name
+  focal_mapname <- paste0("map_explore_", focal_lter, ".png")
+  
+  # Export this locally
+  ggsave(filename = file.path(path, focal_mapname), 
+         width = 6, height = 6, units = "in")
+  
+  # Upload to Drive
+  googledrive::drive_upload(media = file.path(path, focal_mapname), overwrite = T, path = check_folder)
   
   # Closing message
   message("Finished with ", focal_lter) }
 
-# Create multi-panel graph
-cowplot::plot_grid(plotlist = map_list, labels = "AUTO", nrow = 2)
-
-
-
-
 # Tidy up environment
-rm(list = setdiff(ls(), c("path", "coord_df", "all_shps")))
+rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
 
 # End ----
