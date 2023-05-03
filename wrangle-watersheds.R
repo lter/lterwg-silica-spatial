@@ -223,12 +223,16 @@ shps_df %>%
   dplyr::group_by(area_diff_direction) %>%
   dplyr::summarize(file_ct = dplyr::n())
 
+# Create a checks folder if it doesn't exist yet
+dir.create(path = file.path(path, "shape_checks"), showWarnings = F)
+
 # Export locally
-write.csv(shps_df, file = file.path(path, "artisanal_shape_area_check.csv"), 
+write.csv(shps_df, file = file.path(path, "shape_checks", "artisanal_shape_area_check.csv"), 
           row.names = F, na = '')
 
 # Upload to Drive
-googledrive::drive_upload(media = file.path(path, "artisanal_shape_area_check.csv"), overwrite = T, 
+googledrive::drive_upload(media = file.path(path, "shape_checks", "artisanal_shape_area_check.csv"), 
+                          overwrite = T, 
                           path = check_folder)
 
 # Tidy up environment
@@ -272,6 +276,9 @@ states <- sf::st_as_sf(maps::map(database = "state", plot = F, fill = T))
 # Combine the two
 borders <- dplyr::bind_rows(world, states) %>%
   dplyr::mutate(LTER = "aaa")
+
+# Create folder for exporting maps
+dir.create(path = file.path(path, "test_maps"), showWarnings = F)
 
 # For each LTER make map
 for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
@@ -350,11 +357,11 @@ for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
   focal_mapname <- paste0("map_explore_", focal_lter, ".png")
   
   # Export this locally
-  ggsave(filename = file.path(path, focal_mapname), 
+  ggsave(filename = file.path(path, "test_maps", focal_mapname), 
          width = 6, height = 6, units = "in")
   
   # Upload to Drive
-  googledrive::drive_upload(media = file.path(path, focal_mapname), overwrite = T, path = check_folder)
+  googledrive::drive_upload(media = file.path(path, "test_maps", focal_mapname), overwrite = T, path = check_folder)
   
   # Closing message
   message("Finished with ", focal_lter) }
