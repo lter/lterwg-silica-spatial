@@ -5,7 +5,7 @@
 ## Nick J Lyon
 
 # Purpose:
-## Using the watershed shapefiles created in "id-watershed-polygons.R"
+## Using the watershed shapefile created in "wrangle-watersheds.R"
 ## Extract the following data: LAND COVER
 
 ## ------------------------------------------------------- ##
