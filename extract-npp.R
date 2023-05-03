@@ -2,35 +2,51 @@
 #       Silica WG - Extract Spatial Data - NPP
 ## ------------------------------------------------------- ##
 # Written by:
-## Angel Chen
+## Angel Chen, Nick Lyon
 
 # Purpose:
-## Using the watershed shapefiles created in "id-watershed-polygons.R"
+## Using the watershed shapefiles created in "wrangle-watersheds.R"
 ## Extract the following data: NPP
 
 ## ------------------------------------------------------- ##
-#                    Housekeeping ----
+                        # Housekeeping ----
 ## ------------------------------------------------------- ##
 
-# Read needed libraries
+# Load needed libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, sf, ncdf4, stars, terra, exactextractr, 
-                 NCEAS/scicomptools, googledrive)
+librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, 
+                 googledrive, readxl)
 
 # Clear environment
 rm(list = ls())
+
+# Silence `summarize`
+options(dplyr.summarise.inform = F)
 
 # Identify path to location of shared data
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 # Load in site names with lat/longs
-sites <- read.csv(file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv'))
+sites <- readxl::read_excel(path = file.path(path, "site-coordinates",
+                                             "silica-coords_RAW.xlsx")) %>%
+  ## Pare down to minimum needed columns
+  dplyr::select(LTER, Stream_Name, Discharge_Site_Name, Shapefile_Name) %>%
+  ## Drop duplicate rows (if any)
+  dplyr::distinct() %>%
+  ## Remove any watersheds without a shapefile
+  dplyr::filter(!is.na(Shapefile_Name) & 
+                  nchar(Shapefile_Name) != 0 &
+                  !Shapefile_Name %in% c("?", "MISSING"))
 
 # Check it out
 dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
-sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
+sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp")) %>%
+  # Expand names to what they were before
+  dplyr::rename(Shapefile_Name = file_name,
+                expert_area_km2 = exp_area,
+                shape_area_km2 = real_area)
 
 # Check that out
 dplyr::glimpse(sheds)
@@ -39,7 +55,7 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-#          MOD17A3HGF v006 - Identify Files ----
+            # MOD17A3HGF v006 - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
@@ -63,7 +79,7 @@ for(region in c("north-america-usa", "north-america-arctic",
 # Wrangle the list
 file_all <- file_list %>%
   # Unlist the loop's output
-  purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+  purrr::list_rbind() %>%
   # Identify date from file name
   dplyr::mutate(date_raw = stringr::str_extract(string = files, 
                                                 pattern = "_doy[[:digit:]]{7}")) %>%
@@ -81,7 +97,7 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-#     .       NPP - Bounding Box Check ----
+                # NPP - Bounding Box Check ----
 ## ------------------------------------------------------- ##
 # Let's check to make sure each of my manual bounding boxes fits the sites for that region
 
@@ -143,11 +159,8 @@ plot(sheds, axes = T, add = T)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-#                    NPP - Extract ----
+                      # NPP - Extract ----
 ## ------------------------------------------------------- ##
-
-# Silence `dplyr::summarize` preemptively
-options(dplyr.summarise.inform = F)
 
 # Specify driver
 focal_driver <- "raw-npp"
@@ -164,10 +177,15 @@ not_done <- file_all %>%
   dplyr::filter(!year %in% done_files$year)
 
 # Create a definitive object of files to extract
-# file_set <- not_done # Uncomment if want to only do only undone extractions
-file_set <- file_all # Uncomment if want to do all extractions
+file_set <- not_done # Uncomment if want to only do only undone extractions
+# file_set <- file_all # Uncomment if want to do all extractions
 
-for (a_year in "2021"){
+# Loop across years...
+for (a_year in unique(file_set$year)){
+  
+  # Starting message
+  message("Processing begun for year ", a_year)
+  
   # Subset to one year
   one_year_data <- dplyr::filter(file_set, year == a_year)
   
@@ -180,10 +198,10 @@ for (a_year in "2021"){
       
       # Extract all possible information from that dataframe
       ex_data <- exactextractr::exact_extract(x = npp_raster, y = sheds, 
-                                              include_cols = c("river_id"),
+                                              include_cols = c("LTER", "Shapefile_Name"),
                                               progress = FALSE) %>%
         # Unlist to dataframe
-        purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+        purrr::list_rbind() %>%
         # Drop coverage fraction column
         dplyr::select(-coverage_fraction) %>%
         # Drop NA values that were "extracted"
@@ -193,13 +211,13 @@ for (a_year in "2021"){
         dplyr::filter(value >= -30000 & value <= 32700) %>%
         # Make new relevant columns
         dplyr::mutate(year = a_year,
-                      .after = river_id)
+                      .after = Shapefile_Name)
       
       # Add this dataframe to the list we made 
       year_list[[i]] <- ex_data
       
       # End message
-      message("Finished extracting raster ", i, " of ", nrow(one_year_data)) 
+      message("Finished extracting raster ", i, " of ", nrow(one_year_data), " (", a_year, ")") 
   }
 
   # Assemble a file name for this extraction
@@ -208,12 +226,12 @@ for (a_year in "2021"){
   # Wrangle the output of the within-year extraction
   full_data <- year_list %>%
     # Unlist to dataframe
-    purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+    purrr::list_rbind() %>%
     # Apply scaler value
     ## See "Layers" dropdown here: https://lpdaac.usgs.gov/products/mod17a3hgfv061/
     dplyr::mutate(descaled_val = value * 0.0001) %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
-    dplyr::group_by(river_id, year) %>%
+    dplyr::group_by(LTER, Shapefile_Name, year) %>%
     dplyr::summarize(npp = mean(descaled_val, na.rm = T)) %>%
     dplyr::ungroup() %>%
     # Drop unnecessary columns
@@ -226,12 +244,10 @@ for (a_year in "2021"){
                              "_partial-extracted", export_name))
   
   # End message
-  message("Finished wrangling output for ", a_year) 
-
-}
+  message("Finished wrangling output for ", a_year) }
 
 ## ------------------------------------------------------- ##
-#              NPP - Export ----
+                      # NPP - Export ----
 ## ------------------------------------------------------- ##
 
 # Identify extracted data
@@ -252,7 +268,7 @@ for(k in 1:length(done_files)){
 
 # Unlist that list
 out_df <- full_out %>%
-  purrr::reduce(dplyr::left_join, by = 'river_id') 
+  purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name")) 
 
 # Glimpse it
 dplyr::glimpse(out_df)
@@ -260,7 +276,7 @@ dplyr::glimpse(out_df)
 # Let's get ready to export
 npp_export <- sites %>%
   # Join the npp data
-  dplyr::left_join(y = out_df, by = "river_id")
+  dplyr::left_join(y = out_df, by = c("LTER", "Shapefile_Name"))
 
 # Check it out
 dplyr::glimpse(npp_export)
@@ -280,67 +296,67 @@ googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_
 ## ------------------------------------------------------- ##
 #              Combine Extracted Data ----
 ## ------------------------------------------------------- ##
-# Clear environment
-rm(list = setdiff(ls(), c('path', 'sites')))
-
-# List current extracted data
-extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"), pattern = ".csv") %>%
-  dplyr::filter(name != "all-data_si-extract.csv") 
-
-# Make an empty list
-data_list <- list()
-
-# Download these files
-for(file_name in extracted_data$name){
-  
-  # Filter to desired filed
-  wanted <- extracted_data %>%
-    dplyr::filter(name == file_name)
-  
-  # Download
-  googledrive::drive_download(file = googledrive::as_id(wanted$id),
-                              path = file.path(path, "extracted-data", file_name),
-                              overwrite = T)
-  
-  # Read the CSV and add to the list
-  data_list[[file_name]] <- read.csv(file = file.path(path, "extracted-data", file_name))
-  
-} # End loop
-
-# Get a duplicate of the 'sites' object
-out_df <- sites
-
-# Now loop across remaining elements and left join each
-for(k in 1:length(data_list)){
-  
-  # Add each bit to the existing dataframe
-  out_df <- out_df %>%
-    # Left join by all non-data columns
-    dplyr::left_join(y = data_list[[k]],
-                     by = c("LTER", "Stream_Name", "Discharge_File_Name", "drainSqKm", 
-                            "river_id", "lat", "long")) %>%
-    # Drop duplicated columns
-    unique()
-}
-
-# Check for dropped rivers (i.e., rows)
-## Stream names (chemistry river names)
-setdiff(x = unique(sites$Stream_Name), y = unique(out_df$Stream_Name))
-setdiff(y = unique(sites$Stream_Name), x = unique(out_df$Stream_Name))
-## Discharge file names (discharge river names)
-setdiff(x = unique(sites$Discharge_File_Name), y = unique(out_df$Discharge_File_Name))
-setdiff(y = unique(sites$Discharge_File_Name), x = unique(out_df$Discharge_File_Name))
-
-# Take a look
-dplyr::glimpse(out_df)
-
-# Export this
-write.csv(x = out_df, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "all-data_si-extract.csv"))
-
-# And upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract.csv"),
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+# # Clear environment
+# rm(list = setdiff(ls(), c('path', 'sites')))
+# 
+# # List current extracted data
+# extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"), pattern = ".csv") %>%
+#   dplyr::filter(name != "all-data_si-extract.csv") 
+# 
+# # Make an empty list
+# data_list <- list()
+# 
+# # Download these files
+# for(file_name in extracted_data$name){
+#   
+#   # Filter to desired filed
+#   wanted <- extracted_data %>%
+#     dplyr::filter(name == file_name)
+#   
+#   # Download
+#   googledrive::drive_download(file = googledrive::as_id(wanted$id),
+#                               path = file.path(path, "extracted-data", file_name),
+#                               overwrite = T)
+#   
+#   # Read the CSV and add to the list
+#   data_list[[file_name]] <- read.csv(file = file.path(path, "extracted-data", file_name))
+#   
+# } # End loop
+# 
+# # Get a duplicate of the 'sites' object
+# out_df <- sites
+# 
+# # Now loop across remaining elements and left join each
+# for(k in 1:length(data_list)){
+#   
+#   # Add each bit to the existing dataframe
+#   out_df <- out_df %>%
+#     # Left join by all non-data columns
+#     dplyr::left_join(y = data_list[[k]],
+#                      by = c("LTER", "Stream_Name", "Discharge_File_Name", "drainSqKm", 
+#                             "river_id", "lat", "long")) %>%
+#     # Drop duplicated columns
+#     unique()
+# }
+# 
+# # Check for dropped rivers (i.e., rows)
+# ## Stream names (chemistry river names)
+# setdiff(x = unique(sites$Stream_Name), y = unique(out_df$Stream_Name))
+# setdiff(y = unique(sites$Stream_Name), x = unique(out_df$Stream_Name))
+# ## Discharge file names (discharge river names)
+# setdiff(x = unique(sites$Discharge_File_Name), y = unique(out_df$Discharge_File_Name))
+# setdiff(y = unique(sites$Discharge_File_Name), x = unique(out_df$Discharge_File_Name))
+# 
+# # Take a look
+# dplyr::glimpse(out_df)
+# 
+# # Export this
+# write.csv(x = out_df, na = '', row.names = F,
+#           file = file.path(path, "extracted-data", "all-data_si-extract.csv"))
+# 
+# # And upload to GoogleDrive
+# googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract.csv"),
+#                           overwrite = T,
+#                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
 
 # End ----
