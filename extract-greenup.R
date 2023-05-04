@@ -2,11 +2,11 @@
         # Silica WG - Extract Spatial Data - Greenup
 ## ------------------------------------------------------- ##
 # Written by:
-## Angel Chen
+## Angel Chen, Nick Lyon
 
 # Purpose:
 ## Using the watershed shapefiles created in "wrangle-watersheds.R"
-## Extract the following data: GREENUP
+## Extract the following data: GREEN-UP
 
 ## ------------------------------------------------------- ##
                        # Housekeeping ----
@@ -139,13 +139,20 @@ cycle1_files <- file_set %>%
 
 # For each cycle 0 year
 for (a_year in sort(unique(cycle0_files$year))){
+  # Starting message
+  message("Beginning cycle 0 extraction for ", a_year)
+  
   # Subset to one year
   one_year_data <- dplyr::filter(cycle0_files, year == a_year)
   
   # Make a list to house extracted information for a year
   year_list <- list()
   
+  # Loop across region
   for (i in 1:nrow(one_year_data)){
+    # Message
+    message("Processing raster ", i)
+    
     # Read in the raster
     gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup", one_year_data$region[i], one_year_data$files[i]))
     
@@ -198,13 +205,20 @@ for (a_year in sort(unique(cycle0_files$year))){
 
 # Extract cycle 1 too
 for (a_year in sort(unique(cycle1_files$year))){
+  # Starting message
+  message("Beginning cycle 1 extraction for ", a_year)
+  
   # Subset to one year
   one_year_data <- dplyr::filter(cycle1_files, year == a_year)
   
   # Make a list to house extracted information for a year
   year_list <- list()
   
+  # Loop across region
   for (i in 1:nrow(one_year_data)){
+    # Message
+    message("Processing raster ", i)
+    
     # Read in the raster
     gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup", one_year_data$region[i], one_year_data$files[i]))
     
