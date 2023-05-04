@@ -292,7 +292,7 @@ for(k in 1:length(done_cycle0)){
                                 start = 1, end = 4)
   
   # Rename the data column
-  names(file) <- c("river_id", paste0("greenup_cycle0_", file_year, "MMDD"))
+  names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle0_", file_year, "MMDD"))
   
   # Add it to the list
   full_out_cycle0[[k]] <- file
@@ -322,7 +322,7 @@ for(k in 1:length(done_cycle1)){
                                 start = 1, end = 4)
   
   # Rename the data column
-  names(file) <- c("river_id", paste0("greenup_cycle1_", file_year, "MMDD"))
+  names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle1_", file_year, "MMDD"))
   
   # Add it to the list
   full_out_cycle1[[k]] <- file
@@ -360,7 +360,7 @@ dplyr::glimpse(out_df)
 # Let's get ready to export
 greenup_export <- sites %>%
   # Join the greenup data
-  dplyr::left_join(y = out_df_v2, by = c("LTER", "Shapefile_Name"))
+  dplyr::left_join(y = out_df, by = c("LTER", "Shapefile_Name"))
 
 # Check it out
 dplyr::glimpse(greenup_export)
