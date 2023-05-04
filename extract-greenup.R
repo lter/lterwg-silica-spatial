@@ -78,7 +78,7 @@ for(region in c("north-america-usa", "north-america-arctic",
 # Wrangle the list
 file_all <- file_list %>%
   # Unlist the loop's output
-  purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+  purrr::list_rbind() %>%
   # Identify date from file name
   dplyr::mutate(date_raw = stringr::str_extract(string = files, 
                                                 pattern = "_doy[[:digit:]]{7}")) %>%
@@ -138,7 +138,7 @@ cycle1_files <- file_set %>%
 ## ------------------------------------------------------- ##
 
 # For each cycle 0 year
-for (a_year in unique(cycle0_files$year)){
+for (a_year in sort(unique(cycle0_files$year))){
   # Subset to one year
   one_year_data <- dplyr::filter(cycle0_files, year == a_year)
   
@@ -174,7 +174,7 @@ for (a_year in unique(cycle0_files$year)){
   # Wrangle the output of the within-year extraction
   full_data <- year_list %>%
     # Unlist to dataframe
-    purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+    purrr::list_rbind() %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
     dplyr::group_by(LTER, Shapefile_Name, year) %>%
     dplyr::summarize(greenup_cycle0_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
@@ -197,7 +197,7 @@ for (a_year in unique(cycle0_files$year)){
 ## ------------------------------------------------------- ##
 
 # Extract cycle 1 too
-for (a_year in unique(cycle1_files$year)){
+for (a_year in sort(unique(cycle1_files$year))){
   # Subset to one year
   one_year_data <- dplyr::filter(cycle1_files, year == a_year)
   
@@ -232,7 +232,7 @@ for (a_year in unique(cycle1_files$year)){
   # Wrangle the output of the within-year extraction
   full_data <- year_list %>%
     # Unlist to dataframe
-    purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+    purrr::list_rbind() %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
     dplyr::group_by(LTER, Shapefile_Name, year) %>%
     dplyr::summarize(greenup_cycle1_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%

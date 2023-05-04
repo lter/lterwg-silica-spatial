@@ -84,7 +84,7 @@ for(region in c("north-america-usa", "north-america-arctic",
 # Wrangle the list
 file_all <- file_list %>%
   # Unlist the loop's output
-  purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+  purrr::list_rbind() %>%
   # Identify date from file name
   dplyr::mutate(date_raw = stringr::str_extract(string = files, 
                                                 pattern = "_doy[[:digit:]]{7}")) %>%
@@ -105,9 +105,6 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
                 # Snow Fraction - Extract ----
 ## ------------------------------------------------------- ##
-
-# Silence `dplyr::summarize` preemptively
-options(dplyr.summarise.inform = F)
 
 # Specify driver
 focal_driver <- "raw-snow-modis10a2-v006"
@@ -144,7 +141,7 @@ file_set <- not_done # Uncomment if want to only do only undone extractions
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
 # for(annum in "2002"){
-for(annum in unique(file_set$year)){
+for(annum in sort(unique(file_set$year))){
   
   # Start message
   message("Processing begun for year: ", annum)
@@ -154,7 +151,7 @@ for(annum in unique(file_set$year)){
   
   # Loop across day-of-year within year
   # for(day_num in "009") {
-  for(day_num in unique(one_year$doy)){
+  for(day_num in sort(unique(one_year$doy))){
     
     # Starting message
     message("Processing begun for day of year: ", day_num)
@@ -205,7 +202,7 @@ for(annum in unique(file_set$year)){
     # Wrangle the output of the within-day of year extraction
     full_data <- doy_list %>%
       # Unlist to dataframe
-      purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+      purrr::list_rbind() %>%
       # Handle the summarization within river (potentially across multiple rasters' pixels)
       dplyr::group_by(LTER, Shapefile_Name, year, doy) %>%
       dplyr::summarize(

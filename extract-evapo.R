@@ -133,7 +133,7 @@ file_set <- not_done # Uncomment if want to only do only undone extractions
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
 # for(annum in "2001"){
-for(annum in unique(file_set$year)){
+for(annum in sort(unique(file_set$year))){
   
   # Start message
   message("Processing begun for year: ", annum)
@@ -143,7 +143,7 @@ for(annum in unique(file_set$year)){
 
   # Loop across day-of-year within year
   # for(day_num in "001") {
-  for(day_num in unique(one_year$doy)){
+  for(day_num in sort(unique(one_year$doy))){
     
     # Starting message
     message("Processing begun for day of year: ", day_num)
@@ -194,7 +194,7 @@ for(annum in unique(file_set$year)){
     # Wrangle the output of the within-day of year extraction
     full_data <- doy_list %>%
       # Unlist to dataframe
-      purrr::map_dfr(.f = dplyr::select, dplyr::everything()) %>%
+      purrr::list_rbind() %>%
       # Handle the summarization within river (potentially across multiple rasters' pixels)
       dplyr::group_by(LTER, Shapefile_Name, year, doy) %>%
       dplyr::summarize(value = mean(value, na.rm = T)) %>%
