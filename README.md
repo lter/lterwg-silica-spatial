@@ -9,11 +9,11 @@ Joanna Carey & Kathi Jo Jankowski
 
 ## Script Explanations
 
-- **id-watershed-polygons.R** - Identifies watershed drainage basins. Uses HydroSHEDS basin delineations (see [here](https://www.hydrosheds.org/page/hydrobasins)) unless otherwise specified
+- **wrangle-watersheds.R** - Processes watershed shapefiles into a single shapefile with all watersheds included. Starting shapefiles retrieved from site experts / various online sources. See the Reference Table for more information on these files (e.g., name, origin, CRS, etc.)
 
-    - **hydrosheds_custom_fxns.R** - Identification of upstream HydroSHEDS polygons must be recursive and requires two custom functions found on GitHub
- 
-- **extract-[...].R** - These scripts are each responsible for extracting, summarizing, and exporting the spatial data type included in the script name. Each script uses the watersheds identified by "id-watershed-polygons.R" but is otherwise completely independent of other scripts in this repo
+- **extract-[...].R** - These scripts are each responsible for extracting, summarizing, and exporting the spatial data type included in the script name. Each script uses the watersheds identified by "wrangle-watersheds.R" but is otherwise completely independent of other scripts in this repo
+
+- **appears-bbox-check.R** - Checks whether the site shapefiles fit inside of the manually-drawn [AppEEARS](https://appeears.earthdatacloud.nasa.gov/) bounding boxes. Used to be a sub-section of each `extract-...` script but it's easier to just centralize this check in a separate script.
 
 - **crop-drivers.R** - For the drivers downloaded from [AppEEARS](https://appeears.earthdatacloud.nasa.gov/), data are retrieved from manually-drawn  bounding boxes. These bounding boxes intentionally overlap eachother somewhat so that no gaps exist between downloads but this does necessitate cropping those boxes to avoid "double counting" the pixels contained in two separate bounding boxes. This script does all of that cropping.
 
