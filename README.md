@@ -9,13 +9,19 @@ Joanna Carey & Kathi Jo Jankowski
 
 ## Script Explanations
 
+### Core Scripts
+
 - **wrangle-watersheds.R** - Processes watershed shapefiles into a single shapefile with all watersheds included. Starting shapefiles retrieved from site experts / various online sources. See the Reference Table for more information on these files (e.g., name, origin, CRS, etc.)
 
 - **extract-[...].R** - These scripts are each responsible for extracting, summarizing, and exporting the spatial data type included in the script name. Each script uses the watersheds identified by "wrangle-watersheds.R" but is otherwise completely independent of other scripts in this repo
 
+- **combine-drivers.R** - This script identifies all drivers that have been extracted and combines them into a single, analysis-ready file. This saves the analytical team(s) from needing to do this joining themselves.
+
+### Ancillary Scripts
+
 - **appears-bbox-check.R** - Checks whether the site shapefiles fit inside of the manually-drawn [AppEEARS](https://appeears.earthdatacloud.nasa.gov/) bounding boxes. Used to be a sub-section of each `extract-...` script but it's easier to just centralize this check in a separate script.
 
-- **crop-drivers.R** - For the drivers downloaded from [AppEEARS](https://appeears.earthdatacloud.nasa.gov/), data are retrieved from manually-drawn  bounding boxes. These bounding boxes intentionally overlap eachother somewhat so that no gaps exist between downloads but this does necessitate cropping those boxes to avoid "double counting" the pixels contained in two separate bounding boxes. This script does all of that cropping.
+- **crop-drivers.R** - For the drivers downloaded from [AppEEARS](https://appeears.earthdatacloud.nasa.gov/), data are retrieved from manually-drawn  bounding boxes. These bounding boxes intentionally overlap each other somewhat so that no gaps exist between downloads but this does necessitate cropping those boxes to avoid "double counting" the pixels contained in two separate bounding boxes. This script does all of that cropping.
 
     - AppEEARS data acquisition process is as follows:
     - 1) Sign into AppEEARS portal (create account if you don't already have one)
