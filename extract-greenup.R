@@ -54,7 +54,7 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-           # MCD12Q2 (v. 061) - Identify Files ----
+           # Green-Up Day - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
@@ -101,7 +101,7 @@ dplyr::glimpse(file_all)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-                # Greenup Day - Extract Prep ----
+                # Green-Up Day - Extract Prep ----
 ## ------------------------------------------------------- ##
 
 # Specify driver
@@ -134,7 +134,7 @@ cycle1_files <- file_set %>%
   dplyr::filter(cycle == 1)
 
 ## ------------------------------------------------------- ##
-            # Greenup Day - Extract Cycle 0 ----
+            # Green-Up Day - Extract Cycle 0 ----
 ## ------------------------------------------------------- ##
 
 # For each cycle 0 year
@@ -200,7 +200,7 @@ for (a_year in sort(unique(cycle0_files$year))){
   message("Finished wrangling output for ", a_year) }
 
 ## ------------------------------------------------------- ##
-            # Greenup Day - Extract Cycle 1 ----
+            # Green-Up Day - Extract Cycle 1 ----
 ## ------------------------------------------------------- ##
 
 # Extract cycle 1 too
@@ -268,7 +268,7 @@ for (a_year in sort(unique(cycle1_files$year))){
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
-            # Greenup Day - Process Extraction ----
+            # Green-Up Day - Process Extraction ----
 ## ------------------------------------------------------- ##
 
 # Identify the extracted cycle 0 data
@@ -338,7 +338,7 @@ out_df_cycle1 <- full_out_cycle1 %>%
 dplyr::glimpse(out_df_cycle1)
 
 ## ------------------------------------------------------- ##
-                    # Greenup Day - Export ----
+                    # Green-Up Day - Export ----
 ## ------------------------------------------------------- ##
 
 # Join cycle 0 and cycle 1 tables together
