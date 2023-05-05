@@ -240,77 +240,6 @@ for(k in 1:length(done_greenup)){
   # Finish
   message("Retrieved file ", k, " of ", length(done_greenup)) }
 
-
-
-
-
-
-# # Identify the extracted cycle 0 data
-# done_cycle0 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle0") 
-# 
-# # Identify the extracted cycle 1 data
-# done_cycle1 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle1") 
-# 
-# # Make an empty list to store our cycle 0 tables
-# full_out_cycle0 <- list()
-# full_out_cycle1 <- list()
-# 
-# # Read all of these files in
-# for(k in 1:length(done_cycle0)){
-#   
-#   # Read in the kth file
-#   file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle0[k]))
-#   
-#   # Identify the year
-#   file_year <- stringr::str_sub(string = file$greenup_cycle0_YYYYMMDD[1],
-#                                 start = 1, end = 4)
-#   
-#   # Rename the data column
-#   names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle0_", file_year, "MMDD"))
-#   
-#   # Add it to the list
-#   full_out_cycle0[[k]] <- file
-#   
-#   # Finish
-#   message("Retrieved file ", k, " of ", length(done_cycle0)) }
-# 
-# # Unlist that list
-# out_df_cycle0 <- full_out_cycle0 %>%
-#   purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name")) 
-# 
-# # Glimpse it
-# dplyr::glimpse(out_df_cycle0)
-# 
-# # Read in all of the cycle 1 files
-# for(k in 1:length(done_cycle1)){
-#   
-#   # Read in the kth file
-#   file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle1[k]))
-#   
-#   # Drop empty years
-#   non_empty_years <- file %>%
-#     dplyr::filter(nchar(greenup_cycle1_YYYYMMDD) != 0)
-#     
-#   # Identify the year
-#   file_year <- stringr::str_sub(string = non_empty_years$greenup_cycle1_YYYYMMDD[1],
-#                                 start = 1, end = 4)
-#   
-#   # Rename the data column
-#   names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle1_", file_year, "MMDD"))
-#   
-#   # Add it to the list
-#   full_out_cycle1[[k]] <- file
-#   
-#   # Finish
-#   message("Retrieved file ", k, " of ", length(done_cycle1)) }
-# 
-# # Unlist that list
-# out_df_cycle1 <- full_out_cycle1 %>%
-#   purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name"))
-# 
-# # Glimpse it
-# dplyr::glimpse(out_df_cycle1)
-
 ## ------------------------------------------------------- ##
                     # Green-Up Day - Export ----
 ## ------------------------------------------------------- ##
@@ -328,10 +257,6 @@ out_df <- out_list %>%
                   contains("2016"), contains("2017"), contains("2018"),
                   contains("2019"),
                   .after = Shapefile_Name)
-
-# Join cycle 0 and cycle 1 tables together
-# out_df <- out_df_cycle0 %>%
-#   dplyr::left_join(out_df_cycle1, by = c("LTER", "Shapefile_Name"))
 
 # Glimpse this too
 dplyr::glimpse(out_df)
