@@ -273,7 +273,7 @@ for(k in 1:length(done_files)){
 # Unlist that list
 out_df <- full_out %>%
   purrr::map(dplyr::mutate, Shapefile_Name = as.character(Shapefile_Name)) %>%
-  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+  purrr::list_rbind() %>%
   # And drop the placeholder dataframes when the extracted file is empty
   ## Again, only happens because of an unsolvable issue with the raw data
   dplyr::filter(Shapefile_Name != "xxx") %>%
