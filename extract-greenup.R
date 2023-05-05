@@ -153,7 +153,8 @@ for(a_cycle in 0:1){
       message("Processing raster ", i, " of ", nrow(one_year_data))
       
       # Read in the raster
-      gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup", one_year_data$region[i], one_year_data$files[i]))
+      gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup",
+                                         one_year_data$region[i], one_year_data$files[i]))
       
       # Extract all possible information from that dataframe
       ex_data <- exactextractr::exact_extract(x = gr_raster, y = sheds, 
@@ -172,8 +173,7 @@ for(a_cycle in 0:1){
       year_list[[i]] <- ex_data
       
       # End message
-      message("Finished extracting raster ", i, " of ", nrow(one_year_data)) 
-    }
+      message("Finished extracting raster ", i, " of ", nrow(one_year_data)) }
     
     # Assemble a file name for this extraction
     export_name <- paste0("greenup_extract_", a_year, "_cycle", a_cycle, ".csv")
@@ -183,13 +183,14 @@ for(a_cycle in 0:1){
       # Unlist to dataframe
       purrr::list_rbind() %>%
       # Handle the summarization within river (potentially across multiple rasters' pixels)
-      dplyr::group_by(LTER, Shapefile_Name, year) %>%
-      dplyr::summarize(greenup_cycle_days_since_jan1_1970 = round(mean(value, na.rm = T))) %>%
+      dplyr::group_by(LTER, Shapefile_Name, cycle, year) %>%
+      dplyr::summarize(days_since_jan1_1970 = floor(mean(value, na.rm = T))) %>%
       dplyr::ungroup() %>%
       # Convert the days since Jan 1, 1970 to the actual date
-      dplyr::mutate(greenup_cycle_YYYYMMDD = lubridate::as_date(greenup_cycle_days_since_jan1_1970, origin ="1970-01-01")) %>%
-      # Drop unnecessary columns
-      dplyr::select(-year, -greenup_cycle_days_since_jan1_1970)
+      dplyr::mutate(greenup_cycle_YYYYMMDD = lubridate::as_date(days_since_jan1_1970, 
+                                                                origin = "1970-01-01")) %>%
+      # Drop unnecessary column(s)
+      dplyr::select(-days_since_jan1_1970)
     
     # Export this file for a given year
     write.csv(x = full_data, row.names = F, na = '',
@@ -202,83 +203,122 @@ for(a_cycle in 0:1){
   # Global end message
   message("Finished wrangling outputs for cycle ", a_cycle) }
 
+# Clean up environment
+rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+
 ## ------------------------------------------------------- ##
              # Green-Up Day - Summarize ----
 ## ------------------------------------------------------- ##
 
-# Identify the extracted cycle 0 data
-done_cycle0 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle0") 
+# Identify extracted files
+done_greenup <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"))
 
-# Identify the extracted cycle 1 data
-done_cycle1 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle1") 
-
-# Make an empty list to store our cycle 0 tables
-full_out_cycle0 <- list()
-full_out_cycle1 <- list()
+# Make an empty list for storing data
+out_list <- list()
 
 # Read all of these files in
-for(k in 1:length(done_cycle0)){
+for(k in 1:length(done_greenup)){
   
   # Read in the kth file
-  file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle0[k]))
+  file_v1 <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_greenup[k]))
   
-  # Identify the year
-  file_year <- stringr::str_sub(string = file$greenup_cycle0_YYYYMMDD[1],
-                                start = 1, end = 4)
-  
-  # Rename the data column
-  names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle0_", file_year, "MMDD"))
-  
-  # Add it to the list
-  full_out_cycle0[[k]] <- file
-  
-  # Finish
-  message("Retrieved file ", k, " of ", length(done_cycle0)) }
-
-# Unlist that list
-out_df_cycle0 <- full_out_cycle0 %>%
-  purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name")) 
-
-# Glimpse it
-dplyr::glimpse(out_df_cycle0)
-
-# Read in all of the cycle 1 files
-for(k in 1:length(done_cycle1)){
-  
-  # Read in the kth file
-  file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle1[k]))
-  
-  # Drop empty years
-  non_empty_years <- file %>%
-    dplyr::filter(nchar(greenup_cycle1_YYYYMMDD) != 0)
-    
-  # Identify the year
-  file_year <- stringr::str_sub(string = non_empty_years$greenup_cycle1_YYYYMMDD[1],
-                                start = 1, end = 4)
-  
-  # Rename the data column
-  names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle1_", file_year, "MMDD"))
+  # Wrangle that file a bit
+  file_v2 <- file_v1 %>%
+    # Pivot longer
+    tidyr::pivot_longer(cols = greenup_cycle_YYYYMMDD,
+                        names_to = "junk", values_to = "date") %>%
+    # Assemble a more informative date column name
+    dplyr::mutate(name = paste0("greenup_cycle", cycle, "_", year, "MMDD")) %>%
+    # Drop (now) unwanted columns
+    dplyr::select(-junk, -cycle, -year) %>%
+    # Pivot wider again
+    tidyr::pivot_wider(names_from = name, values_from = date)
   
   # Add it to the list
-  full_out_cycle1[[k]] <- file
+  out_list[[k]] <- file_v2
   
   # Finish
-  message("Retrieved file ", k, " of ", length(done_cycle1)) }
+  message("Retrieved file ", k, " of ", length(done_greenup)) }
 
-# Unlist that list
-out_df_cycle1 <- full_out_cycle1 %>%
-  purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name"))
 
-# Glimpse it
-dplyr::glimpse(out_df_cycle1)
+
+
+
+
+# # Identify the extracted cycle 0 data
+# done_cycle0 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle0") 
+# 
+# # Identify the extracted cycle 1 data
+# done_cycle1 <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"), pattern = "cycle1") 
+# 
+# # Make an empty list to store our cycle 0 tables
+# full_out_cycle0 <- list()
+# full_out_cycle1 <- list()
+# 
+# # Read all of these files in
+# for(k in 1:length(done_cycle0)){
+#   
+#   # Read in the kth file
+#   file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle0[k]))
+#   
+#   # Identify the year
+#   file_year <- stringr::str_sub(string = file$greenup_cycle0_YYYYMMDD[1],
+#                                 start = 1, end = 4)
+#   
+#   # Rename the data column
+#   names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle0_", file_year, "MMDD"))
+#   
+#   # Add it to the list
+#   full_out_cycle0[[k]] <- file
+#   
+#   # Finish
+#   message("Retrieved file ", k, " of ", length(done_cycle0)) }
+# 
+# # Unlist that list
+# out_df_cycle0 <- full_out_cycle0 %>%
+#   purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name")) 
+# 
+# # Glimpse it
+# dplyr::glimpse(out_df_cycle0)
+# 
+# # Read in all of the cycle 1 files
+# for(k in 1:length(done_cycle1)){
+#   
+#   # Read in the kth file
+#   file <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_cycle1[k]))
+#   
+#   # Drop empty years
+#   non_empty_years <- file %>%
+#     dplyr::filter(nchar(greenup_cycle1_YYYYMMDD) != 0)
+#     
+#   # Identify the year
+#   file_year <- stringr::str_sub(string = non_empty_years$greenup_cycle1_YYYYMMDD[1],
+#                                 start = 1, end = 4)
+#   
+#   # Rename the data column
+#   names(file) <- c("LTER", "Shapefile_Name", paste0("greenup_cycle1_", file_year, "MMDD"))
+#   
+#   # Add it to the list
+#   full_out_cycle1[[k]] <- file
+#   
+#   # Finish
+#   message("Retrieved file ", k, " of ", length(done_cycle1)) }
+# 
+# # Unlist that list
+# out_df_cycle1 <- full_out_cycle1 %>%
+#   purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name"))
+# 
+# # Glimpse it
+# dplyr::glimpse(out_df_cycle1)
 
 ## ------------------------------------------------------- ##
                     # Green-Up Day - Export ----
 ## ------------------------------------------------------- ##
 
-# Join cycle 0 and cycle 1 tables together
-out_df <- out_df_cycle0 %>%
-  dplyr::left_join(out_df_cycle1, by = c("LTER", "Shapefile_Name")) %>%
+# Wrangle output list
+out_df <- out_list %>%
+  # Unlist via left joining
+  purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name")) %>%
   # Move columns around
   dplyr::relocate(contains("2001"), contains("2002"), contains("2003"),
                   contains("2004"), contains("2005"), contains("2006"),
@@ -288,6 +328,10 @@ out_df <- out_df_cycle0 %>%
                   contains("2016"), contains("2017"), contains("2018"),
                   contains("2019"),
                   .after = Shapefile_Name)
+
+# Join cycle 0 and cycle 1 tables together
+# out_df <- out_df_cycle0 %>%
+#   dplyr::left_join(out_df_cycle1, by = c("LTER", "Shapefile_Name"))
 
 # Glimpse this too
 dplyr::glimpse(out_df)
