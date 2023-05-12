@@ -27,9 +27,8 @@ source(file = "wrangle-watersheds.R", echo = T)
 ## ------------------------------------------------------- ##
                    # Extract Drivers ----
 ## ------------------------------------------------------- ##
-# NOTE: Drivers with "_partial-extracted" folders must have those CSVs deleted manually
-## Otherwise won't actually re-extract those drivers
-## This is a feature (not a bug) for when R crashes during extraction
+# NOTE: Drivers with "_partial-extracted" folders must have those CSVs deleted
+## This script handles that automatically just note that they are deleted
 
 # NOTE no. 2: Arranged from least to most computing time
 
@@ -68,32 +67,112 @@ gc()
 
 # Net Primary Productivity
 ## Bounding boxes (x8), annual (x20 years)
+
+# Focal driver *folder* name
+focal <- "raw-npp"
+
+# Define folder path
+path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
+                  "raw-driver-data", focal, "_partial-extracted")
+
+# Identify partially extracted CSVs from previous run
+partials <- dir(path = path)
+
+# Delete them
+for(file in sort(unique(partials))){
+  
+  # Actual deletion step
+  unlink(x = file.path(path, file))
+  
+  # Message
+  message("File '", file, "' deleted.") }
+
+# Re-extract from clean slate
 source(file = "extract-npp.R", echo = T)
-## Need to delete '_partial-extracted' CSVs!
 
 # Garbage collection
 gc()
 
 # Green Up Day
 ## Bounding boxes (x8), annual (x20 years), x2 "cycles" of green up
+
+# Focal driver *folder* name
+focal <- "raw-greenup"
+
+# Define folder path
+path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
+                  "raw-driver-data", focal, "_partial-extracted")
+
+# Identify partially extracted CSVs from previous run
+partials <- dir(path = path)
+
+# Delete them
+for(file in sort(unique(partials))){
+  
+  # Actual deletion step
+  unlink(x = file.path(path, file))
+  
+  # Message
+  message("File '", file, "' deleted.") }
+
+# Re-extract from clean slate
 source(file = "extract-greenup.R", echo = T)
-## Need to delete '_partial-extracted' CSVs!
 
 # Garbage collection
 gc()
 
 # Evapotranspiration
 ## Bounding boxes (x8), 8-day (x20 years)
+
+# Focal driver *folder* name
+focal <- "raw-evapo-modis16a2-v006"
+
+# Define folder path
+path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
+                  "raw-driver-data", focal, "_partial-extracted")
+
+# Identify partially extracted CSVs from previous run
+partials <- dir(path = path)
+
+# Delete them
+for(file in sort(unique(partials))){
+  
+  # Actual deletion step
+  unlink(x = file.path(path, file))
+  
+  # Message
+  message("File '", file, "' deleted.") }
+
+# Re-extract from clean slate
 source(file = "extract-evapo.R", echo = T)
-## Need to delete '_partial-extracted' CSVs!
 
 # Garbage collection
 gc()
 
 # Snow Fraction
 ## Bounding boxes (x8), 8-day (x20 years)
+
+# Focal driver *folder* name
+focal <- "raw-snow-modis10a2-v006"
+
+# Define folder path
+path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
+                  "raw-driver-data", focal, "_partial-extracted")
+
+# Identify partially extracted CSVs from previous run
+partials <- dir(path = path)
+
+# Delete them
+for(file in sort(unique(partials))){
+  
+  # Actual deletion step
+  unlink(x = file.path(path, file))
+  
+  # Message
+  message("File '", file, "' deleted.") }
+
+# Re-extract from clean slate
 source(file = "extract-snowfrac.R", echo = T)
-## Need to delete '_partial-extracted' CSVs!
 
 # Garbage collection
 gc()
