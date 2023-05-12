@@ -31,39 +31,51 @@ source(file = "wrangle-watersheds.R", echo = T)
 ## Otherwise won't actually re-extract those drivers
 ## This is a feature (not a bug) for when R crashes during extraction
 
+# NOTE no. 2: Arranged from least to most computing time
+
 # Soil
+## Global, static
 source(file = "extract-soil.R", echo = T)
 
 # Land Cover
+## Global, static
 source(file = "extract-landcover.R", echo = T)
 
 # Lithology (I.e., rocks)
+## Global, static
 source(file = "extract-lithology.R", echo = T)
 
 # Elevation
+## Global, static
 source(file = "extract-elevation.R", echo = T)
 
-# Air Temperature
-source(file = "extract-airtemp.R", echo = T)
-
 # Precipitation (I.e., rainfall)
+## Global, monthly (x 43 years)
 source(file = "extract-precip.R", echo = T)
 
+# Air Temperature
+## Global, monthly (x 74 years)
+source(file = "extract-airtemp.R", echo = T)
+
 # Net Primary Productivity
-## Need to delete '_partial-extracted' CSVs!
+## Bounding boxes (x8), annual (x20 years)
 source(file = "extract-npp.R", echo = T)
+## Need to delete '_partial-extracted' CSVs!
 
 # Green Up Day
-## Need to delete '_partial-extracted' CSVs!
+## Bounding boxes (x8), annual (x20 years), x2 "cycles" of green up
 source(file = "extract-greenup.R", echo = T)
+## Need to delete '_partial-extracted' CSVs!
 
 # Evapotranspiration
-## Need to delete '_partial-extracted' CSVs!
+## Bounding boxes (x8), 8-day (x20 years)
 source(file = "extract-evapo.R", echo = T)
+## Need to delete '_partial-extracted' CSVs!
 
 # Snow Fraction
-## Need to delete '_partial-extracted' CSVs!
+## Bounding boxes (x8), 8-day (x20 years)
 source(file = "extract-snowfrac.R", echo = T)
+## Need to delete '_partial-extracted' CSVs!
 
 ## ------------------------------------------------------- ##
                   # Combine Drivers ----
