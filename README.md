@@ -11,6 +11,8 @@ Joanna Carey & Kathi Jo Jankowski
 
 ### Core Scripts
 
+- **total-workflow.R** - Runs (1) `wrangle-watersheds.R` then (2) all `extract-[...].R` scripts plus a deletion of superseded "partial extract" CSVs and finished by running (3) `combine-drivers.R`. See below for descriptions of each of those scripts
+
 - **wrangle-watersheds.R** - Processes watershed shapefiles into a single shapefile with all watersheds included. Starting shapefiles retrieved from site experts / various online sources. See the Reference Table for more information on these files (e.g., name, origin, CRS, etc.)
 
 - **extract-[...].R** - These scripts are each responsible for extracting, summarizing, and exporting the spatial data type included in the script name. Each script uses the watersheds identified by "wrangle-watersheds.R" but is otherwise completely independent of other scripts in this repo
