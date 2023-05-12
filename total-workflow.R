@@ -32,41 +32,70 @@ source(file = "wrangle-watersheds.R", echo = T)
 
 # NOTE no. 2: Arranged from least to most computing time
 
-# Soil
-## Global, static
+## ------------------------- ##
+          # Soil -----
+## ------------------------- ##
+
+# Re-extract (global, static)
 source(file = "extract-soil.R", echo = T)
-
-# Land Cover
-## Global, static
-source(file = "extract-landcover.R", echo = T)
-
-# Lithology (I.e., rocks)
-## Global, static
-source(file = "extract-lithology.R", echo = T)
-
-# Elevation
-## Global, static
-source(file = "extract-elevation.R", echo = T)
 
 # Do garbage collection to free up memory
 gc()
 
-# Precipitation (I.e., rainfall)
-## Global, monthly (x 43 years)
+## ------------------------- ##
+        # Land Cover -----
+## ------------------------- ##
+
+# Re-extract (global, static)
+source(file = "extract-landcover.R", echo = T)
+
+# Garbage collection
+gc()
+
+## ------------------------- ##
+        # Lithology -----
+## ------------------------- ##
+
+# Re-extract (global, static)
+source(file = "extract-lithology.R", echo = T)
+
+# Garbage collection
+gc()
+
+## ------------------------- ##
+        # Elevation -----
+## ------------------------- ##
+
+# Re-extract (global, static)
+source(file = "extract-elevation.R", echo = T)
+
+# Garbage collection
+gc()
+
+## ------------------------- ##
+     # Precipitation -----
+## ------------------------- ##
+
+# Re-extract (global, monthly [x43 years])
 source(file = "extract-precip.R", echo = T)
 
 # Garbage collection
 gc()
 
-# Air Temperature
-## Global, monthly (x 74 years)
+## ------------------------- ##
+    # Air Temperature -----
+## ------------------------- ##
+
+# Re-extract (global, monthly [x74 years])
 source(file = "extract-airtemp.R", echo = T)
 
 # Garbage collection
 gc()
 
-# Net Primary Productivity
-## Bounding boxes (x8), annual (x20 years)
+## ------------------------- ##
+          # NPP -----
+## ------------------------- ##
+# Net Primary Productivity (bounding boxes [x8], annual [x20 years])
 
 # Focal driver *folder* name
 focal <- "raw-npp"
@@ -93,8 +122,10 @@ source(file = "extract-npp.R", echo = T)
 # Garbage collection
 gc()
 
-# Green Up Day
-## Bounding boxes (x8), annual (x20 years), x2 "cycles" of green up
+## ------------------------- ##
+      # Green-Up Day -----
+## ------------------------- ##
+# (bounding boxes [x8], annual [x20 years], x2 "cycles" of green up)
 
 # Focal driver *folder* name
 focal <- "raw-greenup"
@@ -121,8 +152,10 @@ source(file = "extract-greenup.R", echo = T)
 # Garbage collection
 gc()
 
-# Evapotranspiration
-## Bounding boxes (x8), 8-day (x20 years)
+## ------------------------- ##
+          # ET -----
+## ------------------------- ##
+# Evapotranspiration (bounding boxes [x8], 8-day [x20 years])
 
 # Focal driver *folder* name
 focal <- "raw-evapo-modis16a2-v006"
@@ -149,8 +182,10 @@ source(file = "extract-evapo.R", echo = T)
 # Garbage collection
 gc()
 
-# Snow Fraction
-## Bounding boxes (x8), 8-day (x20 years)
+## ------------------------- ##
+          # Snow -----
+## ------------------------- ##
+# Snow Fraction (bounding boxes [x8], 8-day [x20 years])
 
 # Focal driver *folder* name
 focal <- "raw-snow-modis10a2-v006"
