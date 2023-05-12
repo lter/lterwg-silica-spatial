@@ -8,6 +8,10 @@
 ## Re-wrangle the 'artisanal' watersheds and re-extract all drivers
 ## Useful as a one-stop shop for updating driver data
 
+## ------------------------------------------------------- ##
+                    # Housekeeping -----
+## ------------------------------------------------------- ##
+
 # Make sure googledrive library is loaded
 library(googledrive)
 
