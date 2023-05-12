@@ -49,33 +49,54 @@ source(file = "extract-lithology.R", echo = T)
 ## Global, static
 source(file = "extract-elevation.R", echo = T)
 
+# Do garbage collection to free up memory
+gc()
+
 # Precipitation (I.e., rainfall)
 ## Global, monthly (x 43 years)
 source(file = "extract-precip.R", echo = T)
 
+# Garbage collection
+gc()
+
 # Air Temperature
 ## Global, monthly (x 74 years)
 source(file = "extract-airtemp.R", echo = T)
+
+# Garbage collection
+gc()
 
 # Net Primary Productivity
 ## Bounding boxes (x8), annual (x20 years)
 source(file = "extract-npp.R", echo = T)
 ## Need to delete '_partial-extracted' CSVs!
 
+# Garbage collection
+gc()
+
 # Green Up Day
 ## Bounding boxes (x8), annual (x20 years), x2 "cycles" of green up
 source(file = "extract-greenup.R", echo = T)
 ## Need to delete '_partial-extracted' CSVs!
+
+# Garbage collection
+gc()
 
 # Evapotranspiration
 ## Bounding boxes (x8), 8-day (x20 years)
 source(file = "extract-evapo.R", echo = T)
 ## Need to delete '_partial-extracted' CSVs!
 
+# Garbage collection
+gc()
+
 # Snow Fraction
 ## Bounding boxes (x8), 8-day (x20 years)
 source(file = "extract-snowfrac.R", echo = T)
 ## Need to delete '_partial-extracted' CSVs!
+
+# Garbage collection
+gc()
 
 ## ------------------------------------------------------- ##
                   # Combine Drivers ----
@@ -83,6 +104,10 @@ source(file = "extract-snowfrac.R", echo = T)
 
 # Combine all extracted drivers
 source(file = "combine-drivers.R", echo = T)
+
+# Do garbage collection & clear environment
+gc()
+rm(list = ls())
 
 # End ----
 
