@@ -53,7 +53,8 @@ library(supportR)
 ```
 
 ```{r github-tree, message = F, warning = F}
-supportR::github_tree(repo = "https://github.com/lter/lterwg-silica-data", exclude = "docs")
+supportR::github_tree(repo = "https://github.com/lter/lterwg-silica-spatial",
+                      exclude = "deprecated")
 ```
 
 ## Related Repositories

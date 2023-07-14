@@ -89,14 +89,32 @@ Scripts in this repository are described below:
 See below for a “tree” of this repository’s content:
 
 ``` r
-supportR::github_tree(repo = "https://github.com/lter/lterwg-silica-data", exclude = "docs")
+supportR::github_tree(repo = "https://github.com/lter/lterwg-silica-spatial",
+                      exclude = "deprecated")
 ```
 
-    ##        levelName
-    ## 1 .             
-    ## 2  ¦--.gitignore
-    ## 3  ¦--README.Rmd
-    ## 4  °--README.md
+    ##                   levelName
+    ## 1  .                       
+    ## 2   ¦--.gitignore          
+    ## 3   ¦--README.Rmd          
+    ## 4   ¦--README.md           
+    ## 5   ¦--appears-bbox-check.R
+    ## 6   ¦--combine-drivers.R   
+    ## 7   ¦--crop-drivers.R      
+    ## 8   ¦--deprecated          
+    ## 9   ¦   °--9 excluded items
+    ## 10  ¦--extract-airtemp.R   
+    ## 11  ¦--extract-elevation.R 
+    ## 12  ¦--extract-evapo.R     
+    ## 13  ¦--extract-greenup.R   
+    ## 14  ¦--extract-landcover.R 
+    ## 15  ¦--extract-lithology.R 
+    ## 16  ¦--extract-npp.R       
+    ## 17  ¦--extract-precip.R    
+    ## 18  ¦--extract-snowfrac.R  
+    ## 19  ¦--extract-soil.R      
+    ## 20  ¦--total-workflow.R    
+    ## 21  °--wrangle-watersheds.R
 
 ## Related Repositories
 
