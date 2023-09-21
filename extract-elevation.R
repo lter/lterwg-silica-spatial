@@ -14,9 +14,12 @@
 
 # Read needed libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, 
-                 googledrive, readxl)
-
+librarian::shelf(tidyverse, sf, stars, terra, exactextractr, starsExtra, NCEAS/scicomptools, 
+                 googledrive, readxl, spatialEco)
+                      
+# install spatialEco 2.0.0 since its latest version (2.0.1) isn't compatible with Aurora's R version
+#remotes::install_version("spatialEco", "2.0.0")
+                      
 # Clear environment
 rm(list = ls())
 
@@ -92,12 +95,70 @@ elev_actual <- elev_out %>%
 dplyr::glimpse(elev_actual)
 
 ## ------------------------------------------------------- ##
-                  # Elevation - Export ----
+          # Basin Slope - Extract & Summarize ----
+## ------------------------------------------------------- ##
+# Create an empty list to store results
+slope_list <- list()
+
+# For each watershed shapefile...
+for (i in 1:15){
+  # Crop the elevation raster to each shapefile
+  cropped_raster <- terra::crop(x = elev_raw, y = sheds[i,])
+  # Calculate the slopes
+  slope_raster <- terra::terrain(cropped_raster, v = "slope", unit = "degrees")
+  # Extract the slopes into a dataframe
+  slope_dataframe <- terra::as.data.frame(slope_raster)
+  # Create a dummy dataframe if the extracted dataframe has 0 rows
+  if (nrow(slope_dataframe) == 0){
+    LTER_Shapefile_slope_dataframe <- data.frame(LTER = sheds[i,]$LTER,
+                                                 Shapefile_Name = sheds[i,]$Shapefile_Name,
+                                                 basin_slope_median_degree = NA,
+                                                 basin_slope_mean_degree = NA,
+                                                 basin_slope_min_degree = NA,
+                                                 basin_slope_max_degree = NA)
+    # Save the dataframe into our list
+    slope_list[[i]] <- LTER_Shapefile_slope_dataframe
+  } else {
+  # Else if the extracted dataframe is non-empty, calculate slope statistics
+    LTER_Shapefile_slope_dataframe <- slope_dataframe %>%
+      dplyr::mutate(LTER = sheds[i,]$LTER,
+             Shapefile_Name = sheds[i,]$Shapefile_Name) %>%
+      dplyr::group_by(LTER, Shapefile_Name) %>%
+      dplyr::summarize(basin_slope_median_degree = median(slope),
+                       basin_slope_mean_degree = spatialEco::mean_angle(slope, angle = "degree"),
+                       basin_slope_min_degree = min(slope),
+                       basin_slope_max_degree = max(slope))
+    # Save the dataframe into our list
+    slope_list[[i]] <- LTER_Shapefile_slope_dataframe
+  }
+}
+
+# Unlist into one big dataframe
+slope_actual <- slope_list %>% purrr::map_dfr(.f = select, everything())
+
+# Glimpse this
+dplyr::glimpse(slope_actual)
+
+# Here is an alternative way to extract the slope using the `starsExtra::slope()` function, 
+# but it requires rasters with a projected CRS, not a geographic CRS.
+# So I would need to change the CRS first if I wanted to use `starsExtra::slope()`.
+# I opted to use the `terra::terrain()` function instead.
+
+# cropped_raster <- terra::crop(x = elev_raw, y = sheds[1,])
+# reproj_raster <- terra::project(cropped_raster, "EPSG:3857") # Web Mercator projection
+# converted_raster <- stars::st_as_stars(reproj_raster)
+# slope_raster <- starsExtra::slope(converted_raster)
+# slope_dataframe <- as.data.frame(slope_raster)
+
+## ------------------------------------------------------- ##
+#           Elevation & Basin Slope - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
 elev_export <- sites %>%
   # Join the rock data
-  dplyr::left_join(y = elev_actual, by = c("LTER", "Shapefile_Name"))
+  dplyr::left_join(y = elev_actual, by = c("LTER", "Shapefile_Name")) %>%
+  # Join the slope data
+  dplyr::left_join(y = slope_actual, by = c("LTER", "Shapefile_Name"))
 
 # Check it out
 dplyr::glimpse(elev_export)
