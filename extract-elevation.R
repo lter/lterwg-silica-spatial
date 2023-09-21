@@ -101,9 +101,9 @@ dplyr::glimpse(elev_actual)
 slope_list <- list()
 
 # For each watershed shapefile...
-for (i in 1:15){
-  # Crop the elevation raster to each shapefile
-  cropped_raster <- terra::crop(x = elev_raw, y = sheds[i,])
+for (i in 1:nrow(sheds)){
+  # Crop and mask the elevation raster to each shapefile
+  cropped_raster <- terra::crop(x = elev_raw, y = terra::vect(sheds[i,]), mask = TRUE)
   # Calculate the slopes
   slope_raster <- terra::terrain(cropped_raster, v = "slope", unit = "degrees")
   # Extract the slopes into a dataframe
