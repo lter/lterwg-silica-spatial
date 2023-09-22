@@ -124,10 +124,10 @@ for (i in 1:nrow(sheds)){
       dplyr::mutate(LTER = sheds[i,]$LTER,
              Shapefile_Name = sheds[i,]$Shapefile_Name) %>%
       dplyr::group_by(LTER, Shapefile_Name) %>%
-      dplyr::summarize(basin_slope_median_degree = median(slope),
+      dplyr::summarize(basin_slope_median_degree = stats::median(slope, na.rm = T),
                        basin_slope_mean_degree = spatialEco::mean_angle(slope, angle = "degree"),
-                       basin_slope_min_degree = min(slope),
-                       basin_slope_max_degree = max(slope))
+                       basin_slope_min_degree = min(slope, na.rm = T),
+                       basin_slope_max_degree = max(slope, na.rm = T))
     # Save the dataframe into our list
     slope_list[[i]] <- LTER_Shapefile_slope_dataframe
   }
