@@ -19,6 +19,9 @@ librarian::shelf(tidyverse, sf, stars, terra, exactextractr, starsExtra, NCEAS/s
                       
 # install spatialEco 2.0.0 since its latest version (2.0.1) isn't compatible with Aurora's R version
 #remotes::install_version("spatialEco", "2.0.0")
+
+# Silence dplyr grouping message
+options(dplyr.summarise.inform = F)
                       
 # Clear environment
 rm(list = ls())
@@ -103,6 +106,9 @@ slope_list <- list()
 # For each watershed shapefile...
 for (i in 1:nrow(sheds)){
   
+  # Starting message
+  message("Extracting slope for watershed ", i, " (", (nrow(sheds) - i), " remaining)")
+  
   # Crop and mask the elevation raster to each shapefile
   cropped_raster <- terra::crop(x = elev_raw, y = terra::vect(sheds[i,]), mask = TRUE)
   
@@ -139,7 +145,8 @@ for (i in 1:nrow(sheds)){
                        basin_slope_max_degree = max(slope, na.rm = T))
     
     # Save the dataframe into our list
-    slope_list[[i]] <- LTER_Shapefile_slope_dataframe } # Close conditional
+    slope_list[[i]] <- LTER_Shapefile_slope_dataframe }
+  
 } # Close loop
 
 # Unlist into one big dataframe
