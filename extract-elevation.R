@@ -12,13 +12,14 @@
                       # Housekeeping ----
 ## ------------------------------------------------------- ##
 
+# Install spatialEco 2.0.0 manually
+# remotes::install_version("spatialEco", "2.0.0")
+## Versions >2.0 aren't compatible with NCEAS' server
+
 # Read needed libraries
 # install.packages("librarian")
 librarian::shelf(tidyverse, sf, stars, terra, exactextractr, starsExtra, NCEAS/scicomptools, 
                  googledrive, readxl, spatialEco)
-                      
-# install spatialEco 2.0.0 since its latest version (2.0.1) isn't compatible with Aurora's R version
-#remotes::install_version("spatialEco", "2.0.0")
 
 # Silence dplyr grouping message
 options(dplyr.summarise.inform = F)
