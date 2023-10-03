@@ -2,11 +2,11 @@
        # Silica WG - Extract Spatial Data - Elevation
 ## ------------------------------------------------------- ##
 # Written by:
-## Nick J Lyon
+## Nick J Lyon, Angel Chen
 
 # Purpose:
 ## Using the watershed shapefiles created in "wrangle-watersheds.R"
-## Extract the following data: ELEVATION
+## Extract the following data: ELEVATION, BASIN SLOPE
 
 ## ------------------------------------------------------- ##
                       # Housekeeping ----
@@ -183,7 +183,7 @@ dplyr::glimpse(elev_export)
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
-# Export the summarized lithology data
+# Export the summarized elevation and slope data
 write.csv(x = elev_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_elevation.csv"))
 
