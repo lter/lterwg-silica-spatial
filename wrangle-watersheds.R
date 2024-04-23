@@ -3,7 +3,7 @@
 ## ------------------------------------------------------- ##
 # Written by:
 ## Nick J Lyon
-# Edited by Sidney Bush
+# Edited by Sidney Bush -- for data release 2
 
 # Purpose:
 ## Wrangle "artisanal" watershed shapefiles into a single file to extract driver data
