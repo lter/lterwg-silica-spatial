@@ -209,7 +209,7 @@ dplyr::glimpse(final_shps)
 
 # Export the combine shapefile for all rivers
 sf::st_write(obj = final_shps, delete_layer = T,
-             dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
+             dsn = file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"))
 
 # Process the shapefile object a bit to make a flat table variant
 shps_df <- all_shps %>%
@@ -246,137 +246,6 @@ googledrive::drive_upload(media = file.path(path, "shape_checks", "artisanal_sha
                           path = check_folder)
 
 # Tidy up environment
-rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
-
-## ------------------------------------------------------- ##
-# Exploratory Maps ----
-## ------------------------------------------------------- ##
-
-# # Identify color palette per LTER
-# shed_palette <- c("aaa" = "#ffffff", # placeholder
-#                   ## North America (reds/oranges/yellows)
-#                   "AND" = "#6a040f",
-#                   "ARC" = "#9d0208", 
-#                   "BNZ" = "#d00000", 
-#                   "Catalina Jemez" = "#dc2f02", 
-#                   "Coal Creek" = "#e85d04", 
-#                   "HBR" = "#f48c06", 
-#                   "KNZ" = "#faa307", 
-#                   "KRR" = "#ffba08", 
-#                   "LMP" = "#370617", 
-#                   "NWT" = "#ff9b54", 
-#                   "Sagehen" = "#ff7f51", 
-#                   "UMR" = "#ce4257", 
-#                   "USGS" = "#720026", 
-#                   "Walker Branch" = "#4f000b",
-#                   ## Carribbean
-#                   "LUQ" = "#2b9348", 
-#                   ## Europe
-#                   "Finnish Environmental Institute" = "#0077b6", 
-#                   "Krycklan" = "#00b4d8", 
-#                   "NIVA" = "#ade8f4", 
-#                   ## Arctic / Antarctica
-#                   "GRO" = "#9d4edd", 
-#                   "MCM" = "#c77dff")
-# 
-# # Read in global & state borders
-# world <- sf::st_as_sf(maps::map(database = "world", plot = F, fill = T))
-# states <- sf::st_as_sf(maps::map(database = "state", plot = F, fill = T))
-# 
-# # Combine the two
-# borders <- dplyr::bind_rows(world, states) %>%
-#   dplyr::mutate(LTER = "aaa")
-# 
-# # Create folder for exporting maps
-# dir.create(path = file.path(path, "test_maps"), showWarnings = F)
-# 
-# # For each LTER make map
-# for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
-#   # focal_lter <- "USGS"
-#   
-#   # Start loop
-#   message("Beginning plot creation for ", focal_lter, " watershed shapes")
-#   
-#   # Filter to one "LTER" (in quotes because includes non-LTERs)
-#   sub_shp <- all_shps %>%
-#     dplyr::filter(LTER == focal_lter)
-#   
-#   # Identify boundary of object
-#   sub_bbox <- sf::st_bbox(obj = sub_shp)
-#   
-#   # Create (and wrangle) a dataframe version of this
-#   sub_bound_df <- data.frame("corner" = names(sub_bbox),
-#                              "lat_long" = stringr::str_sub(string = names(sub_bbox), 1, 1),
-#                              "end" = stringr::str_sub(string = names(sub_bbox), 2, 4),
-#                              "value" = as.numeric(sub_bbox)) %>%
-#     # Identify range
-#     dplyr::group_by(lat_long) %>%
-#     dplyr::mutate(range = abs(max(value) - min(value))) %>%
-#     dplyr::ungroup() %>%
-#     # Replace if very small
-#     dplyr::mutate(range = ifelse(range < 2, yes = 2, no = range)) %>%
-#     # Add to actual values conditionally
-#     dplyr::mutate(lims = dplyr::case_when(
-#       value >= 0 & end == "min" ~ value - range,
-#       value >= 0 & end == "max" ~ value + range,
-#       value < 0 & end == "min" ~ value + range,
-#       value < 0 & end == "max" ~ value - range)) %>%
-#     # Add axis steps
-#     dplyr::mutate(steps = dplyr::case_when(range <= 5 ~ 2,
-#                                            range <= 10 ~ 2,
-#                                            range <= 50 ~ 10,
-#                                            range > 50 ~ 20))
-#   
-#   # Strip off relevant bit for each limits
-#   sub_xlim <- sub_bound_df %>%
-#     dplyr::filter(lat_long == "x") %>%
-#     dplyr::pull(lims)
-#   sub_ylim <- sub_bound_df %>%
-#     dplyr::filter(lat_long == "y") %>%
-#     dplyr::pull(lims)
-#   
-#   # Attach sub shape to borders
-#   sub_all <- sub_shp %>%
-#     dplyr::bind_rows(borders)
-#   
-#   # Crop palette to only relevant color(s)
-#   sub_palette <- shed_palette[unique(sub_all$LTER)]
-# 
-#   # Make plot
-#   sub_map <- sub_all %>%
-#     ggplot(aes(fill = LTER)) +
-#     geom_sf(alpha = 0.3) +
-#     # Set plot extents
-#     coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, 
-#              crs = st_crs(x = 4326)) +
-#     # Customize theming / labels
-#     scale_fill_manual(values = sub_palette) +
-#     scale_x_continuous(limits = sub_xlim, breaks = seq(from = floor(min(sub_xlim)),
-#                                                        to = ceiling(max(sub_xlim)),
-#                                                        by = max(sub_bound_df$steps))) +
-#     scale_y_continuous(limits = sub_ylim, breaks = seq(from = floor(min(sub_ylim)),
-#                                                        to = ceiling(max(sub_ylim)),
-#                                                        by = max(sub_bound_df$steps))) +
-#     labs(x = "Longitude", y = "Latitude", 
-#          title = paste0(focal_lter, " Map")) +
-#     supportR::theme_lyon() +
-#     theme(legend.position = "none",
-#           axis.text.y = element_text(angle = 90, vjust = 1, hjust = 0.5))
-#   
-#   # Make file name
-#   focal_mapname <- paste0("map_explore_", focal_lter, ".png")
-#   
-#   # Export this locally
-#   ggsave(filename = file.path(path, "test_maps", focal_mapname), 
-#          width = 6, height = 6, units = "in")
-#   
-#   # Upload to Drive
-#   googledrive::drive_upload(media = file.path(path, "test_maps", focal_mapname), overwrite = T, path = check_folder)
-#   
-#   # Closing message
-#   message("Finished with ", focal_lter) }
-
-# Tidy up environment
-rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
+rm(list = ls()); gc()
 
 # End ----
