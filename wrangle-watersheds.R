@@ -25,9 +25,8 @@ rm(list = ls())
 # Identify path to location of shared data
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
-# Define the Drive folder for exporting checks / diagnostics to
-check_folder <- googledrive::as_id("https://drive.google.com/drive/u/1/folders/1-IawEkFjfkrzAlgolvS1KTTm0pEW9K9h")
-
+# source("wrangle-artisanal-watersheds.R")
+# source("wrangle-hydrosheds.R")
 
 ## ------------------------------------------------------- ##
                   # Acquire Shapefiles ----
