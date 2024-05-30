@@ -1,6 +1,38 @@
 ## ------------------------------------------------------- ##
 # Hydrosheds  ----
 ## ------------------------------------------------------- ##
+
+## ------------------------------------------------------- ##
+# Reference Table Acquisition ----
+## ------------------------------------------------------- ##
+
+# Grab ID of the GoogleSheet with site coordinates
+googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
+  dplyr::filter(name == "Site_Reference_Table") %>%
+  googledrive::drive_download(file = ., overwrite = T,
+                              path = file.path(path, "site-coordinates",
+                                               "silica-coords_RAW.xlsx"))
+
+# Read in site coordinates (i.e., ref table)
+coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
+                                                "silica-coords_RAW.xlsx")) %>%
+  ## Pare down to minimum needed columns
+  dplyr::select(LTER, Shapefile_Name, Stream_Name, drainSqKm, Latitude, Longitude, Shapefile_CRS_EPSG) %>%
+  ## Drop duplicate rows (if any)
+  dplyr::distinct() %>%
+  ## Rename some columns
+  dplyr::rename(expert_area_km2 = drainSqKm,
+                crs_code = Shapefile_CRS_EPSG) |>
+  filter(is.na(Shapefile_Name)!=T|
+           is.na(Shapefile_Name)==T& !LTER %in% c("ARC","BcCZO", "BNZ", "Cameroon", "Catalina Jemez", "Coal Creek11", "Finnish Environmental Institute", 
+                                                  "HYBAM", "KNZ", "KRR", "LMP", "LUQ", "MCM", "PIE", "Tanguro(Jankowski)", "USGS")
+         & (!is.na(Latitude)&!is.na(Longitude)))
+
+# Glimpse this
+dplyr::glimpse(coord_df)
+coord_df|> filter(is.na(Shapefile_Name)) |> pull(LTER) |> unique()
+
+
 good_sheds2 <- coord_df %>%
   # Filter to only shapefiles in ref. table & on Aurora
   dplyr::filter(is.na(Shapefile_Name)) %>%
@@ -363,72 +395,6 @@ write.csv(hydro_poly_df, row.names = F, na = "",
 # Plot all of the watersheds
 plot(hydro_poly["focal_poly"], axes = T, lab = c(2, 2, 2))
 
-## ------------------------------------------------------- ##
-# Add GRO Streams' Shapefiles ----
-## ------------------------------------------------------- ##
-
-# Grab the GRO watershed polygons
-gro_sheds <- sf::st_read(file.path(path, 'GRO-shapefiles', 'GRO_watersheds.shp')) %>%
-  # Rename the unique ID column to match the HydroSHEDS polygons
-  dplyr::rename(focal_poly = uniqueID)
-
-# Need to also rename the geometry attribute
-sf::st_geometry(gro_sheds) <- "geom"
-
-# Check structure
-dplyr::glimpse(gro_sheds)
-dplyr::glimpse(hydro_poly)
-
-# Now let's attach the GRO shapefiles we got elsewhere to the HydroSheds polygons
-poly_actual <- hydro_poly %>%
-  # First make "focal_poly" into a character
-  dplyr::mutate(focal_poly = as.character(focal_poly)) %>%
-  # Drop the drainage area
-  dplyr::select(-drainSqKm) %>%
-  # Now attach the GRO shapefiles
-  dplyr::bind_rows(gro_sheds) %>%
-  # Let's rename the 'focal_poly' column more informatively
-  dplyr::rename(river_id = focal_poly)
-
-# And check structure
-dplyr::glimpse(poly_actual)
-
-# Make a plot to make sure it worked
-plot(poly_actual["river_id"], axes = T, lab = c(2, 2, 2)) # yep!
-
-# Save out shapefile of all the HydroSheds polygons and the GRO polygons
-st_write(obj = poly_actual, delete_layer = T,
-         dsn = file.path(path, "site-coordinates", "silica-watersheds.shp"))
-
-# Strip GRO information from coordinate dataframe
-gro_coords <- coord_df %>%
-  # Filter to only GRO
-  dplyr::filter(LTER == "GRO") %>%
-  # Pare down to only desired columns
-  dplyr::select(LTER, Stream_Name, Discharge_File_Name, drainSqKm,
-                lat = Latitude, long = Longitude) %>%
-  # Make a "HYBAS_ID" stand-in column
-  dplyr::mutate(HYBAS_ID = paste(LTER, Stream_Name, sep = "_"),
-                .after = drainSqKm)
-
-# Combine this information with the HydroSHEDS site info already gathered
-sites_final <- hydro_poly_df %>%
-  # Make HYBAS_ID a character
-  dplyr::mutate(HYBAS_ID = as.character(HYBAS_ID)) %>%
-  # Bind on GRO coordinates
-  dplyr::bind_rows(gro_coords) %>%
-  # Rename ID column more informatively
-  dplyr::rename(river_id = HYBAS_ID)
-
-# Glimpse it
-dplyr::glimpse(sites_final)
-
-# Export for later
-write.csv(sites_final, row.names = F, na = "",
-          file = file.path(path, "site-coordinates", 'silica-coords_ACTUAL.csv') )
-
-# Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro_out', 'coord_df', 'poly_actual', 'sites_final')))
 
 ## ------------------------------------------------------- ##
 # Crop to Bounding Box ----
@@ -514,91 +480,6 @@ plot(final_sf, axes = T)
 # Save out this object as a shapefile
 st_write(obj = poly_actual, delete_layer = T,
          dsn = file.path(path, "site-coordinates", "CROPPED-silica-watersheds.shp"))
-
-## ------------------------------------------------------- ##
-# Assess Shapefile Area ----
-## ------------------------------------------------------- ##
-
-# Triple check no rivers are lost
-supportR::diff_check(old = unique(poly_actual$river_id),
-                     new = unique(final_sf$river_id))
-
-# Empty list
-area_list <- list()
-
-# For each river:
-for(area_river in unique(poly_actual$river_id)){
-  
-  # Subset both the uncropped and cropped areas to this river
-  sub_uncrop_sf <- dplyr::filter(poly_actual, river_id == area_river)
-  sub_crop_sf <- dplyr::filter(final_sf, river_id == area_river)
-  
-  # Calculate shapefile area (in km2) for both
-  sub_uncrop_area <- sub_uncrop_sf %>%
-    sf::st_area() %>%
-    units::set_units(x = ., km^2)
-  sub_crop_area <- sub_crop_sf %>%
-    sf::st_area() %>%
-    units::set_units(x = ., km^2)
-  
-  # Assemble dataframe
-  sub_area_df <- data.frame("river_id" = as.character(area_river), 
-                            "hydrosheds_area_km2" = as.numeric(sub_uncrop_area),
-                            "cropped_area_km2" = as.numeric(sub_crop_area))
-  
-  # Add to list
-  area_list[[area_river]] <- sub_area_df
-  
-  # Message
-  message("Area calculated for river ", area_river) }
-
-# Unlist output
-area_actual <- area_list %>%
-  purrr::list_rbind(x = .)
-
-# Glimpse it
-dplyr::glimpse(area_actual)
-
-# Wrangle a final area checking object for ease of evaluation of this method
-glimpse(coord_df)
-
-# Begin with raw reference table object
-area_export <- coord_df %>%
-  # Drop any rivers that lack coordinates
-  dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
-  # Also remove McMurdo because HydroSHEDS doesn't work for those sites
-  dplyr::filter(LTER != "MCM") %>%
-  # Pare down to only needed columns and rename one more informatively
-  dplyr::select(LTER, Stream_Name, Discharge_File_Name, expert_area_km2 = drainSqKm) %>%
-  # Bind on the final sites information so we can get the HydroSHEDS river IDs
-  dplyr::left_join(sites_final, c("LTER", "Stream_Name", "Discharge_File_Name")) %>%
-  # Pare down the columns again
-  dplyr::select(LTER, Stream_Name, Discharge_File_Name, river_id, expert_area_km2) %>%
-  # Drop duplicate rows
-  dplyr::distinct() %>%
-  # Attach area information
-  dplyr::left_join(area_actual, by = "river_id") %>%
-  # Rename a column more intuitively
-  dplyr::rename(hydrosheds_id = river_id) %>%
-  # Drop duplicate rows (again)
-  dplyr::distinct() %>%
-  # Collapse duplicate 'chemistry steam names' within 'discharge stream names'
-  dplyr::group_by(LTER, Discharge_File_Name, hydrosheds_id, 
-                  expert_area_km2, hydrosheds_area_km2, cropped_area_km2) %>%
-  dplyr::summarize(Stream_Name = paste(Stream_Name, collapse = " / ")) %>%
-  dplyr::ungroup() %>%
-  # Move stream name back to where it belongs
-  dplyr::relocate(Stream_Name, .after = Discharge_File_Name)
-
-# Check this out
-dplyr::glimpse(area_export)
-
-# Export locally
-write.csv(area_export, file = file.path(path, "hydrosheds_shape_area_check.csv"),
-          row.names = F, na = '')
-
-# Upload to Drive
-googledrive::drive_upload(media = file.path(path, "hydrosheds_shape_area_check.csv"), path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7"), overwrite = T)
 
 # End ----
 
