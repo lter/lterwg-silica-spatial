@@ -64,8 +64,8 @@ soil_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-soil",
 crs(soil_raw)
 
 # Experimental plotting
-plot(soil_raw, reset = F, axes = T)
-plot(sheds, add = T, axes = T)
+# plot(soil_raw, reset = F, axes = T)
+# plot(sheds, add = T, axes = T)
 
 # Strip out rocks from our polygons
 soil_out <- exactextractr::exact_extract(x = soil_raw, y = sheds,
@@ -202,8 +202,8 @@ write.csv(x = soil_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_soil.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_soil.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_soil_2.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----

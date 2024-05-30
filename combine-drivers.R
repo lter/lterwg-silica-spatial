@@ -75,7 +75,8 @@ driver_df <- sites
 # For each file
 for(k in 1:length(data_list)){
   # Processing message
-  message("Adding ", names(data_list[k]), " to output dataframe")
+  message("Adding ", names(data_list[k]), " to 
+          output dataframe")
   
   # Left join onto the driver dataframe and overwrite the object
   driver_df %<>%
@@ -98,10 +99,10 @@ supportR::diff_check(old = unique(sites$Discharge_Site_Name),
 
 # Export this
 write.csv(x = driver_df, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "all-data_si-extract.csv"))
+          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240511.csv"))
 
 # And upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240511.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
 

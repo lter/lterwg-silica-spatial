@@ -61,16 +61,34 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 file_list <- list()
 
 # Identify files for each region
+# for(region in c("north-america-usa", "north-america-arctic",
+#                 "cropped-russia-west", "cropped-russia-west-2",
+#                 "cropped-russia-center", "cropped-russia-east",
+#                 "puerto-rico", "scandinavia")){
+
+## NEW SITES for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",
+                "cropped-russia-west", "cropped-russia-west-2",   
                 "cropped-russia-center", "cropped-russia-east",
-                "puerto-rico", "scandinavia")){
+                "puerto-rico", "scandinavia",
+                "amazon", "australia",  
+                "canada",  "congo", 
+                "germany", "united-kingdom")){
   
+  # # Identify files in that folder
+  # file_df <- data.frame("region" = region,
+  #                       "files" = dir(path = file.path(path, "raw-driver-data", 
+  #                                                      "raw-greenup", region),
+  #                                     pattern = "MCD12Q2.006_Greenup_"))
+  
+  # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-greenup", region),
-                                      pattern = "MCD12Q2.006_Greenup_"))
+                                                       "raw-greenup", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MCD12Q2.006_Greenup_")|
+                    stringr::str_detect(string=files, pattern="MCD12Q2.061_Greenup_")) 
+  
   
   # Add that set of files to the list
   file_list[[region]] <- file_df }
@@ -277,8 +295,8 @@ write.csv(x = greenup_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_greenup.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup_2.csv"),
                          overwrite = T,
-                         path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                         path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----

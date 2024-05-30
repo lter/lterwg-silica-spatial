@@ -15,7 +15,7 @@
 # Load needed libraries
 # install.packages("librarian")
 librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, 
-                 googledrive, readxl)
+                 googledrive, readxl,ncdf4)
 
 # Clear environment
 rm(list = ls())
@@ -78,8 +78,8 @@ for(k in 1:file_ct){
   focal_precip <- precip_files[k]
   
   # Read in the file as netCDF
-  prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-gpcp-precip",
-                                                 focal_precip))
+  # prec_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-gpcp-precip",
+  #                                                focal_precip))
   
   # Read it as a raster too
   prec_rast <- terra::rast(x = file.path(path, "raw-driver-data", "raw-gpcp-precip", 
@@ -113,11 +113,11 @@ for(k in 1:file_ct){
   message("Processing complete for ", layer_time, " (number ", k, " of ", file_ct, ")") }
 
 # Exploratory plot one of what we just extracted
-plot(rotated, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
+# plot(rotated, axes = T, reset = F)
+# plot(sheds, axes = T, add = T)
 
 # Can also double check other aspects of what we've processed
-print(prec_nc)
+#print(prec_nc)
 names(prec_rast)
 print(rotated$precip)
 
@@ -239,8 +239,8 @@ write.csv(x = prec_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_precip.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_precip.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_precip_2.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----

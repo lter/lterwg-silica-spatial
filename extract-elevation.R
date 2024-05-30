@@ -67,8 +67,8 @@ elev_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-elevation",
                                       "wc2.1_30s_elev.tif"))
 
 # Exploratory plot for overlap
-plot(elev_raw, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
+# plot(elev_raw, axes = T, reset = F)
+# plot(sheds, axes = T, add = T)
 
 # Strip out land cover for our polygons
 elev_out <- exactextractr::exact_extract(x = elev_raw, y = sheds,
@@ -189,8 +189,8 @@ write.csv(x = elev_export, na = '', row.names = F,
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", 
-                                            "si-extract_elevation.csv"),
+                                            "si-extract_elevation_2.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----

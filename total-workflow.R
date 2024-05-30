@@ -3,6 +3,10 @@
 ## ------------------------------------------------------- ##
 # Written by:
 ## Nick J Lyon
+## Edited by Sidney A Bush 04/2024
+
+# Revisions as of 4/2024: 
+## Added additional regions for each extract- file (evapo, greenup, npp, snowfrac)
 
 # Purpose:
 ## Re-wrangle the 'artisanal' watersheds and re-extract all drivers
@@ -35,6 +39,7 @@ source(file = "wrangle-watersheds.R", echo = T)
 ## This script handles that automatically just note that they are deleted
 
 # NOTE no. 2: Arranged from least to most computing time
+
 
 ## ------------------------- ##
           # Soil -----
@@ -75,7 +80,6 @@ source(file = "extract-elevation.R", echo = T)
 
 # Garbage collection
 gc()
-
 ## ------------------------- ##
      # Precipitation -----
 ## ------------------------- ##

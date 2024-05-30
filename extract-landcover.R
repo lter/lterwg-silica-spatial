@@ -60,8 +60,8 @@ lulc_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-glcc-landcov
                                       "global-glcc-wgs84", "gblulcgeo20.tif"))
 
 # Exploratory plot for overlap
-plot(lulc_raw, axes = T, reset = F)
-plot(sheds["LTER"], axes = T, add = T)
+# plot(lulc_raw, axes = T, reset = F)
+# plot(sheds["LTER"], axes = T, add = T)
 
 # Strip out land cover for our polygons
 land_out <- exactextractr::exact_extract(x = lulc_raw, y = sheds,
@@ -179,8 +179,8 @@ write.csv(x = land_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_landcover.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_landcover.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_landcover_2.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----

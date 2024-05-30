@@ -61,22 +61,40 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 file_list <- list()
 
 # Specify driver
-focal_driver <- "raw-snow-modis10a2-v006"
+#focal_driver <- "raw-snow-modis10a2-v006"
 
 # Specify file pattern
-file_pattern <- "MOD10A2.006_Eight_Day_Snow_Cover_"
+# file_pattern <- "MOD10A2.006_Eight_Day_Snow_Cover_"
 
 # Identify files for each region
+# for(region in c("north-america-usa", "north-america-arctic",
+#                 "cropped-russia-west", "cropped-russia-west-2",
+#                 "cropped-russia-center", "cropped-russia-east",
+#                 "puerto-rico", "scandinavia")){
+
+## NEW SITEs ALERT ##
 for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",
+                "cropped-russia-west", "cropped-russia-west-2",   
                 "cropped-russia-center", "cropped-russia-east",
-                "puerto-rico", "scandinavia")){
+                "puerto-rico", "scandinavia",
+                "amazon", "australia",  
+                "canada",  "congo", 
+                "germany", "united-kingdom")){
   
+  # # Identify files in that folder
+  # file_df <- data.frame("region" = region,
+  #                       "files" = dir(path = file.path(path, "raw-driver-data", 
+  #                                                      focal_driver, region),
+  #                                     pattern = file_pattern))
+  
+  # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       focal_driver, region),
-                                      pattern = file_pattern))
+                                                       "raw-snow-modis10a2-v006", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MOD10A2.006_Eight_Day_Snow_Cover_")|
+                    stringr::str_detect(string=files, pattern="MOD10A2.061_Eight_Day_Snow_Cover_")) 
+  
   
   # Add that set of files to the list
   file_list[[region]] <- file_df }
@@ -409,12 +427,12 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 # Export the summarized lithology data
 write.csv(x = snow_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", 
-                           paste0("si-extract_", col_prefix, ".csv")))
+                           paste0("si-extract_", col_prefix, "_2.csv")))
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", 
-                                            paste0("si-extract_", col_prefix, ".csv")),
+                                            paste0("si-extract_", col_prefix, "_2.csv")),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----
