@@ -48,7 +48,7 @@ good_sheds2 <- coord_df %>%
 # Check that out
 dplyr::glimpse(good_sheds2)
 
-source(file.path("deprecated", "hydrosheds_custom_fxns.R"))
+source(file.path("tools", "hydrosheds_custom_fxns.R"))
 
 
 
