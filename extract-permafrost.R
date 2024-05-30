@@ -61,9 +61,9 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 pf_raw <- terra::rast(x = file.path(path, "raw-driver-data", "raw-permafrost", 
                                     "perprob.tif"))
 
-# Exploratory plot for overlap
-plot(pf_raw, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
+# # Exploratory plot for overlap
+# plot(pf_raw, axes = T, reset = F)
+# plot(sheds, axes = T, add = T)
 
 # Strip out land cover for our polygons
 pf_out <- exactextractr::exact_extract(x = pf_raw, y = sheds,
@@ -109,13 +109,13 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized elevation and slope data
 write.csv(x = pf_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_permafrost.csv"))
+          file = file.path(path, "extracted-data", "si-extract_permafrost_2.csv"))
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", 
-                                            "si-extract_permafrost.csv"),
+                                            "si-extract_permafrost_2.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----
 

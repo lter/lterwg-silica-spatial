@@ -15,7 +15,7 @@
 # Load needed libraries
 # install.packages("librarian")
 librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, 
-                 googledrive, readxl)
+                 googledrive, readxl, ncdf4)
 
 # Clear environment
 rm(list = ls())
@@ -58,11 +58,11 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
                   # Air Temp - Extract ----
 ## ------------------------------------------------------- ##
 # Read in the netCDF file and examine for context on units / etc.
-air_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
-                                              "air.mon.mean.nc"))
-
-# Look at this
-print(air_nc)
+# air_nc <- ncdf4::nc_open(filename = file.path(path, "raw-driver-data", "raw-airtemp-monthly",
+#                                               "air.mon.mean.nc"))
+# 
+# # Look at this
+# print(air_nc)
 
 # Read it as a raster too
 ## This format is more easily manipulable for our purposes
@@ -117,8 +117,8 @@ for(k in 1:layer_ct){
   message("Processing complete for ", layer_time, " (number ", k, " of ", layer_ct, ")") }
 
 # Exploratory plot one of what we just extracted
-plot(rotated, axes = T, reset = F)
-plot(sheds, axes = T, add = T)
+# plot(rotated, axes = T, reset = F)
+# plot(sheds, axes = T, add = T)
 
 ## ------------------------------------------------------- ##
                 # Air Temp - Summarize ----
@@ -212,11 +212,11 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
 write.csv(x = air_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_air-temp.csv"))
+          file = file.path(path, "extracted-data", "si-extract_air-temp_2.csv"))
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_air-temp.csv"),
                           overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----

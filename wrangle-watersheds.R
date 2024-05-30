@@ -4,6 +4,8 @@
 # Written by:
 ## Nick J Lyon
 # Edited by Sidney Bush -- for data release 2
+## LATER: will need to add HydroSHEDS sites for: Murray-Darling (Australia) and Canada sites
+
 
 # Purpose:
 ## Wrangle "artisanal" watershed shapefiles into a single file to extract driver data
@@ -24,7 +26,8 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 # Define the Drive folder for exporting checks / diagnostics to
-check_folder <- googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7")
+check_folder <- googledrive::as_id("https://drive.google.com/drive/u/1/folders/1-IawEkFjfkrzAlgolvS1KTTm0pEW9K9h")
+
 
 ## ------------------------------------------------------- ##
             # Reference Table Acquisition ----
@@ -32,7 +35,7 @@ check_folder <- googledrive::as_id("https://drive.google.com/drive/u/0/folders/1
 
 # Grab ID of the GoogleSheet with site coordinates
 googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
-  dplyr::filter(name == "WRTDS_Reference_Table") %>%
+  dplyr::filter(name == "Site_Reference_Table") %>%
   googledrive::drive_download(file = ., overwrite = T,
                               path = file.path(path, "site-coordinates",
                                                "silica-coords_RAW.xlsx"))
@@ -41,22 +44,27 @@ googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/fol
 coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
                                                 "silica-coords_RAW.xlsx")) %>%
   ## Pare down to minimum needed columns
-  dplyr::select(LTER, Shapefile_Name, drainSqKm, Latitude, Longitude, Shapefile_CRS_EPSG) %>%
+  dplyr::select(LTER, Shapefile_Name, Stream_Name, drainSqKm, Latitude, Longitude, Shapefile_CRS_EPSG) %>%
   ## Drop duplicate rows (if any)
   dplyr::distinct() %>%
   ## Rename some columns
   dplyr::rename(expert_area_km2 = drainSqKm,
-                crs_code = Shapefile_CRS_EPSG)
+                crs_code = Shapefile_CRS_EPSG) |>
+  filter(is.na(Shapefile_Name)!=T|
+           is.na(Shapefile_Name)==T& !LTER %in% c("ARC","BcCZO", "BNZ", "Cameroon", "Catalina Jemez", "Coal Creek11", "Finnish Environmental Institute", 
+                                                  "HYBAM", "KNZ", "KRR", "LMP", "LUQ", "MCM", "PIE", "Tanguro(Jankowski)", "USGS")
+         & (!is.na(Latitude)&!is.na(Longitude)))
   
 # Glimpse this
 dplyr::glimpse(coord_df)
+coord_df|> filter(is.na(Shapefile_Name)) |> pull(LTER) |> unique()
 
 ## ------------------------------------------------------- ##
                   # Acquire Shapefiles ----
 ## ------------------------------------------------------- ##
 
 # Identify all shapefiles currently in Aurora
-server_files <- data.frame("files" = dir(path = file.path(path, 'artisanal-shapefiles'))) %>%
+server_files <- data.frame("files" = dir(path = file.path(path, 'artisanal-shapefiles-2'))) %>%
   # Split off file type
   dplyr::mutate(file_type = stringr::str_sub(string = files, start = nchar(files) - 3,
                                              nchar(files)))
@@ -127,7 +135,7 @@ sf::sf_use_s2(F)
 for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
   
   # Read in the shapefile
-  focal_shp_raw <- sf::st_read(file.path(path, "artisanal-shapefiles",
+  focal_shp_raw <- sf::st_read(file.path(path, "artisanal-shapefiles-2",
                                          paste0(focal_name, ".shp")), quiet = T)
   
   
@@ -184,6 +192,7 @@ plot(all_shps["Shapefile_Name"], axes = T, main = NULL)
 # Tidy up environment
 rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
 
+
 ## ------------------------------------------------------- ##
                     # Export Results ----
 ## ------------------------------------------------------- ##
@@ -228,11 +237,11 @@ shps_df %>%
 dir.create(path = file.path(path, "shape_checks"), showWarnings = F)
 
 # Export locally
-write.csv(shps_df, file = file.path(path, "shape_checks", "artisanal_shape_area_check.csv"), 
+write.csv(shps_df, file = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"), 
           row.names = F, na = '')
 
 # Upload to Drive
-googledrive::drive_upload(media = file.path(path, "shape_checks", "artisanal_shape_area_check.csv"), 
+googledrive::drive_upload(media = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"), 
                           overwrite = T, 
                           path = check_folder)
 
@@ -243,129 +252,129 @@ rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
                   # Exploratory Maps ----
 ## ------------------------------------------------------- ##
 
-# Identify color palette per LTER
-shed_palette <- c("aaa" = "#ffffff", # placeholder
-                  ## North America (reds/oranges/yellows)
-                  "AND" = "#6a040f",
-                  "ARC" = "#9d0208", 
-                  "BNZ" = "#d00000", 
-                  "Catalina Jemez" = "#dc2f02", 
-                  "Coal Creek" = "#e85d04", 
-                  "HBR" = "#f48c06", 
-                  "KNZ" = "#faa307", 
-                  "KRR" = "#ffba08", 
-                  "LMP" = "#370617", 
-                  "NWT" = "#ff9b54", 
-                  "Sagehen" = "#ff7f51", 
-                  "UMR" = "#ce4257", 
-                  "USGS" = "#720026", 
-                  "Walker Branch" = "#4f000b",
-                  ## Carribbean
-                  "LUQ" = "#2b9348", 
-                  ## Europe
-                  "Finnish Environmental Institute" = "#0077b6", 
-                  "Krycklan" = "#00b4d8", 
-                  "NIVA" = "#ade8f4", 
-                  ## Arctic / Antarctica
-                  "GRO" = "#9d4edd", 
-                  "MCM" = "#c77dff")
-
-# Read in global & state borders
-world <- sf::st_as_sf(maps::map(database = "world", plot = F, fill = T))
-states <- sf::st_as_sf(maps::map(database = "state", plot = F, fill = T))
-
-# Combine the two
-borders <- dplyr::bind_rows(world, states) %>%
-  dplyr::mutate(LTER = "aaa")
-
-# Create folder for exporting maps
-dir.create(path = file.path(path, "test_maps"), showWarnings = F)
-
-# For each LTER make map
-for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
-  # focal_lter <- "USGS"
-  
-  # Start loop
-  message("Beginning plot creation for ", focal_lter, " watershed shapes")
-  
-  # Filter to one "LTER" (in quotes because includes non-LTERs)
-  sub_shp <- all_shps %>%
-    dplyr::filter(LTER == focal_lter)
-  
-  # Identify boundary of object
-  sub_bbox <- sf::st_bbox(obj = sub_shp)
-  
-  # Create (and wrangle) a dataframe version of this
-  sub_bound_df <- data.frame("corner" = names(sub_bbox),
-                             "lat_long" = stringr::str_sub(string = names(sub_bbox), 1, 1),
-                             "end" = stringr::str_sub(string = names(sub_bbox), 2, 4),
-                             "value" = as.numeric(sub_bbox)) %>%
-    # Identify range
-    dplyr::group_by(lat_long) %>%
-    dplyr::mutate(range = abs(max(value) - min(value))) %>%
-    dplyr::ungroup() %>%
-    # Replace if very small
-    dplyr::mutate(range = ifelse(range < 2, yes = 2, no = range)) %>%
-    # Add to actual values conditionally
-    dplyr::mutate(lims = dplyr::case_when(
-      value >= 0 & end == "min" ~ value - range,
-      value >= 0 & end == "max" ~ value + range,
-      value < 0 & end == "min" ~ value + range,
-      value < 0 & end == "max" ~ value - range)) %>%
-    # Add axis steps
-    dplyr::mutate(steps = dplyr::case_when(range <= 5 ~ 2,
-                                           range <= 10 ~ 2,
-                                           range <= 50 ~ 10,
-                                           range > 50 ~ 20))
-  
-  # Strip off relevant bit for each limits
-  sub_xlim <- sub_bound_df %>%
-    dplyr::filter(lat_long == "x") %>%
-    dplyr::pull(lims)
-  sub_ylim <- sub_bound_df %>%
-    dplyr::filter(lat_long == "y") %>%
-    dplyr::pull(lims)
-  
-  # Attach sub shape to borders
-  sub_all <- sub_shp %>%
-    dplyr::bind_rows(borders)
-  
-  # Crop palette to only relevant color(s)
-  sub_palette <- shed_palette[unique(sub_all$LTER)]
-
-  # Make plot
-  sub_map <- sub_all %>%
-    ggplot(aes(fill = LTER)) +
-    geom_sf(alpha = 0.3) +
-    # Set plot extents
-    coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, 
-             crs = st_crs(x = 4326)) +
-    # Customize theming / labels
-    scale_fill_manual(values = sub_palette) +
-    scale_x_continuous(limits = sub_xlim, breaks = seq(from = floor(min(sub_xlim)),
-                                                       to = ceiling(max(sub_xlim)),
-                                                       by = max(sub_bound_df$steps))) +
-    scale_y_continuous(limits = sub_ylim, breaks = seq(from = floor(min(sub_ylim)),
-                                                       to = ceiling(max(sub_ylim)),
-                                                       by = max(sub_bound_df$steps))) +
-    labs(x = "Longitude", y = "Latitude", 
-         title = paste0(focal_lter, " Map")) +
-    supportR::theme_lyon() +
-    theme(legend.position = "none",
-          axis.text.y = element_text(angle = 90, vjust = 1, hjust = 0.5))
-  
-  # Make file name
-  focal_mapname <- paste0("map_explore_", focal_lter, ".png")
-  
-  # Export this locally
-  ggsave(filename = file.path(path, "test_maps", focal_mapname), 
-         width = 6, height = 6, units = "in")
-  
-  # Upload to Drive
-  googledrive::drive_upload(media = file.path(path, "test_maps", focal_mapname), overwrite = T, path = check_folder)
-  
-  # Closing message
-  message("Finished with ", focal_lter) }
+# # Identify color palette per LTER
+# shed_palette <- c("aaa" = "#ffffff", # placeholder
+#                   ## North America (reds/oranges/yellows)
+#                   "AND" = "#6a040f",
+#                   "ARC" = "#9d0208", 
+#                   "BNZ" = "#d00000", 
+#                   "Catalina Jemez" = "#dc2f02", 
+#                   "Coal Creek" = "#e85d04", 
+#                   "HBR" = "#f48c06", 
+#                   "KNZ" = "#faa307", 
+#                   "KRR" = "#ffba08", 
+#                   "LMP" = "#370617", 
+#                   "NWT" = "#ff9b54", 
+#                   "Sagehen" = "#ff7f51", 
+#                   "UMR" = "#ce4257", 
+#                   "USGS" = "#720026", 
+#                   "Walker Branch" = "#4f000b",
+#                   ## Carribbean
+#                   "LUQ" = "#2b9348", 
+#                   ## Europe
+#                   "Finnish Environmental Institute" = "#0077b6", 
+#                   "Krycklan" = "#00b4d8", 
+#                   "NIVA" = "#ade8f4", 
+#                   ## Arctic / Antarctica
+#                   "GRO" = "#9d4edd", 
+#                   "MCM" = "#c77dff")
+# 
+# # Read in global & state borders
+# world <- sf::st_as_sf(maps::map(database = "world", plot = F, fill = T))
+# states <- sf::st_as_sf(maps::map(database = "state", plot = F, fill = T))
+# 
+# # Combine the two
+# borders <- dplyr::bind_rows(world, states) %>%
+#   dplyr::mutate(LTER = "aaa")
+# 
+# # Create folder for exporting maps
+# dir.create(path = file.path(path, "test_maps"), showWarnings = F)
+# 
+# # For each LTER make map
+# for(focal_lter in setdiff(sort(unique(all_shps$LTER)), c("GRO"))){
+#   # focal_lter <- "USGS"
+#   
+#   # Start loop
+#   message("Beginning plot creation for ", focal_lter, " watershed shapes")
+#   
+#   # Filter to one "LTER" (in quotes because includes non-LTERs)
+#   sub_shp <- all_shps %>%
+#     dplyr::filter(LTER == focal_lter)
+#   
+#   # Identify boundary of object
+#   sub_bbox <- sf::st_bbox(obj = sub_shp)
+#   
+#   # Create (and wrangle) a dataframe version of this
+#   sub_bound_df <- data.frame("corner" = names(sub_bbox),
+#                              "lat_long" = stringr::str_sub(string = names(sub_bbox), 1, 1),
+#                              "end" = stringr::str_sub(string = names(sub_bbox), 2, 4),
+#                              "value" = as.numeric(sub_bbox)) %>%
+#     # Identify range
+#     dplyr::group_by(lat_long) %>%
+#     dplyr::mutate(range = abs(max(value) - min(value))) %>%
+#     dplyr::ungroup() %>%
+#     # Replace if very small
+#     dplyr::mutate(range = ifelse(range < 2, yes = 2, no = range)) %>%
+#     # Add to actual values conditionally
+#     dplyr::mutate(lims = dplyr::case_when(
+#       value >= 0 & end == "min" ~ value - range,
+#       value >= 0 & end == "max" ~ value + range,
+#       value < 0 & end == "min" ~ value + range,
+#       value < 0 & end == "max" ~ value - range)) %>%
+#     # Add axis steps
+#     dplyr::mutate(steps = dplyr::case_when(range <= 5 ~ 2,
+#                                            range <= 10 ~ 2,
+#                                            range <= 50 ~ 10,
+#                                            range > 50 ~ 20))
+#   
+#   # Strip off relevant bit for each limits
+#   sub_xlim <- sub_bound_df %>%
+#     dplyr::filter(lat_long == "x") %>%
+#     dplyr::pull(lims)
+#   sub_ylim <- sub_bound_df %>%
+#     dplyr::filter(lat_long == "y") %>%
+#     dplyr::pull(lims)
+#   
+#   # Attach sub shape to borders
+#   sub_all <- sub_shp %>%
+#     dplyr::bind_rows(borders)
+#   
+#   # Crop palette to only relevant color(s)
+#   sub_palette <- shed_palette[unique(sub_all$LTER)]
+# 
+#   # Make plot
+#   sub_map <- sub_all %>%
+#     ggplot(aes(fill = LTER)) +
+#     geom_sf(alpha = 0.3) +
+#     # Set plot extents
+#     coord_sf(xlim = sub_xlim, ylim = sub_ylim, expand = F, 
+#              crs = st_crs(x = 4326)) +
+#     # Customize theming / labels
+#     scale_fill_manual(values = sub_palette) +
+#     scale_x_continuous(limits = sub_xlim, breaks = seq(from = floor(min(sub_xlim)),
+#                                                        to = ceiling(max(sub_xlim)),
+#                                                        by = max(sub_bound_df$steps))) +
+#     scale_y_continuous(limits = sub_ylim, breaks = seq(from = floor(min(sub_ylim)),
+#                                                        to = ceiling(max(sub_ylim)),
+#                                                        by = max(sub_bound_df$steps))) +
+#     labs(x = "Longitude", y = "Latitude", 
+#          title = paste0(focal_lter, " Map")) +
+#     supportR::theme_lyon() +
+#     theme(legend.position = "none",
+#           axis.text.y = element_text(angle = 90, vjust = 1, hjust = 0.5))
+#   
+#   # Make file name
+#   focal_mapname <- paste0("map_explore_", focal_lter, ".png")
+#   
+#   # Export this locally
+#   ggsave(filename = file.path(path, "test_maps", focal_mapname), 
+#          width = 6, height = 6, units = "in")
+#   
+#   # Upload to Drive
+#   googledrive::drive_upload(media = file.path(path, "test_maps", focal_mapname), overwrite = T, path = check_folder)
+#   
+#   # Closing message
+#   message("Finished with ", focal_lter) }
 
 # Tidy up environment
 rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
