@@ -1,7 +1,11 @@
 ## ------------------------------------------------------- ##
-# Hydrosheds  ----
+                # Hydrosheds  ----
 ## ------------------------------------------------------- ##
 
+# This script is currently for extracting watersheds for Canada and Murray Darling for Data Release 2
+# It can be adapted to add more regions by changing code in lines 
+                
+                
 ## ------------------------------------------------------- ##
 # Reference Table Acquisition ----
 ## ------------------------------------------------------- ##
@@ -49,10 +53,6 @@ good_sheds2 <- coord_df %>%
 dplyr::glimpse(good_sheds2)
 
 source(file.path("tools", "hydrosheds_custom_fxns.R"))
-
-
-
-
 
 # BASEMENT ----
 
@@ -217,6 +217,7 @@ sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
 # 8 = Arctic (North America); 9 = Greenland 
 
 # Prepare only needed HydroSheds 'continents'
+## Update this for canada/murray darling
 basin_needs <- rbind(europe, north_am, arctic)
 
 # Attach the twelfth Pfafstetter code by matching with HYBAS_ID
