@@ -5,9 +5,28 @@
 # This script is currently for extracting watersheds for Canada and Murray Darling for Data Release 2
 # It can be adapted to add more regions by changing code in lines 
                 
+## ------------------------------------------------------- ##
+                # Housekeeping -----
+## ------------------------------------------------------- ##
+
+# Read needed libraries
+# install.packages("librarian")
+librarian::shelf(tidyverse, magrittr, googledrive, sf, terra, nngeo, NCEAS/scicomptools)
+
+# Clear environment
+rm(list = ls())
+
+# Identify path to location of shared data
+(path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
                 
 ## ------------------------------------------------------- ##
-# Reference Table Acquisition ----
+          # Reference Table Acquisition ----
+## ------------------------------------------------------- ##
+
+
+
+## ------------------------------------------------------- ##
+# Site Coordinate Acquisition ----
 ## ------------------------------------------------------- ##
 
 # Grab ID of the GoogleSheet with site coordinates
@@ -36,7 +55,7 @@ coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
 dplyr::glimpse(coord_df)
 coord_df|> filter(is.na(Shapefile_Name)) |> pull(LTER) |> unique()
 
-
+# Do some necessary processing
 good_sheds2 <- coord_df %>%
   # Filter to only shapefiles in ref. table & on Aurora
   dplyr::filter(is.na(Shapefile_Name)) %>%
@@ -52,7 +71,12 @@ good_sheds2 <- coord_df %>%
 # Check that out
 dplyr::glimpse(good_sheds2)
 
+# Check coordinates
+range(good_sheds2$lat)
+range(good_sheds2$long)
+
 source(file.path("tools", "hydrosheds_custom_fxns.R"))
+
 
 # BASEMENT ----
 
