@@ -23,18 +23,16 @@ rm(list = ls())
           # Reference Table Acquisition ----
 ## ------------------------------------------------------- ##
 
-
-
-## ------------------------------------------------------- ##
-# Site Coordinate Acquisition ----
-## ------------------------------------------------------- ##
-
 # Grab ID of the GoogleSheet with site coordinates
 googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
   dplyr::filter(name == "Site_Reference_Table") %>%
   googledrive::drive_download(file = ., overwrite = T,
                               path = file.path(path, "site-coordinates",
                                                "silica-coords_RAW.xlsx"))
+
+## ------------------------------------------------------- ##
+# Site Coordinate Acquisition ----
+## ------------------------------------------------------- ##
 
 # Read in site coordinates (i.e., ref table)
 coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
@@ -72,76 +70,8 @@ good_sheds2 <- coord_df %>%
 dplyr::glimpse(good_sheds2)
 
 # Check coordinates
-range(good_sheds2$lat)
-range(good_sheds2$long)
-
-source(file.path("tools", "hydrosheds_custom_fxns.R"))
-
-
-# BASEMENT ----
-
-## ------------------------------------------------------- ##
-# Silica WG - Identify Watershed Shapefiles
-## ------------------------------------------------------- ##
-# Written by:
-## Nick J Lyon
-
-# Purpose:
-## Create/find shapefiles of watershed boundaries around site lat/long points.
-## These polygons can be used later as 'cookie cutters' to extract the relevant portion of global climate data rasters
-
-## ------------------------------------------------------- ##
-# Housekeeping -----
-## ------------------------------------------------------- ##
-
-# Read needed libraries
-# install.packages("librarian")
-librarian::shelf(tidyverse, magrittr, googledrive, sf, terra, nngeo, NCEAS/scicomptools)
-
-# Clear environment
-rm(list = ls())
-
-# Identify path to location of shared data
-(path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
-
-## ------------------------------------------------------- ##
-# Site Coordinate Acquisition ----
-## ------------------------------------------------------- ##
-
-# Grab ID of the GoogleSheet with site coordinates
-ref_id <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
-  dplyr::filter(name == "WRTDS_Reference_Table")
-
-# Download ref table (overwriting previous downloads)
-googledrive::drive_download(file = googledrive::as_id(ref_id), overwrite = T,
-                            path = file.path(path, "site-coordinates",
-                                             "silica-coords_RAW.xlsx"))
-
-# Read it in
-coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates", "silica-coords_RAW.xlsx"))
-
-# Glimpse this
-dplyr::glimpse(coord_df)
-
-# Do some necessary processing
-sites <- coord_df %>%
-  # Remove some unneeded columns
-  dplyr::select(LTER, Stream_Name, Discharge_File_Name, Latitude, Longitude) %>%
-  # Drop missing coordinates
-  dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
-  # Remove McMurdo (Antarctica isn't included in Hydrosheds) and GRO (shapefiles too large)
-  dplyr::filter(!LTER %in% c("GRO", "MCM")) %>%
-  # Rename lat/long more simply
-  dplyr::rename(long = Longitude, lat = Latitude) %>%
-  # Make all character columns into factors
-  dplyr::mutate(dplyr::across(LTER:Discharge_File_Name, factor))
-
-# Glimpse it
-dplyr::glimpse(sites)
-
-# Check coordinates
-range(sites$lat)
-range(sites$long)
+range(good_sheds2$Latitude)
+range(good_sheds2$Longitude)
 
 ## ------------------------------------------------------- ##
 # Load HydroSHEDS Basin Delineations ----
@@ -202,19 +132,19 @@ sf::sf_use_s2(F)
 ## earlier form of processing assumes two points lie on a plane
 
 # Pull out HYBAS_IDs at site coordinates
-sites_actual <- sites %>%
+sites_actual <- good_sheds2 %>%
   # Quickly address any coordinates that don't intersect with *any* HydroSHEDS (but should)
   ## Only affects one site and that one is very near the ocean in reality
   ## Longitude
-  dplyr::mutate(long = dplyr::case_when(
+  dplyr::mutate(Longitude = dplyr::case_when(
     # Bump a Finnish site a little further inland
     LTER == "Finnish Environmental Institute" &
       Stream_Name %in% c("Site 28208", "Oulujoki 13000") &
-      long == 25.4685 ~ 25.5,
+      Longitude == 25.4685 ~ 25.5,
     # Otherwise retain old coordinate
-    TRUE ~ long)) %>%
+    TRUE ~ Longitude)) %>%
   # Make this explicitly spatial
-  sf::st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
+  sf::st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
   # Identify HydroSHEDS polygons that intersect with those coordinates
   dplyr::mutate(
     # Find the interaction points as integers
@@ -258,7 +188,7 @@ dplyr::glimpse(sites_actual)
 # We may want to visualize aggregated basins so let's go that direction now
 
 # Clean up environment to have less data stored as we move forward
-rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'coord_df')))
+rm(list = setdiff(ls(), c('path', 'good_sheds2', 'sites_actual', 'basin_needs', 'coord_df')))
 
 ## ------------------------------------------------------- ##
 # Identify Drainage Basins ----
@@ -270,7 +200,9 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'coord
 ## 3) Merging the focal polygon and all upstream polygons into a single spatial object
 
 # Load custom functions needed for this operation
-source("hydrosheds_custom_fxns.R")
+# source("hydrosheds_custom_fxns.R")
+source(file.path("tools", "hydrosheds_custom_fxns.R"))
+
 
 # Identify focal polygons where we've already identified upstream polygon IDs
 found_polys <- dir(path = file.path(path, 'hydrosheds-basin-ids'),
@@ -407,7 +339,7 @@ hydro_poly_df <- sites_actual %>%
   dplyr::select(-ixn, -SUB_AREA, -focal_poly, -dplyr::starts_with("PFAF_")) %>%
   # Relocate area
   dplyr::relocate(drainSqKm, .before = HYBAS_ID) %>%
-  # Attach original lat/long coordinates in case needed later
+  # Attach original Latitude/Longitude coordinates in case needed later
   dplyr::left_join(y = sites, by = c("LTER", "Stream_Name", "Discharge_File_Name"))
 
 # Check it again
@@ -424,7 +356,7 @@ plot(hydro_poly["focal_poly"], axes = T, lab = c(2, 2, 2))
 ## ------------------------------------------------------- ##
 # Crop to Bounding Box ----
 ## ------------------------------------------------------- ##
-# We may want to crop drainage basins to their expert-defined lat/long maxima
+# We may want to crop drainage basins to their expert-defined Latitude/Longitude maxima
 
 # Attach bounding box values to final sites object
 bbox_coords <- sites_final %>%
@@ -507,4 +439,5 @@ st_write(obj = poly_actual, delete_layer = T,
          dsn = file.path(path, "site-coordinates", "CROPPED-silica-watersheds.shp"))
 
 # End ----
+
 
