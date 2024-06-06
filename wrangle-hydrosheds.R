@@ -3,7 +3,7 @@
 ## ------------------------------------------------------- ##
 
 # This script is currently for extracting watersheds for Canada and Murray Darling for Data Release 2
-# It can be adapted to add more regions by changing code in lines 
+# It can be adapted to add more regions by changing code in line 114?
                 
 ## ------------------------------------------------------- ##
                 # Housekeeping -----
@@ -111,8 +111,7 @@ str(arctic)
 ## PFAF_# + N = progressively finer separation
 
 # Bind our files into a single (admittedly giant) object
-all_basins <- rbind(arctic, asia, oceania, greenland, north_am,
-                    south_am, siberia, africa, europe)
+all_basins <- rbind(arctic, oceania, north_am)
 
 # For ease of manipulation get just the HYBAS_ID
 # These uniquely identify the most specific level so they work upstream too (no pun intended)
@@ -172,7 +171,7 @@ sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
 
 # Prepare only needed HydroSheds 'continents'
 ## Update this for canada/murray darling
-basin_needs <- rbind(europe, north_am, arctic)
+basin_needs <- rbind(oceania, north_am, arctic)
 
 # Attach the twelfth Pfafstetter code by matching with HYBAS_ID
 sites_actual$PFAF_12 <- basin_needs$PFAF_12[match(sites_actual$HYBAS_ID, 
@@ -270,7 +269,7 @@ hydro_out <- id_list %>%
 dplyr::glimpse(hydro_out)
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro_out', 'coord_df')))
+rm(list = setdiff(ls(), c('path', 'good_sheds2', 'sites_actual', 'basin_needs', 'hydro_out', 'coord_df')))
 
 ## ------------------------------------------------------- ##
 # Wrangle Drainage Basin Object ----
@@ -280,6 +279,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sites_actual', 'basin_needs', 'hydro
 sf::sf_use_s2(F)
 ## s2 processing assumes that two points lie on a sphere
 ## earlier form of processing assumes two points lie on a plane
+
 
 # Strip the polygons that correspond to those IDs
 hydro_poly <- hydro_out %>%
@@ -293,150 +293,173 @@ hydro_poly <- hydro_out %>%
   # ...sum sub-polygon areas and combine sub-polygon geometries
   dplyr::summarise(drainSqKm = sum(SUB_AREA, na.rm = TRUE),
                    geometry = sf::st_union(geometry)) %>%
+  dplyr::ungroup() %>%
   # Need to make the class officially sf again before continuing
-  sf::st_as_sf() %>%
-  # Then eliminate any small gaps within those shapes
-  nngeo::st_remove_holes()
-
+  sf::st_as_sf()
+  
 # Check structure
 str(hydro_poly)
 
-# Quick diagnostic check: identify number of HydroSHEDS polygons that get fused into each river's watershed shapefile
-poly_ct <- hydro_out %>%
-  # Group by focal polygon and count number of unique HYBAS IDs
-  dplyr::group_by(focal_poly) %>%
-  dplyr::summarize(hydrosheds_polygon_ct = dplyr::n()) %>%
-  dplyr::ungroup() %>%
-  # Attach drainage area sums from the hydro_poly object and rename that column descriptively
-  dplyr::left_join(y = sf::st_drop_geometry(hydro_poly), by = "focal_poly") %>%
-  dplyr::rename(hydrosheds_area_km2 = drainSqKm) %>%
-  # Rename "focal_poly"
-  dplyr::rename(HYBAS_ID = focal_poly) %>%
-  # Attach other site information (like more descriptive names)
-  dplyr::left_join(y = sites_actual, by = "HYBAS_ID") %>%
-  # Pare down columns and reorder remaining ones
-  dplyr::select(LTER:Discharge_File_Name, hydrosheds_polygon_ct, hydrosheds_area_km2)
+## Filling of polygon gaps code should go here
 
-# Glimpse that
-dplyr::glimpse(poly_ct)
+## ------------------------------------------------------- ##
+# FINAL WRANGLING ----
+## ------------------------------------------------------- ##
 
-# Export as a CSV
-write.csv(x = poly_ct, file = file.path(path, "hydrosheds_polygon_count.csv"),
-          row.names = F, na = '')
-
-# Upload to Drive too
-googledrive::drive_upload(media = file.path(path, "hydrosheds_polygon_count.csv"), path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1hrVN2qTzhxbcxe-XZNdRORkPfu4TQaO7"), overwrite = T)
-
-# Get a dataframe version of this + site information for later use
-hydro_poly_df <- sites_actual %>%
-  # Drop geometry
+dplyr::glimpse(hydro_poly)
+poly_actual <- sites_actual %>%
   sf::st_drop_geometry() %>%
-  # Get a column to join by
-  dplyr::mutate(focal_poly = as.numeric(HYBAS_ID)) %>%
-  # Bind in a geometry-less version of the focal polygon thing
-  dplyr::left_join(y = sf::st_drop_geometry(x = hydro_poly), by = "focal_poly") %>%
-  # Drop some unneeded columns
-  dplyr::select(-ixn, -SUB_AREA, -focal_poly, -dplyr::starts_with("PFAF_")) %>%
-  # Relocate area
-  dplyr::relocate(drainSqKm, .before = HYBAS_ID) %>%
-  # Attach original Latitude/Longitude coordinates in case needed later
-  dplyr::left_join(y = sites, by = c("LTER", "Stream_Name", "Discharge_File_Name"))
+  rename(focal_poly = HYBAS_ID) %>%
+  select(-PFAF_12, -SUB_AREA, -ixn) %>%
+  left_join(hydro_poly, by = "focal_poly") %>%
+  select(-focal_poly) %>%
+  dplyr::rename(exp_area = expert_area_km2,
+                real_area = drainSqKm) %>%
+  mutate(file_name = NA, .before = dplyr:: everything())
 
-# Check it again
-dplyr::glimpse(hydro_poly_df)
+dplyr::glimpse(poly_actual)
 
-# Export this for later use as a CSV
-write.csv(hydro_poly_df, row.names = F, na = "",
-          file = file.path(path, "site-coordinates", 'silica-coords_HydroSHEDS.csv') )
+# Export the combine shapefile for all rivers
+sf::st_write(obj = final_shps, delete_layer = T,
+             dsn = file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
 
-# Plot all of the watersheds
-plot(hydro_poly["focal_poly"], axes = T, lab = c(2, 2, 2))
+
+## BASEMENT ----
+
+# test <- hydro_poly %>%
+#   filter(st_geometry_type(.) %in% c("POLYGON", "MULTIPOLYGON") )
+# plot(test)
+
+## Need to figure out how to fill these holes later ###
+# # Then eliminate any small gaps within those shapes
+# hydro_poly_fill <- hydro_poly %>%
+#   st_multipolygon(lapply(., function(x) x[1]))
+#   nngeo::st_remove_holes()
+
+
+# Quick diagnostic check: identify number of HydroSHEDS polygons that get fused into each river's watershed shapefile
+# poly_ct <- hydro_out %>%
+#   # Group by focal polygon and count number of unique HYBAS IDs
+#   dplyr::group_by(focal_poly) %>%
+#   dplyr::summarize(hydrosheds_polygon_ct = dplyr::n()) %>%
+#   dplyr::ungroup() %>%
+#   # Attach drainage area sums from the hydro_poly object and rename that column descriptively
+#   dplyr::left_join(y = sf::st_drop_geometry(hydro_poly), by = "focal_poly") %>%
+#   dplyr::rename(hydrosheds_area_km2 = drainSqKm) %>%
+#   # Rename "focal_poly"
+#   dplyr::rename(HYBAS_ID = focal_poly) %>%
+#   # Attach other site information (like more descriptive names)
+#   dplyr::left_join(y = sites_actual, by = "HYBAS_ID") 
+# 
+# # Glimpse that
+# dplyr::glimpse(poly_ct)
+
+# # Get a dataframe version of this + site information for later use
+# hydro_poly_df <- sites_actual %>%
+#   # Drop geometry
+#   sf::st_drop_geometry() %>%
+#   # Get a column to join by
+#   dplyr::mutate(focal_poly = as.numeric(HYBAS_ID)) %>%
+#   # Bind in a geometry-less version of the focal polygon thing
+#   dplyr::left_join(y = sf::st_drop_geometry(x = hydro_poly), by = "focal_poly") %>%
+#   # Drop some unneeded columns
+#   dplyr::select(-ixn, -SUB_AREA, -focal_poly, -dplyr::starts_with("PFAF_")) %>%
+#   # Relocate area
+#   dplyr::relocate(drainSqKm, .before = HYBAS_ID) %>%
+#   # Attach original Latitude/Longitude coordinates in case needed later
+#   dplyr::left_join(y = sites, by = c("LTER", "Stream_Name", "Discharge_File_Name"))
+# 
+# # Check it again
+# dplyr::glimpse(hydro_poly_df)
 
 
 ## ------------------------------------------------------- ##
 # Crop to Bounding Box ----
 ## ------------------------------------------------------- ##
-# We may want to crop drainage basins to their expert-defined Latitude/Longitude maxima
-
-# Attach bounding box values to final sites object
-bbox_coords <- sites_final %>%
-  dplyr::left_join(y = coord_df, by = c("LTER", "Stream_Name", "Discharge_File_Name")) %>%
-  # Pare down columns
-  dplyr::select(river_id, Min_Long, Max_Long, Min_Lat, Max_Lat) %>%
-  # Filter to only rivers with bounding boxes
-  dplyr::filter(!is.na(Min_Long) & !is.na(Max_Long) & !is.na(Min_Lat) & !is.na(Max_Lat)) %>%
-  # Keep only one row per river_id
-  dplyr::distinct()
-
-# Check that out
-dplyr::glimpse(bbox_coords)
-
-# Make an empty list
-crop_list <- list()
-
-# For each polygon
-for(river in unique(bbox_coords$river_id)){
-  
-  # Filter the bbox_coords object to just one river
-  river_bbox_coords <- dplyr::filter(bbox_coords, river_id == river)
-  
-  # If we have a complete bounding box...
-  if(!is.na(river_bbox_coords$Min_Long) & !is.na(river_bbox_coords$Max_Long) & 
-     !is.na(river_bbox_coords$Min_Lat) & !is.na(river_bbox_coords$Max_Lat)){
-    
-    # Strip out the coordinates of the bounding box
-    bbox_vec = c("xmin" = river_bbox_coords$Min_Long,
-                 "xmax" = river_bbox_coords$Max_Long,
-                 "ymin" = river_bbox_coords$Min_Lat,
-                 "ymax" = river_bbox_coords$Max_Lat)
-    
-    # Filter the polygon `sf` object to just this river
-    poly_sub <- poly_actual %>%
-      dplyr::filter(river_id == river) %>%
-      # Now crop using the named vector
-      sf::st_crop(y = bbox_vec)
-    
-    # Add this to the list
-    crop_list[[river]] <- poly_sub
-    
-    # Print success message
-    message("River ID '", river, "' cropped to bounding box") 
-    
-    # If we *do not* have the bounding box...
-  } else {
-    # If any part of the bounding box is unknown, skip cropping of this watershed
-    message("Bounding box for river ID '", river, "' incomplete or entirely missing") 
-  } 
-}
-
-# Remove all cropped rivers from the uncropped river object
-uncropped <- poly_actual %>%
-  dplyr::filter(!river_id %in% names(crop_list))
-
-# Exploratory plot to confirm
-## Pre-cropping polygon (for the Andrews rivers)
-plot(dplyr::filter(poly_actual, river_id == "7000435790")["river_id"], axes = T)
-plot(crop_list[["7000435790"]]["river_id"], axes = T)
-
-# Duplicate the uncropped object
-final_sf <- uncropped
-
-# For each cropped river:
-for(crop_river in names(crop_list)){
-  
-  # Attach to larger object containing other rivers
-  final_sf %<>%
-    dplyr::bind_rows(crop_list[[crop_river]])
-  
-  # Success message
-  message("Added cropped river ", crop_river, " to all site sf object") }
-
-# Exploratory final plot
-plot(final_sf, axes = T)
-
-# Save out this object as a shapefile
-st_write(obj = poly_actual, delete_layer = T,
-         dsn = file.path(path, "site-coordinates", "CROPPED-silica-watersheds.shp"))
+# # We may want to crop drainage basins to their expert-defined Latitude/Longitude maxima
+# 
+# # Attach bounding box values to final sites object
+# bbox_coords <- sites_final %>%
+#   dplyr::left_join(y = coord_df, by = c("LTER", "Stream_Name", "Discharge_File_Name")) %>%
+#   # Pare down columns
+#   dplyr::select(river_id, Min_Long, Max_Long, Min_Lat, Max_Lat) %>%
+#   # Filter to only rivers with bounding boxes
+#   dplyr::filter(!is.na(Min_Long) & !is.na(Max_Long) & !is.na(Min_Lat) & !is.na(Max_Lat)) %>%
+#   # Keep only one row per river_id
+#   dplyr::distinct()
+# 
+# # Check that out
+# dplyr::glimpse(bbox_coords)
+# 
+# # Make an empty list
+# crop_list <- list()
+# 
+# # For each polygon
+# for(river in unique(bbox_coords$river_id)){
+#   
+#   # Filter the bbox_coords object to just one river
+#   river_bbox_coords <- dplyr::filter(bbox_coords, river_id == river)
+#   
+#   # If we have a complete bounding box...
+#   if(!is.na(river_bbox_coords$Min_Long) & !is.na(river_bbox_coords$Max_Long) & 
+#      !is.na(river_bbox_coords$Min_Lat) & !is.na(river_bbox_coords$Max_Lat)){
+#     
+#     # Strip out the coordinates of the bounding box
+#     bbox_vec = c("xmin" = river_bbox_coords$Min_Long,
+#                  "xmax" = river_bbox_coords$Max_Long,
+#                  "ymin" = river_bbox_coords$Min_Lat,
+#                  "ymax" = river_bbox_coords$Max_Lat)
+#     
+#     # Filter the polygon `sf` object to just this river
+#     poly_sub <- poly_actual %>%
+#       dplyr::filter(river_id == river) %>%
+#       # Now crop using the named vector
+#       sf::st_crop(y = bbox_vec)
+#     
+#     # Add this to the list
+#     crop_list[[river]] <- poly_sub
+#     
+#     # Print success message
+#     message("River ID '", river, "' cropped to bounding box") 
+#     
+#     # If we *do not* have the bounding box...
+#   } else {
+#     # If any part of the bounding box is unknown, skip cropping of this watershed
+#     message("Bounding box for river ID '", river, "' incomplete or entirely missing") 
+#   } 
+# }
+# 
+# 
+# 
+# 
+# # Remove all cropped rivers from the uncropped river object
+# uncropped <- poly_actual %>%
+#   dplyr::filter(!river_id %in% names(crop_list))
+# 
+# # Exploratory plot to confirm
+# ## Pre-cropping polygon (for the Andrews rivers)
+# plot(dplyr::filter(poly_actual, river_id == "7000435790")["river_id"], axes = T)
+# plot(crop_list[["7000435790"]]["river_id"], axes = T)
+# 
+# # Duplicate the uncropped object
+# final_sf <- uncropped
+# 
+# # For each cropped river:
+# for(crop_river in names(crop_list)){
+#   
+#   # Attach to larger object containing other rivers
+#   final_sf %<>%
+#     dplyr::bind_rows(crop_list[[crop_river]])
+#   
+#   # Success message
+#   message("Added cropped river ", crop_river, " to all site sf object") }
+# 
+# # Exploratory final plot
+# plot(final_sf, axes = T)
+# 
+# # Save out this object as a shapefile
+# st_write(obj = poly_actual, delete_layer = T,
+#          dsn = file.path(path, "site-coordinates", "CROPPED-silica-watersheds.shp"))
 
 # End ----
 
