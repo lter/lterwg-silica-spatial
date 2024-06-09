@@ -30,7 +30,7 @@ options(dplyr.summarise.inform = F)
 sites <- readxl::read_excel(path = file.path(path, "site-coordinates",
                                              "silica-coords_RAW.xlsx")) %>%
   ## Pare down to minimum needed columns
-  dplyr::select(LTER, Stream_Name, Discharge_Site_Name, Shapefile_Name) %>%
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name) %>%
   ## Drop duplicate rows (if any)
   dplyr::distinct() %>%
   ## Remove any watersheds without a shapefile
@@ -242,7 +242,7 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized npp data
 write.csv(x = npp_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_npp.csv"))
+          file = file.path(path, "extracted-data", "si-extract_npp_2.csv"))
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_npp_2.csv"),

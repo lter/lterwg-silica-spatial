@@ -320,7 +320,7 @@ poly_actual <- sites_actual %>%
 dplyr::glimpse(poly_actual)
 
 # Export the combine shapefile for all rivers
-sf::st_write(obj = final_shps, delete_layer = T,
+sf::st_write(obj = poly_actual, delete_layer = T,
              dsn = file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
 
 

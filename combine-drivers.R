@@ -23,7 +23,7 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 # Load in shape area check
-area_check <- read.csv(file.path(path, "shape_checks", "artisanal_shape_area_check.csv"))
+area_check <- read.csv(file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"))
 
 # Check it out
 dplyr::glimpse(area_check)
@@ -99,10 +99,10 @@ supportR::diff_check(old = unique(sites$Discharge_Site_Name),
 
 # Export this
 write.csv(x = driver_df, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240511.csv"))
+          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240606.csv"))
 
 # And upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240511.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240606.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1Z-qlt9okoZ4eE-VVsbHiVVSu7V5nEkqK"))
 
