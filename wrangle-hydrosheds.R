@@ -70,8 +70,8 @@ good_sheds2 <- coord_df %>%
 dplyr::glimpse(good_sheds2)
 
 # Check coordinates
-range(good_sheds2$Latitude)
-range(good_sheds2$Longitude)
+# range(good_sheds2$Latitude)
+# range(good_sheds2$Longitude)
 
 ## ------------------------------------------------------- ##
 # Load HydroSHEDS Basin Delineations ----
@@ -299,6 +299,8 @@ hydro_poly <- hydro_out %>%
   
 # Check structure
 str(hydro_poly)
+dplyr::glimpse(hydro_poly)
+
 
 ## Filling of polygon gaps code should go here
 
@@ -306,7 +308,10 @@ str(hydro_poly)
 # FINAL WRANGLING ----
 ## ------------------------------------------------------- ##
 
-dplyr::glimpse(hydro_poly)
+## Need hydrosheds to have unique shapefile names (shp_nm)
+sites_actual <- cbind(sites_actual, "hydrosheds"=1:nrow(sites_actual)) 
+sites_actual$shp_nm <-paste0(sites_actual$LTER, sites_actual$hydrosheds)
+
 poly_actual <- sites_actual %>%
   sf::st_drop_geometry() %>%
   rename(focal_poly = HYBAS_ID) %>%
@@ -314,8 +319,8 @@ poly_actual <- sites_actual %>%
   left_join(hydro_poly, by = "focal_poly") %>%
   select(-focal_poly) %>%
   dplyr::rename(exp_area = expert_area_km2,
-                real_area = drainSqKm) %>%
-  mutate(file_name = NA, .before = dplyr:: everything())
+                real_area = drainSqKm) 
+  #mutate(shp_nm = "hydrosheds", .before = dplyr:: everything())
 
 dplyr::glimpse(poly_actual)
 

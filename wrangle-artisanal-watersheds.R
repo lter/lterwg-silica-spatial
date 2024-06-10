@@ -200,7 +200,7 @@ rm(list = setdiff(ls(), c("path", "coord_df", "all_shps", "check_folder")))
 # Long column names get coerced into abbreviations if left alone
 final_shps <- all_shps %>%
   # Rename the columns more succinctly
-  dplyr::rename(file_name = Shapefile_Name,
+  dplyr::rename(shp_nm = Shapefile_Name,
                 exp_area = expert_area_km2,
                 real_area = shape_area_km2)
 
