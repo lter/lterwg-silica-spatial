@@ -3,7 +3,7 @@
 ## ------------------------------------------------------- ##
 
 # This script is currently for extracting watersheds for Canada and Murray Darling for Data Release 2
-# It can be adapted to add more regions by changing code in line 114?
+# It can be adapted to add more regions by changing code in line 114 and 174
                 
 ## ------------------------------------------------------- ##
                 # Housekeeping -----
@@ -111,7 +111,7 @@ str(arctic)
 ## PFAF_# + N = progressively finer separation
 
 # Bind our files into a single (admittedly giant) object
-all_basins <- rbind(arctic, oceania, north_am)
+all_basins <- rbind(africa, arctic, north_am, oceania, south_am)
 
 # For ease of manipulation get just the HYBAS_ID
 # These uniquely identify the most specific level so they work upstream too (no pun intended)

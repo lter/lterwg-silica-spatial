@@ -36,9 +36,9 @@ sites <- readxl::read_excel(path = file.path(path, "site-coordinates",
   ## Pare down to minimum needed columns
   dplyr::select(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name) %>%
   ## Drop duplicate rows (if any)
-  dplyr::distinct() %>%
+  dplyr::distinct() 
   ## Remove any watersheds without a shapefile
-  dplyr::filter(!is.na(Shapefile_Name) & 
+  dplyr::filter(!is.na(Shapefile_Name) &
                   nchar(Shapefile_Name) != 0 &
                   !Shapefile_Name %in% c("?", "MISSING"))
 
