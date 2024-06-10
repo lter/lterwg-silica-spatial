@@ -323,6 +323,11 @@ dplyr::glimpse(poly_actual)
 sf::st_write(obj = poly_actual, delete_layer = T,
              dsn = file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
 
+# Tidy up environment
+rm(list = ls()); gc()
+
+# End ----
+
 
 ## BASEMENT ----
 

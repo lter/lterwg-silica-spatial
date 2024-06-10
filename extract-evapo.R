@@ -67,15 +67,14 @@ file_list <- list()
 #                 "cropped-russia-center", "cropped-russia-east",
 #                 "puerto-rico", "scandinavia")){
 
-## NEW SITES ALERT ##
-## had to change canada and germany to canada_2 and germany_2 so that I could upload new version of MODIS without conflicts.  
+## NEW SITES for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
                 "cropped-russia-west", "cropped-russia-west-2",
                 "cropped-russia-center", "cropped-russia-east",
                 "puerto-rico", "scandinavia",
                 "amazon", "australia",
-                "canada_2",  "congo",
-                "germany_2", "united-kingdom")){
+                "canada",  "congo",
+                "germany", "united-kingdom")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder

@@ -61,13 +61,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # Make an empty list
 file_list <- list()
 
-# Identify files for each region
-# for(region in c("north-america-usa", "north-america-arctic",
-#                 "cropped-russia-west", "cropped-russia-west-2",
-#                 "cropped-russia-center", "cropped-russia-east",
-#                 "puerto-rico", "scandinavia")){
-
-## NEW SITEs ALERT ##
+## NEW SITES added for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
                 "cropped-russia-west", "cropped-russia-west-2",   
                 "cropped-russia-center", "cropped-russia-east",
@@ -75,12 +69,6 @@ for(region in c("north-america-usa", "north-america-arctic",
                 "amazon", "australia",  
                 "canada",  "congo", 
                 "germany", "united-kingdom")){
-  
-  # # Identify files in that folder
-  # file_df <- data.frame("region" = region,
-  #                       "files" = dir(path = file.path(path, "raw-driver-data", 
-  #                                                      "raw-npp", region),
-  #                                     pattern = "MOD17A3HGF.006_Npp_"))
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder

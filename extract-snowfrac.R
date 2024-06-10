@@ -60,19 +60,8 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # Make an empty list
 file_list <- list()
 
-# Specify driver
-#focal_driver <- "raw-snow-modis10a2-v006"
 
-# Specify file pattern
-# file_pattern <- "MOD10A2.006_Eight_Day_Snow_Cover_"
-
-# Identify files for each region
-# for(region in c("north-america-usa", "north-america-arctic",
-#                 "cropped-russia-west", "cropped-russia-west-2",
-#                 "cropped-russia-center", "cropped-russia-east",
-#                 "puerto-rico", "scandinavia")){
-
-## NEW SITEs ALERT ##
+## NEW SITES added for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
                 "cropped-russia-west", "cropped-russia-west-2",   
                 "cropped-russia-center", "cropped-russia-east",
@@ -80,12 +69,6 @@ for(region in c("north-america-usa", "north-america-arctic",
                 "amazon", "australia",  
                 "canada",  "congo", 
                 "germany", "united-kingdom")){
-  
-  # # Identify files in that folder
-  # file_df <- data.frame("region" = region,
-  #                       "files" = dir(path = file.path(path, "raw-driver-data", 
-  #                                                      focal_driver, region),
-  #                                     pattern = file_pattern))
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
