@@ -188,8 +188,8 @@ dplyr::glimpse(soil_actual)
                   # Soil Order - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-# changed from "sites" to "sheds"... 
-soil_export <- sheds %>%
+# changed from "sites" to "sheds"... what is the role of "sites"??
+soil_export <- sites %>%
   # Join the rock data
   dplyr::left_join(y = soil_actual, by = c("LTER", "Shapefile_Name"))
 
