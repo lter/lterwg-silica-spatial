@@ -38,7 +38,7 @@ googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/fol
 coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
                                                 "silica-coords_RAW.xlsx")) %>%
   ## Pare down to minimum needed columns
-  dplyr::select(LTER, Shapefile_Name, Stream_Name, drainSqKm, Latitude, Longitude, Shapefile_CRS_EPSG) %>%
+  dplyr::select(LTER, Shapefile_Name, Discharge_File_Name, Stream_Name, drainSqKm, Latitude, Longitude, Shapefile_CRS_EPSG) %>%
   ## Drop duplicate rows (if any)
   dplyr::distinct() %>%
   ## Rename some columns
@@ -60,7 +60,7 @@ good_sheds2 <- coord_df %>%
   # Drop any non-unique rows (shouldn't be any but good to double check)
   dplyr::distinct() %>%
   # Condense what remains to ensure no duplicates
-  dplyr::group_by(LTER, Stream_Name, Latitude, Longitude) %>%
+  dplyr::group_by(LTER, Stream_Name, Discharge_File_Name, Latitude, Longitude) %>%
   dplyr::summarize(expert_area_km2 = mean(expert_area_km2, na.rm = T),
                    Latitude = dplyr::first(Latitude),
                    Longitude = dplyr::first(Longitude)) %>%
@@ -161,7 +161,7 @@ dplyr::glimpse(sites_actual)
 # Check any sites missing intersections
 sites_actual %>%
   dplyr::filter(nchar(stringr::str_sub(HYBAS_ID, 1, 1)) == 0) %>%
-  dplyr::select(LTER, Stream_Name)
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name)
 
 # And to make our lives easier, check out which continents we actually need
 sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))

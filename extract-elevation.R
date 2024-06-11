@@ -31,7 +31,6 @@ rm(list = ls())
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
 # Load in site names with lat/longs
-# Load in site names with lat/longs
 sites <- readxl::read_excel(path = file.path(path, "site-coordinates",
                                              "silica-coords_RAW.xlsx")) %>%
   ## Pare down to minimum needed columns
@@ -59,8 +58,9 @@ sheds <- sheds %>%
   dplyr::left_join(y = sites, by = c("LTER", "Shapefile_Name"))
 
 sheds$Stream_Name <- ifelse(!is.na(sheds$Stream_Name.x), sheds$Stream_Name.x, sheds$Stream_Name.y)
-sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, shape_area_km2, exp_are, hydrshd, real_ar))
-
+sheds$Discharge_File_Name <- ifelse(!is.na(sheds$Dsc_F_N), sheds$Dsc_F_N, sheds$Discharge_File_Name)
+sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, shape_area_km2, exp_are, hydrshd, real_ar, 
+                              Dsc_F_N))
 
 # Check that out
 dplyr::glimpse(sheds)
