@@ -33,10 +33,10 @@ sites <- readxl::read_excel(path = file.path(path, "site-coordinates",
   dplyr::select(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name) %>%
   ## Drop duplicate rows (if any)
   dplyr::distinct() 
-  # Remove any watersheds without a shapefile
-  dplyr::filter(!is.na(Shapefile_Name) &
-                  nchar(Shapefile_Name) != 0 &
-                  !Shapefile_Name %in% c("?", "MISSING"))
+# Remove any watersheds without a shapefile
+# dplyr::filter(!is.na(Shapefile_Name) &
+#                 nchar(Shapefile_Name) != 0 &
+#                 !Shapefile_Name %in% c("?", "MISSING"))
 
 # Check it out
 dplyr::glimpse(sites)
@@ -44,9 +44,18 @@ dplyr::glimpse(sites)
 # Grab the shapefiles the previous script (see PURPOSE section) created
 sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watersheds.shp")) %>%
   # Expand names to what they were before
-  dplyr::rename(Shapefile_Name = file_name,
+  dplyr::rename(Shapefile_Name = shp_nm,
+                Stream_Name = Strm_Nm,
                 expert_area_km2 = exp_area,
                 shape_area_km2 = real_area)
+
+## combine sites and sheds to get ALL sheds (including hydrosheds) and their metadata (from the sites dataframe)
+sheds <- sheds %>%
+  dplyr::left_join(y = sites, by = c("LTER", "Shapefile_Name"))
+
+sheds$Stream_Name <- ifelse(!is.na(sheds$Stream_Name.x), sheds$Stream_Name.x, sheds$Stream_Name.y)
+sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, shape_area_km2, exp_are, hydrshd, real_ar))
+
 
 # Check that out
 dplyr::glimpse(sheds)
@@ -367,9 +376,11 @@ dplyr::glimpse(et_actual)
             # Evapotranspiration - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-et_export <- sites %>%
+et_export <- sheds %>%
   # Join the rock data
-  dplyr::left_join(y = et_actual, by = c("LTER", "Shapefile_Name"))
+  dplyr::left_join(y = et_actual, by = c("LTER", "Shapefile_Name"))%>%
+  # this drops the geometry column, which causes issues on export
+  sf::st_drop_geometry()  
 
 # Check it out
 dplyr::glimpse(et_export)

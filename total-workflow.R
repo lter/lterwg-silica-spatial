@@ -80,6 +80,17 @@ source(file = "extract-elevation.R", echo = T)
 
 # Garbage collection
 gc()
+
+## ------------------------- ##
+        # Permafrost -----
+## ------------------------- ##
+
+# Re-extract (global, static(?))
+source(file = "extract-permafrost", echo = T)
+
+# Garbage collection
+gc()
+
 ## ------------------------- ##
      # Precipitation -----
 ## ------------------------- ##

@@ -197,7 +197,6 @@ dplyr::glimpse(soil_actual)
                   # Soil Order - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-# changed from "sites" to "sheds"... what is the role of "sites"??
 soil_export <- sheds %>%
   dplyr::left_join(y = soil_actual, by = c("LTER", "Shapefile_Name")) %>%
   # this drops the geometry column, which causes issues on export
