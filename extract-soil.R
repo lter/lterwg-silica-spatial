@@ -31,11 +31,11 @@ sites <- readxl::read_excel(path = file.path(path, "site-coordinates",
   ## Pare down to minimum needed columns
   dplyr::select(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name) %>%
   ## Drop duplicate rows (if any)
-  dplyr::distinct()  %>%
+  dplyr::distinct() 
   # Remove any watersheds without a shapefile
-  dplyr::filter(!is.na(Shapefile_Name) &
-                  nchar(Shapefile_Name) != 0 &
-                  !Shapefile_Name %in% c("?", "MISSING"))
+  # dplyr::filter(!is.na(Shapefile_Name) &
+  #                 nchar(Shapefile_Name) != 0 &
+  #                 !Shapefile_Name %in% c("?", "MISSING"))
 
 # Check it out
 dplyr::glimpse(sites)
@@ -48,8 +48,17 @@ sheds <- sf::st_read(dsn = file.path(path, "site-coordinates", "silica-watershed
                 expert_area_km2 = exp_area,
                 shape_area_km2 = real_area)
 
+## combine sites and sheds to get ALL sheds (including hydrosheds) and their metadata (from the sites dataframe)
+sheds <- sheds %>%
+  dplyr::left_join(y = sites, by = c("LTER", "Shapefile_Name"))
+
+sheds$Stream_Name <- ifelse(!is.na(sheds$Stream_Name.x), sheds$Stream_Name.x, sheds$Stream_Name.y)
+sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, shape_area_km2, exp_are, hydrshd, real_ar))
+
+
 # Check that out
 dplyr::glimpse(sheds)
+
 
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
@@ -189,9 +198,10 @@ dplyr::glimpse(soil_actual)
 ## ------------------------------------------------------- ##
 # Let's get ready to export
 # changed from "sites" to "sheds"... what is the role of "sites"??
-soil_export <- sites %>%
-  # Join the rock data
-  dplyr::left_join(y = soil_actual, by = c("LTER", "Shapefile_Name"))
+soil_export <- sheds %>%
+  dplyr::left_join(y = soil_actual, by = c("LTER", "Shapefile_Name")) %>%
+  # this drops the geometry column, which causes issues on export
+  sf::st_drop_geometry()  
 
 # Check it out
 dplyr::glimpse(soil_export)
@@ -209,3 +219,7 @@ googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
 # End ----
+
+
+# Tidy up environment
+rm(list = ls()); gc()
