@@ -86,7 +86,7 @@ gc()
 ## ------------------------- ##
 
 # Re-extract (global, static(?))
-source(file = "extract-permafrost", echo = T)
+source(file = "extract-permafrost.R", echo = T)
 
 # Garbage collection
 gc()
