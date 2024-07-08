@@ -63,7 +63,7 @@ sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, sha
                               Dsc_F_N))
 
 ## There are a lot of duplicate sites for the Finnish sites, let's remove them: 
-sheds <- sheds[row.names(unique(sheds[,c("Discharge_File_Name")])),]
+# sheds <- sheds[row.names(unique(sheds[,c("Discharge_File_Name")])),]
 
 
 # Check that out
@@ -121,12 +121,15 @@ supportR::diff_check(old = unique(sheds$Stream_Name), new = unique(driver_df$Str
 supportR::diff_check(old = unique(sheds$Discharge_File_Name), 
                      new = unique(driver_df$Discharge_File_Name))
 
+## We need to drop the geometry column before export because it messes up the .csv file
+driver_df <-sf::st_drop_geometry(driver_df)
+
 # Export this
 write.csv(x = driver_df, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240618.csv"))
+          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240623.csv"))
 
 # And upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240618.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240623.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
