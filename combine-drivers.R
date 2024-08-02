@@ -62,10 +62,6 @@ sheds$Discharge_File_Name <- ifelse(!is.na(sheds$Dsc_F_N), sheds$Dsc_F_N, sheds$
 sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, shape_area_km2, exp_are, hydrshd, real_ar, 
                               Dsc_F_N))
 
-## There are a lot of duplicate sites for the Finnish sites, let's remove them: 
-# sheds <- sheds[row.names(unique(sheds[,c("Discharge_File_Name")])),]
-
-
 # Check that out
 dplyr::glimpse(sheds)
 
@@ -76,7 +72,7 @@ rm(list = setdiff(ls(), c('path', 'sheds')))
 # Combine Extracted Data ----
 ## ------------------------------------------------------- ##
 # List current extracted data
-(extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"), pattern = ".csv") %>%
+(extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1g8JAwIeyr5y5gvHvtx35qV90HnyqM8oK"), pattern = ".csv") %>%
   dplyr::filter(name != "all-data_si-extract.csv"))
 
 # Download all files
@@ -124,12 +120,22 @@ supportR::diff_check(old = unique(sheds$Discharge_File_Name),
 ## We need to drop the geometry column before export because it messes up the .csv file
 driver_df <-sf::st_drop_geometry(driver_df)
 
+## Lastly, we need to add the umlauts, commas, hyphens, etc. back to the Finnish names
+## These needed to be removed to ensure that the data extractions workflow ran properly
+driver_df$Stream_Name[driver_df$Stream_Name == "Kiiminkij 13010 4tien s"] <- "Kiiminkij 13010 4-tien s"
+driver_df$Stream_Name[driver_df$Stream_Name == "Lestijoki 10800 8tien s"] <- "Lestijoki 10800 8-tien s"
+driver_df$Stream_Name[driver_df$Stream_Name == "Mustijoki 42  6010"] <- "Mustijoki 4,2  6010"
+driver_df$Stream_Name[driver_df$Stream_Name == "Mustionjoki 49  15500"] <- "Mustionjoki 4,9  15500"
+driver_df$Stream_Name[driver_df$Stream_Name == "Porvoonjoki 115  6022"] <- "Porvoonjoki 11,5  6022"
+driver_df$Stream_Name[driver_df$Stream_Name == "SIMOJOKI AS 13500"] <- "SIMOJOKI AS. 13500"
+driver_df$Stream_Name[driver_df$Stream_Name == "Vantaa 42  6040"] <- "Vantaa 4,2  6040"
+
 # Export this
 write.csv(x = driver_df, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240623.csv"))
+          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240802.csv"))
 
 # And upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240623.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240802.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

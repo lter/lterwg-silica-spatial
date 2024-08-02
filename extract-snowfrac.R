@@ -408,9 +408,10 @@ dplyr::glimpse(snow_actual)
                  # Snow Fraction - Export ----
 ## ------------------------------------------------------- ##
 # Let's get ready to export
-snow_export <- sites %>%
+snow_export <- sheds %>%
   # Join the rock data
-  dplyr::left_join(y = snow_actual, by = c("LTER", "Shapefile_Name"))
+  dplyr::left_join(y = snow_actual, by = c("LTER", "Shapefile_Name")) %>%
+  sf::st_drop_geometry()  
 
 # Check it out
 dplyr::glimpse(snow_export)
@@ -418,7 +419,7 @@ dplyr::glimpse(snow_export)
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
-# Export the summarized lithology data
+# Export the summarized snow data
 write.csv(x = snow_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", 
                            paste0("si-extract_", col_prefix, "_2.csv")))
