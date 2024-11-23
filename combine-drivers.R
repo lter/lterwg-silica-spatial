@@ -132,10 +132,10 @@ driver_df$Stream_Name[driver_df$Stream_Name == "Vantaa 42  6040"] <- "Vantaa 4,2
 
 # Export this
 write.csv(x = driver_df, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "all-data_si-extract_2_20240802.csv"))
+          file = file.path(path, "extracted-data", "all-data_si-extract_2_202411.csv"))
 
 # And upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_20240802.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "all-data_si-extract_2_202411.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

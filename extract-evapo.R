@@ -392,10 +392,10 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
 write.csv(x = et_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_evapo_2.csv"))
+          file = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv")) ## Changed Nov 2024 to reflect new MODIS version for all sites
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_evapo_2.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

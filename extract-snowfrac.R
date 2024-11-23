@@ -422,11 +422,11 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 # Export the summarized snow data
 write.csv(x = snow_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", 
-                           paste0("si-extract_", col_prefix, "_2.csv")))
+                           paste0("si-extract_", col_prefix, "_2_v061.csv")))
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", 
-                                            paste0("si-extract_", col_prefix, "_2.csv")),
+                                            paste0("si-extract_", col_prefix, "_2_v061.csv")),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 
