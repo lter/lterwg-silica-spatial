@@ -92,7 +92,7 @@ for(region in c("north-america-usa", "north-america-arctic",
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
                                                        "raw-evapo-v061", region))) %>% 
-    dplyr::filter(stringr::str_detect(string=files, pattern="MOD16A2.061_ET_500m_")) 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MOD16A2GF.061_ET_500m_")) 
   
   # Add that set of files to the list
   file_list[[region]] <- file_df }
