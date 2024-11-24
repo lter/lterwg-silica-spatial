@@ -84,9 +84,8 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-greenup", region))) %>% 
-    dplyr::filter(stringr::str_detect(string=files, pattern="MCD12Q2.006_Greenup_")|
-                    stringr::str_detect(string=files, pattern="MCD12Q2.061_Greenup_")) 
+                                                       "raw-greenup-v061", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MCD12Q2.061_Greenup_")) 
   
   
   # Add that set of files to the list
@@ -122,7 +121,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
 
 # Specify driver
-focal_driver <- "raw-greenup"
+focal_driver <- "raw-greenup-v061"
 
 # Identify files we've already extracted from
 done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
@@ -170,7 +169,7 @@ for(a_cycle in 0:1){
       message("Processing raster ", i, " of ", nrow(one_year_data))
       
       # Read in the raster
-      gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup",
+      gr_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-greenup-v061",
                                          one_year_data$region[i], one_year_data$files[i]))
       
       # Extract all possible information from that dataframe
@@ -211,7 +210,7 @@ for(a_cycle in 0:1){
     
     # Export this file for a given year
     write.csv(x = full_data, row.names = F, na = '',
-              file = file.path(path, "raw-driver-data", "raw-greenup",
+              file = file.path(path, "raw-driver-data", "raw-greenup-v061",
                                "_partial-extracted", export_name))
     
     # End message
@@ -228,7 +227,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
 
 # Identify extracted files
-done_greenup <- dir(file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted"))
+done_greenup <- dir(file.path(path, "raw-driver-data", "raw-greenup-v061", "_partial-extracted"))
 
 # Make an empty list for storing data
 out_list <- list()
@@ -237,7 +236,7 @@ out_list <- list()
 for(k in 1:length(done_greenup)){
   
   # Read in the kth file
-  file_v1 <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup", "_partial-extracted", done_greenup[k]))
+  file_v1 <- read.csv(file = file.path(path, "raw-driver-data", "raw-greenup-v061", "_partial-extracted", done_greenup[k]))
   
   # Wrangle that file a bit
   file_v2 <- file_v1 %>%

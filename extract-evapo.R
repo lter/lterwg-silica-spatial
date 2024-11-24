@@ -91,9 +91,8 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-evapo-modis16a2-v006", region))) %>% 
-    dplyr::filter(stringr::str_detect(string=files, pattern="MOD16A2.006_ET_500m_")|
-                    stringr::str_detect(string=files, pattern="MOD16A2.061_ET_500m_")) 
+                                                       "raw-evapo-v061", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MOD16A2.061_ET_500m_")) 
   
   # Add that set of files to the list
   file_list[[region]] <- file_df }
@@ -124,7 +123,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
 
 # Specify driver
-focal_driver <- "raw-evapo-modis16a2-v006"
+focal_driver <- "raw-evapo-v061"
 
 # Make a short name for that driver
 driver_short <- "evapotrans"

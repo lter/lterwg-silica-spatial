@@ -66,7 +66,7 @@ dplyr::glimpse(sheds)
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
-            # MOD17A3HGF v006 - Identify Files ----
+            # MOD17A3HGF -v061 - Identify Files ----
 ## ------------------------------------------------------- ##
 
 # Make an empty list
@@ -85,9 +85,8 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-npp", region))) %>% 
-    dplyr::filter(stringr::str_detect(string=files, pattern="MOD17A3HGF.006_Npp_")|
-                    stringr::str_detect(string=files, pattern="MOD17A3HGF.061_Npp_")) 
+                                                       "raw-npp-v061", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MOD17A3HGF.061_Npp_")) 
   
   
   # Add that set of files to the list
@@ -118,7 +117,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
 
 # Specify driver
-focal_driver <- "raw-npp"
+focal_driver <- "raw-npp-v061"
 
 # Identify files we've already extracted from
 done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
@@ -149,7 +148,7 @@ for (a_year in unique(file_set$year)){
   
   for (i in 1:nrow(one_year_data)){
       # Read in the raster
-      npp_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-npp", one_year_data$region[i], one_year_data$files[i]))
+      npp_raster <- terra::rast(file.path(path, "raw-driver-data", "raw-npp-v061", one_year_data$region[i], one_year_data$files[i]))
       
       # Extract all possible information from that dataframe
       ex_data <- exactextractr::exact_extract(x = npp_raster, y = sheds, 
@@ -195,7 +194,7 @@ for (a_year in unique(file_set$year)){
   
   # Export this file for a given year
   write.csv(x = full_data, row.names = F, na = '',
-            file = file.path(path, "raw-driver-data", "raw-npp",
+            file = file.path(path, "raw-driver-data", "raw-npp-v061",
                              "_partial-extracted", export_name))
   
   # End message

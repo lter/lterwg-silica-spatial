@@ -85,9 +85,8 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Identify files in that folder
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
-                                                       "raw-snow-modis10a2-v006", region))) %>% 
-    dplyr::filter(stringr::str_detect(string=files, pattern="MOD10A2.006_Eight_Day_Snow_Cover_")|
-                    stringr::str_detect(string=files, pattern="MOD10A2.061_Eight_Day_Snow_Cover_")) 
+                                                       "raw-snow-v061", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MOD10A2.061_Eight_Day_Snow_Cover_")) 
   
   
   # Add that set of files to the list
@@ -119,7 +118,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
 
 # Specify driver
-focal_driver <- "raw-snow-modis10a2-v006"
+focal_driver <- "raw-snow-v061"
 
 # Make a short name for that driver
 driver_short <- "snow"
