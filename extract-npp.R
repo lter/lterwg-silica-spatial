@@ -86,7 +86,7 @@ for(region in c("north-america-usa", "north-america-arctic",
   file_df <- data.frame("region" = region,
                         "files" = dir(path = file.path(path, "raw-driver-data", 
                                                        "raw-npp-v061", region))) %>% 
-    dplyr::filter(stringr::str_detect(string=files, pattern="MOD17A3HGF.061_Npp_")) 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MOD17A3HGF.061_Npp_500m")) 
   
   
   # Add that set of files to the list
@@ -131,8 +131,8 @@ not_done <- file_all %>%
   dplyr::filter(!year %in% done_files$year)
 
 # Create a definitive object of files to extract
-file_set <- not_done # Uncomment if want to only do only undone extractions
-# file_set <- file_all # Uncomment if want to do all extractions
+#file_set <- not_done # Uncomment if want to only do only undone extractions
+file_set <- file_all # Uncomment if want to do all extractions
 
 # Loop across years...
 for (a_year in unique(file_set$year)){

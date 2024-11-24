@@ -117,7 +117,7 @@ gc()
 # Net Primary Productivity (bounding boxes [x8], annual [x20 years])
 
 # Focal driver *folder* name
-focal <- "raw-npp"
+focal <- "raw-npp-v061"
 
 # Define folder path
 path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
@@ -147,7 +147,7 @@ gc()
 # (bounding boxes [x8], annual [x20 years], x2 "cycles" of green up)
 
 # Focal driver *folder* name
-focal <- "raw-greenup"
+focal <- "raw-greenup-v061"
 
 # Define folder path
 path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
@@ -177,7 +177,7 @@ gc()
 # Evapotranspiration (bounding boxes [x8], 8-day [x20 years])
 
 # Focal driver *folder* name
-focal <- "raw-evapo-modis16a2-v006"
+focal <- "raw-evapo-v061"
 
 # Define folder path
 path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
@@ -207,7 +207,7 @@ gc()
 # Snow Fraction (bounding boxes [x8], 8-day [x20 years])
 
 # Focal driver *folder* name
-focal <- "raw-snow-modis10a2-v006"
+focal <- "raw-snow-v061"
 
 # Define folder path
 path <- file.path('/', "home", "shares", "lter-si", "si-watershed-extract", 
