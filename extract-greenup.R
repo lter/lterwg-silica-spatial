@@ -272,7 +272,7 @@ out_df <- out_list %>%
                   contains("2013"), contains("2014"), contains("2015"),
                   contains("2016"), contains("2017"), contains("2018"),
                   contains("2019"),
-                  .after = Shapefile_Name)
+                  .after = Shapefile_Name) 
 
 # Glimpse this too
 dplyr::glimpse(out_df)
