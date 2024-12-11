@@ -15,7 +15,7 @@
 # Load needed libraries
 # install.packages("librarian")
 librarian::shelf(tidyverse, sf, stars, terra, exactextractr, NCEAS/scicomptools, 
-                 googledrive, readxl)
+                 googledrive, readxl, dplyr)
 
 # Clear environment
 rm(list = ls())
@@ -55,7 +55,8 @@ sheds <- sheds %>%
 
 sheds$Stream_Name <- ifelse(!is.na(sheds$Stream_Name.x), sheds$Stream_Name.x, sheds$Stream_Name.y)
 sheds$Discharge_File_Name <- ifelse(!is.na(sheds$Dsc_F_N), sheds$Dsc_F_N, sheds$Discharge_File_Name)
-sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, shape_area_km2, exp_are, hydrshd, real_ar, 
+sheds <- sheds %>% 
+  dplyr::select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, shape_area_km2, exp_are, hydrshd, real_ar, 
                               Dsc_F_N))
 
 # Check that out
@@ -71,12 +72,6 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 # Make an empty list
 file_list <- list()
-
-# Identify files for each region
-# for(region in c("north-america-usa", "north-america-arctic",
-#                 "cropped-russia-west", "cropped-russia-west-2",
-#                 "cropped-russia-center", "cropped-russia-east",
-#                 "puerto-rico", "scandinavia")){
 
 ## NEW SITES for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
@@ -97,20 +92,33 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Add that set of files to the list
   file_list[[region]] <- file_df }
 
-# Wrangle the list
+# # Wrangle the list
+# file_all <- file_list %>%
+#   # Unlist the loop's output
+#   purrr::list_rbind() %>%
+#   # Identify date from file name
+#   dplyr::mutate(date_raw = stringr::str_extract(string = files, 
+#                                                 pattern = "_doy[[:digit:]]{7}")) %>%
+#   # Simplify that column
+#   dplyr::mutate(date = gsub(pattern = "_doy", replacement = "", x = date_raw)) %>%
+#   # Identify day of year & year
+#   dplyr::mutate(year = stringr::str_sub(string = date, start = 1, end = 4),
+#                 doy = stringr::str_sub(string = date, start = 5, end = 7)) %>%
+#   # Drop 'raw' version
+#   dplyr::select(-date_raw)
+
 file_all <- file_list %>%
-  # Unlist the loop's output
   purrr::list_rbind() %>%
-  # Identify date from file name
-  dplyr::mutate(date_raw = stringr::str_extract(string = files, 
-                                                pattern = "_doy[[:digit:]]{7}")) %>%
-  # Simplify that column
-  dplyr::mutate(date = gsub(pattern = "_doy", replacement = "", x = date_raw)) %>%
-  # Identify day of year & year
-  dplyr::mutate(year = stringr::str_sub(string = date, start = 1, end = 4),
-                doy = stringr::str_sub(string = date, start = 5, end = 7)) %>%
-  # Drop 'raw' version
-  dplyr::select(-date_raw)
+  # Extract date from filename
+  dplyr::mutate(date_raw = stringr::str_extract(string = files, pattern = "_doy[[:digit:]]{7}")) %>%
+  dplyr::mutate(date = gsub("_doy", "", date_raw)) %>%
+  dplyr::mutate(
+    year = stringr::str_sub(string = date, start = 1, end = 4),
+    doy = stringr::str_sub(string = date, start = 5, end = 7),
+    year_day = as.numeric(paste0(year, doy)) # Combine year and doy
+  ) %>%
+  # Drop raw columns if no longer needed
+  dplyr::select(-date_raw, -date)
 
 # Glimpse it
 dplyr::glimpse(file_all)
@@ -121,7 +129,6 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 ## ------------------------------------------------------- ##
             # Evapotranspiration - Extract ----
 ## ------------------------------------------------------- ##
-
 # Specify driver
 focal_driver <- "raw-evapo-v061"
 
@@ -133,23 +140,62 @@ dir.create(path = file.path(path, "raw-driver-data", focal_driver,
                             "_partial-extracted"),
            showWarnings = F)
 
+# # Identify files we've already extracted from
+# done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
+#                                                  focal_driver,
+#                                                  "_partial-extracted"))) %>%
+#   tidyr::separate(col = files, remove = F,
+#                   into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
+#   # Make a year-day column
+#   dplyr::mutate(year_day = paste0(year, "_", doy))
+# 
+# # Remove completed files from the set of all possible files
+# not_done <- file_all %>%
+#   dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
+#   dplyr::filter(!year_day %in% done_files$year_day)
+# 
+# # Create a definitive object of files to extract
+# #file_set <- not_done # Uncomment if want to only do only undone extractions
+# file_set <- file_all # Uncomment if want to do all extractions
+
+## Trying to start after known corrupt file:
 # Identify files we've already extracted from
-done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data", 
+done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
                                                  focal_driver,
                                                  "_partial-extracted"))) %>%
-  tidyr::separate(col = files, remove = F,
-                  into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
-  # Make a year-day column
-  dplyr::mutate(year_day = paste0(year, "_", doy))
+  dplyr::mutate(doy = stringr::str_extract(files, "doy\\d{7}"), # Extract the DOY part
+    year_day = as.numeric(stringr::str_sub(doy, 4, 10)) # Convert to numeric year_day
+  )
 
-# Remove completed files from the set of all possible files
+
+# # Remove completed files from the set of all possible files
+# not_done <- file_all %>%
+#   dplyr::mutate(doy = stringr::str_extract(files, "doy\\d{7}")) %>%  # Extract the DOY part
+#   dplyr::mutate(year_day = stringr::str_sub(doy, 4, 10))  # Extract the year and DOY
+
+# start_after <- 2010073  # 2010_073 north-america-usa
+start_after <- 2017217 # 2017_217 amazon "Error: [readValues] cannot read values
+
 not_done <- file_all %>%
-  dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
-  dplyr::filter(!year_day %in% done_files$year_day)
+  dplyr::filter(year_day > start_after)
+
+file_all %>%
+  dplyr::group_by(region) %>%
+  dplyr::summarize(total_files = n()) %>%
+  left_join(not_done %>% dplyr::group_by(region) %>%
+              dplyr::summarize(filtered_files = n()), by = "region") %>%
+  print()
+
+not_done %>%
+  dplyr::group_by(region) %>%
+  dplyr::summarize(n_files = n()) %>%
+  print()
+
 
 # Create a definitive object of files to extract
 file_set <- not_done # Uncomment if want to only do only undone extractions
 # file_set <- file_all # Uncomment if want to do all extractions
+
 
 # Extract all possible information from each
 ## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
@@ -161,7 +207,7 @@ for(annum in sort(unique(file_set$year))){
   
   # Subset to one year
   one_year <- dplyr::filter(file_set, year == annum)
-
+  
   # Loop across day-of-year within year
   # for(day_num in "001") {
   for(day_num in sort(unique(one_year$doy))){
@@ -389,9 +435,10 @@ dplyr::glimpse(et_export)
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
-# Export the summarized lithology data
+# Export the summarized data
 write.csv(x = et_export, na = '', row.names = F,
           file = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv")) ## Changed Nov 2024 to reflect new MODIS version for all sites
+
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv"),
