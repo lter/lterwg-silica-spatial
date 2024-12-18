@@ -183,10 +183,11 @@ for (a_year in unique(file_set$year)){
     purrr::list_rbind() %>%
     # Apply scaler value
     ## See "Layers" dropdown here: https://lpdaac.usgs.gov/products/mod17a3hgfv061/
-    dplyr::mutate(descaled_val = value * 0.0001) %>%
+    # dplyr::mutate(descaled_val = value * 0.0001) %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
     dplyr::group_by(LTER, Shapefile_Name, year) %>%
-    dplyr::summarize(npp = mean(descaled_val, na.rm = T)) %>% ## This is mean per pixel 
+    #dplyr::summarize(npp = mean(descaled_val, na.rm = T)) %>% ## This is mean per pixel 
+    dplyr::summarize(npp = mean(value, na.rm = T)) %>% ## This is mean per pixel -- checking to see if data are already scaled
     dplyr::ungroup() %>%
     # Drop unnecessary columns
     dplyr::select(-year) %>% 
