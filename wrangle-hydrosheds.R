@@ -328,6 +328,43 @@ dplyr::glimpse(poly_actual)
 sf::st_write(obj = poly_actual, delete_layer = T,
              dsn = file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
 
+## Want to see that shapefile: 
+# Path to the shapefile you exported
+shapefile_path <- file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp")
+
+# Read the shapefile
+poly_actual <- sf::st_read(shapefile_path)
+
+# Plot the shapefile
+ggplot(data = poly_actual) +
+  geom_sf(aes(fill = real_ar)) +  # Color polygons by the real_area column
+  scale_fill_viridis_c() +         # Use a color scale for better visualization
+  theme_minimal() +                # Clean plot appearance
+  labs(title = "HydroSHEDS Watersheds",
+       fill = "Drainage Area (sq km)")
+
+## This shapefile is only the Canada and Australia sites. We want ALL sites: 
+## ------------------------------------------------------- ##
+# Acquire Shapefiles ----
+## ------------------------------------------------------- ##
+watersheds <- sf::st_read(file.path(path, "site-coordinates", "silica-watersheds.shp"))
+hydrosheds <- sf::st_read(file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
+
+all_shps <- dplyr::bind_rows(watersheds, hydrosheds)
+
+# Plot the shapefile
+ggplot(data = all_shps) +
+  geom_sf(aes(fill = real_ar)) +  # Color polygons by the real_area column
+  scale_fill_viridis_c() +         # Use a color scale for better visualization
+  theme_minimal() +                # Clean plot appearance
+  labs(title = "HydroSHEDS Watersheds",
+       fill = "Drainage Area (sq km)")
+
+
+# Export the combine shapefile for all rivers
+sf::st_write(obj = all_shps, delete_layer = T,
+             dsn = file.path(path, "site-coordinates", "silica-watersheds_hydrosheds_DR_2.shp"))
+
 # Tidy up environment
 rm(list = ls()); gc()
 
