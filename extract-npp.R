@@ -186,7 +186,7 @@ for (a_year in unique(file_set$year)){
     dplyr::mutate(descaled_val = value * 0.0001) %>%
     # Handle the summarization within river (potentially across multiple rasters' pixels)
     dplyr::group_by(LTER, Shapefile_Name, year) %>%
-    dplyr::summarize(npp = mean(descaled_val, na.rm = T)) %>%
+    dplyr::summarize(npp = mean(descaled_val, na.rm = T)) %>% ## This is mean per pixel 
     dplyr::ungroup() %>%
     # Drop unnecessary columns
     dplyr::select(-year) %>% 

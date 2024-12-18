@@ -2,7 +2,7 @@
    # Silica WG - Extract Spatial Data - Evapotranspiration
 ## ------------------------------------------------------- ##
 # Written by:
-## Nick J Lyon
+## Nick J Lyon, Sidney A Bush
 
 # Purpose:
 ## Using the watershed shapefiles created in "wrangle-watersheds.R"
@@ -173,11 +173,12 @@ done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
 #   dplyr::mutate(doy = stringr::str_extract(files, "doy\\d{7}")) %>%  # Extract the DOY part
 #   dplyr::mutate(year_day = stringr::str_sub(doy, 4, 10))  # Extract the year and DOY
 
-# start_after <- 2010073  # 2010_073 north-america-usa
-start_after <- 2017217 # 2017_217 amazon "Error: [readValues] cannot read values
+start_after <- 2010065  # 2010_073 north-america-usa
+# start_after <- 2017217 # 2017_217 amazon "Error: [readValues] cannot read values (potential fix: re-download original file)
 
-not_done <- file_all %>%
-  dplyr::filter(year_day > start_after)
+# not_done <- file_all %>%
+#   dplyr::filter(!(year_day == 2010073 & region == "north-america-usa") & !(year_day == 2017217 & region == "amazon") | 
+#                      !year_day %in% c(2010073, 2017217) | !region %in% c("north-america-usa", "amazon"))
 
 file_all %>%
   dplyr::group_by(region) %>%
