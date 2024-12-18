@@ -92,21 +92,7 @@ for(region in c("north-america-usa", "north-america-arctic",
   # Add that set of files to the list
   file_list[[region]] <- file_df }
 
-# # Wrangle the list
-# file_all <- file_list %>%
-#   # Unlist the loop's output
-#   purrr::list_rbind() %>%
-#   # Identify date from file name
-#   dplyr::mutate(date_raw = stringr::str_extract(string = files, 
-#                                                 pattern = "_doy[[:digit:]]{7}")) %>%
-#   # Simplify that column
-#   dplyr::mutate(date = gsub(pattern = "_doy", replacement = "", x = date_raw)) %>%
-#   # Identify day of year & year
-#   dplyr::mutate(year = stringr::str_sub(string = date, start = 1, end = 4),
-#                 doy = stringr::str_sub(string = date, start = 5, end = 7)) %>%
-#   # Drop 'raw' version
-#   dplyr::select(-date_raw)
-
+# Wrangle the list
 file_all <- file_list %>%
   purrr::list_rbind() %>%
   # Extract date from filename
@@ -173,11 +159,18 @@ done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
 #   dplyr::mutate(doy = stringr::str_extract(files, "doy\\d{7}")) %>%  # Extract the DOY part
 #   dplyr::mutate(year_day = stringr::str_sub(doy, 4, 10))  # Extract the year and DOY
 
-start_after <- 2010065  # 2010_073 north-america-usa
-# start_after <- 2017217 # 2017_217 amazon "Error: [readValues] cannot read values (potential fix: re-download original file)
+# start_after <- 2010065  # 2010_073 north-america-usa
+# start_after <- 2017209 # 2017_217 amazon "Error: [readValues] cannot read values (potential fix: re-download original file)
+start_after <- 2013081 # restarted on 12/13 
+# For some reason, HYBAM site Saut_Maripoa gets dropped in 2013 (doy 089), and is never picked up again -- check loop for this:
+# Something to check: skipped sites for specific year-doy-region combos in one year are not skipped for all years. this is likely happening for all 8-day MODIS data (snow)
 
+not_done <- file_all %>%
+  dplyr::filter(year_day > start_after)
+
+## This is more robust, and should be used instead of the above line once known issues with doy/regions are determined
 # not_done <- file_all %>%
-#   dplyr::filter(!(year_day == 2010073 & region == "north-america-usa") & !(year_day == 2017217 & region == "amazon") | 
+#   dplyr::filter(!(year_day == 2010073 & region == "north-america-usa") & !(year_day == 2017217 & region == "amazon") |
 #                      !year_day %in% c(2010073, 2017217) | !region %in% c("north-america-usa", "amazon"))
 
 file_all %>%
@@ -199,44 +192,44 @@ file_set <- not_done # Uncomment if want to only do only undone extractions
 
 
 # Extract all possible information from each
-## Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
+# Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
 # for(annum in "2001"){
 for(annum in sort(unique(file_set$year))){
-  
+
   # Start message
   message("Processing begun for year: ", annum)
-  
+
   # Subset to one year
   one_year <- dplyr::filter(file_set, year == annum)
-  
+
   # Loop across day-of-year within year
   # for(day_num in "001") {
   for(day_num in sort(unique(one_year$doy))){
-    
+
     # Starting message
     message("Processing begun for day of year: ", day_num)
-    
+
     # Assemble a file name for this extraction
     (export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv"))
-    
+
     # File dataframe of files to just that doy
     simp_df <- dplyr::filter(one_year, doy == day_num)
-    
+
     # Make an empty list
     doy_list <- list()
-    
+
     # Now read in & extract each raster of that day of year
     for(j in 1:nrow(simp_df)){
-      
+
       # Starting message
       message("Begun for file ", j, " of ", nrow(simp_df))
-      
+
       # Read in raster
       et_rast <- terra::rast(file.path(path, "raw-driver-data",  focal_driver,
                                        simp_df$region[j], simp_df$files[j]))
-      
+
       # Extract all possible information from that dataframe
-      ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds, 
+      ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds,
                                               include_cols = c("LTER", "Shapefile_Name"),
                                               progress = FALSE) %>%
         # Unlist to dataframe
@@ -252,13 +245,13 @@ for(annum in sort(unique(file_set$year))){
         dplyr::mutate(year = as.numeric(simp_df$year[j]),
                       doy = as.numeric(simp_df$doy[j]),
                       .after = Shapefile_Name)
-      
+
       # Add this dataframe to the list we made within the larger for loop
       doy_list[[j]] <- ex_data
-      
+
       # End message
       message("Finished extracting raster ", j, " of ", nrow(simp_df)) }
-    
+
     # Wrangle the output of the within-day of year extraction
     full_data <- doy_list %>%
       # Unlist to dataframe
@@ -267,15 +260,15 @@ for(annum in sort(unique(file_set$year))){
       dplyr::group_by(LTER, Shapefile_Name, year, doy) %>%
       dplyr::summarize(value = mean(value, na.rm = T)) %>%
       dplyr::ungroup()
-    
+
     # Export this file for a given day
     write.csv(x = full_data, row.names = F, na = '',
               file = file.path(path, "raw-driver-data", focal_driver,
                                "_partial-extracted", export_name))
-    
+
     # Ending message
     message("Processing ended for day of year: ", day_num) } # Close day-of-year loop
-  
+
   # Ending message
   message("Processing ended year: ", annum) } # Close year loop
 
