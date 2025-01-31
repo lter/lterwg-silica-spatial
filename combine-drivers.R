@@ -19,6 +19,8 @@ librarian::shelf(tidyverse, NCEAS/scicomptools, googledrive, readxl, magrittr, s
 # Clear environment
 rm(list = ls())
 
+gc()
+
 # Identify path to location of shared data
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
@@ -68,41 +70,109 @@ dplyr::glimpse(sheds)
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sheds')))
 
-## ------------------------------------------------------- ##
-# Combine Extracted Data ----
-## ------------------------------------------------------- ##
-# List current extracted data
-(extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"), pattern = ".csv") %>%
-  dplyr::filter(name != "all-data_si-extract.csv"))
+# ## ------------------------------------------------------- ##
+# # Combine Extracted Data ----
+# ## ------------------------------------------------------- ##
 
-# Download all files
-purrr::walk2(.x = extracted_data$id, .y = extracted_data$name,
-             .f = ~ googledrive::drive_download(file = googledrive::as_id(.x), 
-                                                path = file.path(path, "extracted-data", .y),
-                                                overwrite = T))
+# Define lookup table with correct site names
+name_corrections <- data.frame(
+  old_name = c("Kiiminkij 13010 4tien s", 
+               "Lestijoki 10800 8tien s", 
+               "Mustijoki 42  6010", 
+               "Mustionjoki 49  15500", 
+               "Porvoonjoki 115  6022", 
+               "SIMOJOKI AS 13500", 
+               "Vantaa 42  6040"),
+  correct_name = c("Kiiminkij 13010 4-tien s", 
+                   "Lestijoki 10800 8-tien s", 
+                   "Mustijoki 4,2  6010", 
+                   "Mustionjoki 4,9  15500", 
+                   "Porvoonjoki 11,5  6022", 
+                   "SIMOJOKI AS. 13500", 
+                   "Vantaa 4,2  6040")
+)
 
-# Make an empty list
+# **Step 1: List and Download Extracted Data from Google Drive**
+extracted_data <- drive_ls(as_id("https://drive.google.com/drive/u/1/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"), 
+                           pattern = ".csv") %>%
+  filter(name != "all-data_si-extract.csv")
+
+# Download all extracted CSVs
+walk2(.x = extracted_data$id, .y = extracted_data$name, 
+      .f = ~ drive_download(file = as_id(.x), 
+                            path = file.path(path, "extracted-data", .y),
+                            overwrite = TRUE))
+
+# **Step 2: Read the Extracted CSVs into a List**
 data_list <- list()
 
-# Read the files into the list
-for(file_name in extracted_data$name){
-  data_list[[file_name]] <- read.csv(file = file.path(path, "extracted-data", file_name))
+for (file_name in extracted_data$name) {
+  data_list[[file_name]] <- read.csv(file = file.path(path, "extracted-data", file_name)) %>%
+    mutate(Stream_Name = str_trim(Stream_Name)) %>%
+    left_join(name_corrections, by = c("Stream_Name" = "old_name")) %>%
+    mutate(Stream_Name = coalesce(correct_name, Stream_Name)) %>%
+    select(-correct_name)
 }
 
-# Duplicate the sheds object
-driver_df <- sheds
+# **Step 3: Apply Name Corrections to `sheds` Before Merging**
+driver_df <- sheds %>%
+  mutate(Stream_Name = str_trim(Stream_Name)) %>%
+  left_join(name_corrections, by = c("Stream_Name" = "old_name")) %>%
+  mutate(Stream_Name = coalesce(correct_name, Stream_Name)) %>%
+  select(-correct_name)
 
-# For each file
-for(k in 1:length(data_list)){
-  # Processing message
-  message("Adding ", names(data_list[k]), " to 
-          output dataframe")
+# **Step 4: Merge Extracted Data with `driver_df`**
+for (k in seq_along(data_list)) {
+  message("Adding ", names(data_list[k]), " to output dataframe")
   
-  # Left join onto the driver dataframe and overwrite the object
   driver_df %<>%
-    dplyr::left_join(y = data_list[[k]],
-                     by = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"))
+    left_join(y = data_list[[k]], 
+              by = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"))
 }
+
+# **Step 5: Debugging - Check for Remaining Incorrect Names**
+incorrect_names <- driver_df %>%
+  filter(Stream_Name %in% name_corrections$old_name)
+
+if (nrow(incorrect_names) > 0) {
+  cat("Warning: Some site names were NOT corrected properly!\n")
+  print(unique(incorrect_names$Stream_Name))
+} else {
+  cat("All Stream_Name corrections applied successfully!\n")
+}
+
+# # List current extracted data
+# (extracted_data <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"), pattern = ".csv") %>%
+#   dplyr::filter(name != "all-data_si-extract.csv"))
+# 
+# # Download all files
+# purrr::walk2(.x = extracted_data$id, .y = extracted_data$name,
+#              .f = ~ googledrive::drive_download(file = googledrive::as_id(.x), 
+#                                                 path = file.path(path, "extracted-data", .y),
+#                                                 overwrite = T))
+# 
+# # Make an empty list
+# data_list <- list()
+# 
+# # Read the files into the list
+# for(file_name in extracted_data$name){
+#   data_list[[file_name]] <- read.csv(file = file.path(path, "extracted-data", file_name))
+# }
+# 
+# # Duplicate the sheds object
+# driver_df <- sheds
+# 
+# # For each file
+# for(k in 1:length(data_list)){
+#   # Processing message
+#   message("Adding ", names(data_list[k]), " to 
+#           output dataframe")
+#   
+#   # Left join onto the driver dataframe and overwrite the object
+#   driver_df %<>%
+#     dplyr::left_join(y = data_list[[k]],
+#                      by = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"))
+# }
 
 # Glimpse what we wind up with
 dplyr::glimpse(driver_df)
@@ -120,15 +190,6 @@ supportR::diff_check(old = unique(sheds$Discharge_File_Name),
 ## We need to drop the geometry column before export because it messes up the .csv file
 driver_df <-sf::st_drop_geometry(driver_df)
 
-## Lastly, we need to add the umlauts, commas, hyphens, etc. back to the Finnish names
-## These needed to be removed to ensure that the data extractions workflow ran properly
-driver_df$Stream_Name[driver_df$Stream_Name == "Kiiminkij 13010 4tien s"] <- "Kiiminkij 13010 4-tien s"
-driver_df$Stream_Name[driver_df$Stream_Name == "Lestijoki 10800 8tien s"] <- "Lestijoki 10800 8-tien s"
-driver_df$Stream_Name[driver_df$Stream_Name == "Mustijoki 42  6010"] <- "Mustijoki 4,2  6010"
-driver_df$Stream_Name[driver_df$Stream_Name == "Mustionjoki 49  15500"] <- "Mustionjoki 4,9  15500"
-driver_df$Stream_Name[driver_df$Stream_Name == "Porvoonjoki 115  6022"] <- "Porvoonjoki 11,5  6022"
-driver_df$Stream_Name[driver_df$Stream_Name == "SIMOJOKI AS 13500"] <- "SIMOJOKI AS. 13500"
-driver_df$Stream_Name[driver_df$Stream_Name == "Vantaa 42  6040"] <- "Vantaa 4,2  6040"
 
 # Export this
 write.csv(x = driver_df, na = '', row.names = F,
