@@ -74,12 +74,14 @@ file_list <- list()
 
 ## NEW SITES added for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",   
+                "cropped-russia-west", "cropped-russia-west-2",
                 "cropped-russia-center", "cropped-russia-east",
                 "puerto-rico", "scandinavia",
-                "amazon", "australia",  
-                "canada",  "congo", 
+                "amazon", "australia",
+                "canada",  "congo",
                 "germany", "united-kingdom")){
+
+# for(region in c("congo")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
@@ -162,7 +164,7 @@ for (a_year in unique(file_set$year)){
         ## I.e., those that are outside of the current raster bounding nox
         dplyr::filter(!is.na(value)) %>%
         # Drop invalid values (per product documentation page)
-        dplyr::filter(value >= -30000 & value <= 32700) %>%
+        dplyr::filter(value >= -3 & value <= 3.27) %>%
         # Make new relevant columns
         dplyr::mutate(year = a_year,
                       .after = Shapefile_Name)

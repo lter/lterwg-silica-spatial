@@ -62,7 +62,6 @@ sheds <- sheds %>%
 # Check that out
 dplyr::glimpse(sheds)
 
-
 # Clean up environment
 rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
@@ -73,7 +72,7 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # Make an empty list
 file_list <- list()
 
-## NEW SITES for Data Release 2 ##
+# ## NEW SITES for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
                 "cropped-russia-west", "cropped-russia-west-2",
                 "cropped-russia-center", "cropped-russia-east",
@@ -81,6 +80,9 @@ for(region in c("north-america-usa", "north-america-arctic",
                 "amazon", "australia",
                 "canada",  "congo",
                 "germany", "united-kingdom")){
+
+## NEW SITES for Data Release 2 ##
+# for(region in c("congo")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
@@ -106,6 +108,10 @@ file_all <- file_list %>%
   # Drop raw columns if no longer needed
   dplyr::select(-date_raw, -date)
 
+# Filter to remove the year 2000 and only include years up to 2021
+file_all <- file_all %>%
+  dplyr::filter(year != "2000", as.numeric(year) <= 2023)
+
 # Glimpse it
 dplyr::glimpse(file_all)
 
@@ -126,22 +132,22 @@ dir.create(path = file.path(path, "raw-driver-data", focal_driver,
                             "_partial-extracted"),
            showWarnings = F)
 
-# # Identify files we've already extracted from
-# done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
-#                                                  focal_driver,
-#                                                  "_partial-extracted"))) %>%
-#   tidyr::separate(col = files, remove = F,
-#                   into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
-#   # Make a year-day column
-#   dplyr::mutate(year_day = paste0(year, "_", doy))
-# 
-# # Remove completed files from the set of all possible files
-# not_done <- file_all %>%
-#   dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
-#   dplyr::filter(!year_day %in% done_files$year_day)
-# 
-# # Create a definitive object of files to extract
-# #file_set <- not_done # Uncomment if want to only do only undone extractions
+# Identify files we've already extracted from
+done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
+                                                 focal_driver,
+                                                 "_partial-extracted"))) %>%
+  tidyr::separate(col = files, remove = F,
+                  into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
+  # Make a year-day column
+  dplyr::mutate(year_day = paste0(year, "_", doy))
+
+# Remove completed files from the set of all possible files
+not_done <- file_all %>%
+  dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
+  dplyr::filter(!year_day %in% done_files$year_day)
+
+# Create a definitive object of files to extract
+file_set <- not_done # Uncomment if want to only do only undone extractions
 # file_set <- file_all # Uncomment if want to do all extractions
 
 ## Trying to start after known corrupt file:
@@ -159,31 +165,18 @@ done_files <- data.frame("files" = dir(file.path(path, "raw-driver-data",
 #   dplyr::mutate(doy = stringr::str_extract(files, "doy\\d{7}")) %>%  # Extract the DOY part
 #   dplyr::mutate(year_day = stringr::str_sub(doy, 4, 10))  # Extract the year and DOY
 
-# start_after <- 2010065  # 2010_073 north-america-usa
-# start_after <- 2017209 # 2017_217 amazon "Error: [readValues] cannot read values (potential fix: re-download original file)
-start_after <- 2013081 # restarted on 12/13 
-# For some reason, HYBAM site Saut_Maripoa gets dropped in 2013 (doy 089), and is never picked up again -- check loop for this:
-# Something to check: skipped sites for specific year-doy-region combos in one year are not skipped for all years. this is likely happening for all 8-day MODIS data (snow)
-
-not_done <- file_all %>%
-  dplyr::filter(year_day > start_after)
-
-## This is more robust, and should be used instead of the above line once known issues with doy/regions are determined
-# not_done <- file_all %>%
-#   dplyr::filter(!(year_day == 2010073 & region == "north-america-usa") & !(year_day == 2017217 & region == "amazon") |
-#                      !year_day %in% c(2010073, 2017217) | !region %in% c("north-america-usa", "amazon"))
-
 file_all %>%
   dplyr::group_by(region) %>%
-  dplyr::summarize(total_files = n()) %>%
-  left_join(not_done %>% dplyr::group_by(region) %>%
-              dplyr::summarize(filtered_files = n()), by = "region") %>%
-  print()
-
-not_done %>%
-  dplyr::group_by(region) %>%
-  dplyr::summarize(n_files = n()) %>%
-  print()
+  dplyr::summarize(total_files = n()) 
+#   %>%
+#   left_join(not_done %>% dplyr::group_by(region) %>%
+#               dplyr::summarize(filtered_files = n()), by = "region") %>%
+#   print()
+# 
+# not_done %>%
+#   dplyr::group_by(region) %>%
+#   dplyr::summarize(n_files = n()) %>%
+#   print()
 
 
 # Create a definitive object of files to extract
@@ -193,87 +186,93 @@ file_set <- not_done # Uncomment if want to only do only undone extractions
 
 # Extract all possible information from each
 # Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
-# for(annum in "2001"){
-for(annum in sort(unique(file_set$year))){
+# Create an empty list to hold diagnostic info for removed records
+removed_diagnostics <- list()
 
-  # Start message
+# Loop over each year
+for(annum in sort(unique(file_set$year))) {
   message("Processing begun for year: ", annum)
-
-  # Subset to one year
   one_year <- dplyr::filter(file_set, year == annum)
-
-  # Loop across day-of-year within year
-  # for(day_num in "001") {
-  for(day_num in sort(unique(one_year$doy))){
-
-    # Starting message
+  
+  # Loop over each day-of-year within the year
+  for(day_num in sort(unique(one_year$doy))) {
     message("Processing begun for day of year: ", day_num)
-
-    # Assemble a file name for this extraction
-    (export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv"))
-
-    # File dataframe of files to just that doy
+    export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv")
     simp_df <- dplyr::filter(one_year, doy == day_num)
-
-    # Make an empty list
     doy_list <- list()
-
-    # Now read in & extract each raster of that day of year
-    for(j in 1:nrow(simp_df)){
-
-      # Starting message
+    
+    # Loop over each raster file for the current day-of-year
+    for(j in 1:nrow(simp_df)) {
       message("Begun for file ", j, " of ", nrow(simp_df))
-
-      # Read in raster
-      et_rast <- terra::rast(file.path(path, "raw-driver-data",  focal_driver,
+      
+      # Read in the raster
+      et_rast <- terra::rast(file.path(path, "raw-driver-data", focal_driver,
                                        simp_df$region[j], simp_df$files[j]))
-
-      # Extract all possible information from that dataframe
-      ex_data <- exactextractr::exact_extract(x = et_rast, y = sheds,
-                                              include_cols = c("LTER", "Shapefile_Name"),
-                                              progress = FALSE) %>%
-        # Unlist to dataframe
+      
+      # Extract all information from the raster
+      extracted_data <- exactextractr::exact_extract(x = et_rast, y = sheds,
+                                                     include_cols = c("LTER", "Shapefile_Name"),
+                                                     progress = FALSE) %>%
         purrr::list_rbind() %>%
-        # Drop coverage fraction column
         dplyr::select(-coverage_fraction) %>%
-        # Drop NA values that were "extracted"
-        ## I.e., those that are outside of the current raster bounding nox
         dplyr::filter(!is.na(value)) %>%
-        # Drop invalid values (per product documentation page)
-        dplyr::filter(value >= -32767 & value <= 32700) %>%
-        # Make new relevant columns
         dplyr::mutate(year = as.numeric(simp_df$year[j]),
                       doy = as.numeric(simp_df$doy[j]),
                       .after = Shapefile_Name)
-
-      # Add this dataframe to the list we made within the larger for loop
+      
+      # Capture records where value > 3000 (for diagnostics)
+      removed <- extracted_data %>% dplyr::filter(value > 3270)
+      if(nrow(removed) > 0) {
+        removed <- removed %>% 
+          dplyr::mutate(region = simp_df$region[j],
+                        file = simp_df$files[j])
+        removed_diagnostics[[length(removed_diagnostics) + 1]] <- removed
+        message("Diagnostic: Removed ", nrow(removed), " records for site: ",
+                unique(removed$Shapefile_Name), " in year: ", simp_df$year[j],
+                " doy: ", simp_df$doy[j])
+      }
+      
+      # Now filter to keep only valid records 
+      ex_data <- extracted_data %>% 
+        dplyr::filter(value <= 3270 & value >= -3276.7)
+      
+      # Print unique value counts for current extraction
+      print("Unique value counts for current file extraction:")
+      print(ex_data %>% dplyr::count(value, sort = TRUE))
+      
+      # Add the cleaned data to the list for this day-of-year
       doy_list[[j]] <- ex_data
-
-      # End message
-      message("Finished extracting raster ", j, " of ", nrow(simp_df)) }
-
-    # Wrangle the output of the within-day of year extraction
+      message("Finished extracting raster ", j, " of ", nrow(simp_df))
+    }
+    
+    # Combine the extractions for the current day-of-year and summarize by site
     full_data <- doy_list %>%
-      # Unlist to dataframe
       purrr::list_rbind() %>%
-      # Handle the summarization within river (potentially across multiple rasters' pixels)
       dplyr::group_by(LTER, Shapefile_Name, year, doy) %>%
-      dplyr::summarize(value = mean(value, na.rm = T)) %>%
+      dplyr::summarize(value = mean(value, na.rm = TRUE)) %>%
       dplyr::ungroup()
-
-    # Export this file for a given day
-    write.csv(x = full_data, row.names = F, na = '',
+    
+    # Export the day's processed data
+    write.csv(x = full_data, row.names = FALSE, na = '',
               file = file.path(path, "raw-driver-data", focal_driver,
                                "_partial-extracted", export_name))
+    message("Processing ended for day of year: ", day_num)
+  }
+  message("Processing ended year: ", annum)
+}
 
-    # Ending message
-    message("Processing ended for day of year: ", day_num) } # Close day-of-year loop
-
-  # Ending message
-  message("Processing ended year: ", annum) } # Close year loop
-
-# Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all', 'focal_driver')))
+# # After processing all files, combine and export diagnostic data if any exist
+# if(length(removed_diagnostics) > 0) {
+#   diagnostics_df <- purrr::list_rbind(removed_diagnostics)
+#   write.csv(diagnostics_df, file = file.path(path, "extracted-data", "evapotrans_removed_diagnostics.csv"),
+#             row.names = FALSE)
+#   message("Diagnostic data for removed records saved.")
+# } else {
+#   message("No records with values >3270 were found.")
+# }
+# 
+# # Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all', 'focal_driver')))
 
 ## ------------------------------------------------------- ##
             # Evapotranspiration - Summarize ----
@@ -305,21 +304,19 @@ out_df <- full_out %>%
                                                .fns = as.character)) %>%
   # Unlist the list
   purrr::list_rbind() %>% 
-  # Rest of pipe as normal
+  # 
 
-
-# out_df <- full_out %>%
-#   # Unlist that list
-#   purrr::list_rbind() %>%
-  # Account for scaler value
+    # Account for scaler value
   ## See "Layers" dropdown here: https://lpdaac.usgs.gov/products/mod16a2v006/
-  dplyr::mutate(unscaled_val = value * 0.1) %>%
+  # dplyr::mutate(unscaled_val = value * 0.1) %>%
   # Get a daily value (divide by 8 for all but last composite period and by 5 for that one)
   dplyr::mutate(daily_val = ifelse(test = (doy == 361),
-                                   yes = (unscaled_val / 5),
-                                   no = (unscaled_val / 8)) ) %>%
+                                   yes = (value / 5),
+                                   no = (value / 8)) )
   # Drop old column
-  dplyr::select(-unscaled_val, -value)
+  # dplyr::select(-value)
+  # dplyr::select(-unscaled_val, -value)
+
 
 # Glimpse it
 dplyr::glimpse(out_df)
@@ -327,7 +324,7 @@ dplyr::glimpse(out_df)
 # Make an empty list
 next_list <- list()
 
-# Now we need to get that daily value attached too all days in that 8-day increment
+# Now we need to get that daily value attached to all days in that 8-day increment
 for(i in 1:7){
   
   # Increase all days of year by 1

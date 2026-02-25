@@ -71,14 +71,17 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 # Make an empty list
 file_list <- list()
 
-## NEW SITES for Data Release 2 ##
+# NEW SITES for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",   
+                "cropped-russia-west", "cropped-russia-west-2",
                 "cropped-russia-center", "cropped-russia-east",
                 "puerto-rico", "scandinavia",
-                "amazon", "australia",  
-                "canada",  "congo", 
+                "amazon", "australia",
+                "canada",  "congo",
                 "germany", "united-kingdom")){
+  
+# NEW SITES for Data Release 2 ##
+# for(region in c("congo", "germany")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
@@ -271,7 +274,7 @@ out_df <- out_list %>%
                   contains("2010"), contains("2011"), contains("2012"),
                   contains("2013"), contains("2014"), contains("2015"),
                   contains("2016"), contains("2017"), contains("2018"),
-                  contains("2019"),
+                  contains("2019"),  contains("2020"), contains("2021"),
                   .after = Shapefile_Name) 
 
 # Glimpse this too

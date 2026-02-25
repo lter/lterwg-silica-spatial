@@ -199,11 +199,11 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized elevation and slope data
 write.csv(x = elev_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_elevation_2.csv"))
+          file = file.path(path, "extracted-data", "si-extract_elevation_2_cameroon_sites.csv"))
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", 
-                                            "si-extract_elevation_2.csv"),
+                                            "si-extract_elevation_2_cameroon_sites.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

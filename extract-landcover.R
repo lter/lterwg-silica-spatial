@@ -99,6 +99,153 @@ lulc_index <- read.csv(file = file.path(path, "raw-driver-data",
   # Rename the integer code column to match the extracted data
   dplyr::rename(value = lulc_code)
 
+
+# Create comparison showing original vs consolidated categories with percentages
+land_comparison <- land_out %>%
+  # Attach index information
+  dplyr::left_join(y = lulc_index, by = "value") %>%
+  dplyr::select(-value) %>%
+  dplyr::relocate(lulc_category, .after = Shapefile_Name) %>%
+  # Clean up category names
+  dplyr::mutate(lulc_category = tolower(gsub(pattern = " |-",
+                                             replacement = "_",
+                                             x = lulc_category))) %>%
+  # Keep original category name AND create consolidated version
+  dplyr::mutate(lulc_original = lulc_category,
+                lulc_consolidated = dplyr::case_when(
+                  lulc_category %in% c("dryland_cropland_and_pasture",
+                                       "irrigated_cropland_and_pasture",
+                                       "cropland/grassland_mosaic",
+                                       "cropland/woodland_mosaic") ~ "cropland",
+                  lulc_category %in% c("herbaceous_wetland", "wooded_wetland") ~ "wetland",
+                  lulc_category %in% c("bare_ground_tundra", "wooded_tundra",
+                                       "mixed_tundra") ~ "tundra",
+                  lulc_category %in% c("shrubland", "grassland", "savanna",
+                                       "mixed_shrubland/grassland") ~ "shrubland_grassland",
+                  TRUE ~ lulc_category)) %>%
+  # Filter out unwanted categories
+  dplyr::filter(!lulc_consolidated %in% c("snow_or_ice", "water_bodies")) %>%
+  # Aggregate by watershed and both category types
+  dplyr::group_by(LTER, Shapefile_Name, lulc_original, lulc_consolidated) %>%
+  dplyr::summarize(land_total = sum(pixel_ct, na.rm = T), .groups = "drop") %>%
+  # Calculate percentages
+  dplyr::group_by(LTER, Shapefile_Name) %>%
+  dplyr::mutate(total_pixels = sum(land_total, na.rm = T),
+                perc_total = (land_total / total_pixels) * 100) %>%
+  dplyr::ungroup() %>%
+  # Join with sheds to get Stream_Name
+  dplyr::left_join(sheds %>%
+                     sf::st_drop_geometry() %>%
+                     dplyr::select(LTER, Shapefile_Name, Stream_Name),
+                   by = c("LTER", "Shapefile_Name")) %>%
+  # Reorder columns for clarity
+  dplyr::select(LTER, Stream_Name, Shapefile_Name, lulc_original, lulc_consolidated,
+                perc_total, land_total, total_pixels) %>%
+  dplyr::arrange(LTER, Stream_Name, lulc_consolidated, lulc_original)
+
+# Export
+write.csv(x = land_comparison, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "lulc_category_comparison.csv"))
+
+# Compare dominant land cover: original vs consolidated
+# First, get dominant ORIGINAL category per watershed
+major_original <- land_comparison %>%
+  dplyr::group_by(LTER, Stream_Name, Shapefile_Name) %>%
+  dplyr::filter(perc_total == max(perc_total, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(LTER, Stream_Name, Shapefile_Name,
+                major_original = lulc_original,
+                perc_original = perc_total) %>%
+  # Handle ties by collapsing into one row
+  dplyr::group_by(LTER, Stream_Name, Shapefile_Name) %>%
+  dplyr::summarize(major_original = paste(major_original, collapse = "; "),
+                   perc_original = max(perc_original, na.rm = T),
+                   .groups = "drop")
+
+# Second, get dominant CONSOLIDATED category per watershed
+# Need to sum percentages by consolidated type first
+major_consolidated <- land_comparison %>%
+  dplyr::group_by(LTER, Stream_Name, Shapefile_Name, lulc_consolidated) %>%
+  dplyr::summarize(consolidated_total = sum(perc_total, na.rm = T), .groups = "drop") %>%
+  dplyr::group_by(LTER, Stream_Name, Shapefile_Name) %>%
+  dplyr::filter(consolidated_total == max(consolidated_total, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(LTER, Stream_Name, Shapefile_Name,
+                major_consolidated = lulc_consolidated,
+                perc_consolidated = consolidated_total) %>%
+  # Handle ties
+  dplyr::group_by(LTER, Stream_Name, Shapefile_Name) %>%
+  dplyr::summarize(major_consolidated = paste(major_consolidated, collapse = "; "),
+                   perc_consolidated = max(perc_consolidated, na.rm = T),
+                   .groups = "drop")
+
+# Combine both
+major_land_comparison <- major_original %>%
+  dplyr::left_join(major_consolidated, by = c("LTER", "Stream_Name", "Shapefile_Name")) %>%
+  dplyr::arrange(LTER, Stream_Name)
+
+# Export
+write.csv(x = major_land_comparison, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "major_land_comparison.csv"))
+
+message("Exported major_land_comparison.csv showing dominant land cover types")
+
+# Create version with CROPLAND subtypes kept separate, others consolidated
+land_cropland_detail <- land_out %>%
+  # Attach index information
+  dplyr::left_join(y = lulc_index, by = "value") %>%
+  dplyr::select(-value) %>%
+  dplyr::relocate(lulc_category, .after = Shapefile_Name) %>%
+  # Clean up category names
+  dplyr::mutate(lulc_category = tolower(gsub(pattern = " |-",
+                                             replacement = "_",
+                                             x = lulc_category))) %>%
+  # Keep original AND show what it consolidates to
+  dplyr::mutate(
+    lulc_original = lulc_category,
+    lulc_consolidated = dplyr::case_when(
+      lulc_category %in% c("dryland_cropland_and_pasture",
+                           "irrigated_cropland_and_pasture",
+                           "cropland/grassland_mosaic",
+                           "cropland/woodland_mosaic") ~ "cropland",
+      lulc_category %in% c("herbaceous_wetland", "wooded_wetland") ~ "wetland",
+      lulc_category %in% c("bare_ground_tundra", "wooded_tundra",
+                           "mixed_tundra") ~ "tundra",
+      lulc_category %in% c("shrubland", "grassland", "savanna",
+                           "mixed_shrubland/grassland") ~ "shrubland_grassland",
+      TRUE ~ lulc_category)) %>%
+  # Filter to ONLY cropland subtypes OR already-consolidated categories
+  dplyr::filter(lulc_consolidated == "cropland" |
+                  !lulc_original %in% c("dryland_cropland_and_pasture",
+                                        "irrigated_cropland_and_pasture",
+                                        "cropland/grassland_mosaic",
+                                        "cropland/woodland_mosaic")) %>%
+  # Filter out unwanted categories
+  dplyr::filter(!lulc_consolidated %in% c("snow_or_ice", "water_bodies")) %>%
+  # For non-cropland, aggregate by consolidated type; for cropland, keep separate
+  dplyr::group_by(LTER, Shapefile_Name, lulc_original, lulc_consolidated) %>%
+  dplyr::summarize(land_total = sum(pixel_ct, na.rm = T), .groups = "drop") %>%
+  # Calculate percentages
+  dplyr::group_by(LTER, Shapefile_Name) %>%
+  dplyr::mutate(total_pixels = sum(land_total, na.rm = T),
+                perc_total = (land_total / total_pixels) * 100) %>%
+  dplyr::ungroup() %>%
+  # Join with sheds to get Stream_Name
+  dplyr::left_join(sheds %>%
+                     sf::st_drop_geometry() %>%
+                     dplyr::select(LTER, Shapefile_Name, Stream_Name),
+                   by = c("LTER", "Shapefile_Name")) %>%
+  # Reorder columns
+  dplyr::select(LTER, Stream_Name, Shapefile_Name, lulc_original, lulc_consolidated,
+                perc_total, land_total, total_pixels) %>%
+  dplyr::arrange(LTER, Stream_Name, lulc_consolidated, lulc_original)
+
+# Export
+write.csv(x = land_cropland_detail, na = '', row.names = F,
+          file = file.path(path, "extracted-data", "lulc_cropland_detail.csv"))
+
+message("Exported lulc_cropland_detail.csv with cropland subtypes and consolidated categories")
+
 # Wrangle extracted data
 land_v2 <- land_out %>%
   # Attach index information
@@ -189,10 +336,10 @@ dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
 write.csv(x = land_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_landcover_2.csv"))
+          file = file.path(path, "extracted-data", "si-extract_landcover_2_cameroon_sites.csv"))
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_landcover_2.csv"),
+googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_landcover_2_cameroon_sites.csv"),
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

@@ -73,14 +73,17 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 file_list <- list()
 
 
-## NEW SITES added for Data Release 2 ##
+# ## NEW SITES added for Data Release 2 ##
 for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",   
+                "cropped-russia-west", "cropped-russia-west-2",
                 "cropped-russia-center", "cropped-russia-east",
                 "puerto-rico", "scandinavia",
-                "amazon", "australia",  
-                "canada",  "congo", 
+                "amazon", "australia",
+                "canada",  "congo",
                 "germany", "united-kingdom")){
+
+# ## NEW SITES added for Data Release 2 ##
+# for(region in c("congo")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
