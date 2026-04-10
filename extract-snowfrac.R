@@ -61,9 +61,18 @@ sheds <- sheds %>%
 # Check that out
 dplyr::glimpse(sheds)
 
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
           # Snow Fraction - Identify Files ----
@@ -74,13 +83,20 @@ file_list <- list()
 
 
 # ## NEW SITES added for Data Release 2 ##
-for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",
-                "cropped-russia-center", "cropped-russia-east",
-                "puerto-rico", "scandinavia",
-                "amazon", "australia",
-                "canada",  "congo",
-                "germany", "united-kingdom")){
+default_regions <- c("north-america-usa", "north-america-arctic",
+                     "cropped-russia-west", "cropped-russia-west-2",
+                     "cropped-russia-center", "cropped-russia-east",
+                     "puerto-rico", "scandinavia",
+                     "amazon", "australia",
+                     "canada", "congo",
+                     "germany", "united-kingdom")
+
+region_set <- resolve_target_regions(
+  subset_targets = subset_targets,
+  default_regions = default_regions
+)
+
+for(region in region_set){
 
 # ## NEW SITES added for Data Release 2 ##
 # for(region in c("congo")){
@@ -115,7 +131,7 @@ file_all <- file_list %>%
 dplyr::glimpse(file_all)
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
                 # Snow Fraction - Extract ----
@@ -150,7 +166,7 @@ not_done <- file_all %>%
   dplyr::filter(!year_day %in% done_files$year_day)
 
 # Create a definitive object of files to extract
-file_set <- not_done # Uncomment if want to only do only undone extractions
+file_set <- if (merge_subset_outputs) file_all else not_done
 # file_set <- file_all # Uncomment if want to (re-)do all extractions
 
 # Extract all possible information from each
@@ -233,9 +249,14 @@ for(annum in sort(unique(file_set$year))){
       dplyr::ungroup()
     
     # Export this file for a given day
-    write.csv(x = full_data, row.names = F, na = '',
-              file = file.path(path, "raw-driver-data", focal_driver,
-                               "_partial-extracted", export_name))
+    write_subset_csv(
+      df = full_data,
+      output_path = file.path(path, "raw-driver-data", focal_driver,
+                              "_partial-extracted", export_name),
+      key_cols = c("LTER", "Shapefile_Name", "year", "doy"),
+      subset_targets = subset_targets,
+      na = ""
+    )
     
     # Ending message
     message("Processing ended for day of year: ", day_num) } # Close day-of-year loop
@@ -244,7 +265,7 @@ for(annum in sort(unique(file_set$year))){
   message("Processing ended year: ", annum) } # Close year loop
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'focal_driver', 'file_all')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'focal_driver', 'file_all')))
 
 ## ------------------------------------------------------- ##
                 # Snow Fraction - Summarize ----
@@ -285,15 +306,24 @@ for(k in 1:length(done_files)){
   # Print 'done' message
   message("Retrieved file ", k, " of ", length(done_files))}
 
+# Keep the partial 2001 year by default. Set SILICA_SNOW_KEEP_PARTIAL_2001=FALSE
+# only if you explicitly want to drop that incomplete first year.
+keep_partial_2001 <- tolower(Sys.getenv("SILICA_SNOW_KEEP_PARTIAL_2001", "true")) == "true"
+
 # Unlist that list
 out_df <- full_out %>%
   purrr::map(dplyr::mutate, Shapefile_Name = as.character(Shapefile_Name)) %>%
   purrr::list_rbind() %>%
   # And drop the placeholder dataframes when the extracted file is empty
   ## Again, only happens because of an unsolvable issue with the raw data
-  dplyr::filter(Shapefile_Name != "xxx") %>%
-  # Also drop 2001 because only one 8-day period is included
-  dplyr::filter(year > 2001)
+  dplyr::filter(Shapefile_Name != "xxx")
+
+if (!keep_partial_2001) {
+  out_df <- out_df %>% dplyr::filter(year > 2001)
+  message("Dropping partial year 2001 because SILICA_SNOW_KEEP_PARTIAL_2001=FALSE.")
+} else {
+  message("Keeping partial year 2001 in snow outputs (SILICA_SNOW_KEEP_PARTIAL_2001=TRUE).")
+}
 
 # Glimpse it
 dplyr::glimpse(out_df)
@@ -423,9 +453,14 @@ dplyr::glimpse(snow_export)
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized snow data
-write.csv(x = snow_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", 
-                           paste0("si-extract_", col_prefix, "_2_v061.csv")))
+write_subset_csv(
+  df = snow_export,
+  output_path = file.path(path, "extracted-data", 
+                          paste0("si-extract_", col_prefix, "_2_v061.csv")),
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", 

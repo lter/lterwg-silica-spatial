@@ -61,9 +61,18 @@ sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, sha
 # Check that out
 dplyr::glimpse(sheds)
 
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
             # MOD17A3HGF -v061 - Identify Files ----
@@ -73,13 +82,20 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 file_list <- list()
 
 ## NEW SITES added for Data Release 2 ##
-for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",
-                "cropped-russia-center", "cropped-russia-east",
-                "puerto-rico", "scandinavia",
-                "amazon", "australia",
-                "canada",  "congo",
-                "germany", "united-kingdom")){
+default_regions <- c("north-america-usa", "north-america-arctic",
+                     "cropped-russia-west", "cropped-russia-west-2",
+                     "cropped-russia-center", "cropped-russia-east",
+                     "puerto-rico", "scandinavia",
+                     "amazon", "australia",
+                     "canada", "congo",
+                     "germany", "united-kingdom")
+
+region_set <- resolve_target_regions(
+  subset_targets = subset_targets,
+  default_regions = default_regions
+)
+
+for(region in region_set){
 
 # for(region in c("congo")){
   
@@ -112,7 +128,7 @@ file_all <- file_list %>%
 dplyr::glimpse(file_all)
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
                       # NPP - Extract ----
@@ -196,9 +212,14 @@ for (a_year in unique(file_set$year)){
     dplyr::rename_with(.fn = ~paste0("npp_", a_year, "_kgC_m2_year"), .cols = npp)
   
   # Export this file for a given year
-  write.csv(x = full_data, row.names = F, na = '',
-            file = file.path(path, "raw-driver-data", "raw-npp-v061",
-                             "_partial-extracted", export_name))
+  write_subset_csv(
+    df = full_data,
+    output_path = file.path(path, "raw-driver-data", "raw-npp-v061",
+                            "_partial-extracted", export_name),
+    key_cols = c("LTER", "Shapefile_Name"),
+    subset_targets = subset_targets,
+    na = ""
+  )
   
   # End message
   message("Finished wrangling output for ", a_year) }
@@ -244,8 +265,13 @@ dplyr::glimpse(npp_export)
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized npp data
-write.csv(x = npp_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_npp_2_v061.csv"))
+write_subset_csv(
+  df = npp_export,
+  output_path = file.path(path, "extracted-data", "si-extract_npp_2_v061.csv"),
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_npp_2_v061.csv"),

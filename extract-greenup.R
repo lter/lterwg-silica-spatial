@@ -60,9 +60,18 @@ sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, sha
 # Check that out
 dplyr::glimpse(sheds)
 
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
            # Green-Up Day - Identify Files ----
@@ -72,13 +81,20 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 file_list <- list()
 
 # NEW SITES for Data Release 2 ##
-for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",
-                "cropped-russia-center", "cropped-russia-east",
-                "puerto-rico", "scandinavia",
-                "amazon", "australia",
-                "canada",  "congo",
-                "germany", "united-kingdom")){
+default_regions <- c("north-america-usa", "north-america-arctic",
+                     "cropped-russia-west", "cropped-russia-west-2",
+                     "cropped-russia-center", "cropped-russia-east",
+                     "puerto-rico", "scandinavia",
+                     "amazon", "australia",
+                     "canada", "congo",
+                     "germany", "united-kingdom")
+
+region_set <- resolve_target_regions(
+  subset_targets = subset_targets,
+  default_regions = default_regions
+)
+
+for(region in region_set){
   
 # NEW SITES for Data Release 2 ##
 # for(region in c("congo", "germany")){
@@ -117,7 +133,7 @@ file_all <- file_list %>%
 dplyr::glimpse(file_all)
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
                 # Green-Up Day - Extract ----
@@ -142,7 +158,7 @@ not_done <- file_all %>%
    dplyr::filter(!year_cycle %in% done_files$year_cycle)
 
 # Create a definitive object of files to extract
-file_set <- not_done # Uncomment if want to only do only undone extractions
+file_set <- if (merge_subset_outputs) file_all else not_done
 # file_set <- file_all # Uncomment if want to do all extractions
 
 # For both of the cycles (0 & 1)
@@ -212,9 +228,14 @@ for(a_cycle in 0:1){
       dplyr::select(-days_since_jan1_1970)
     
     # Export this file for a given year
-    write.csv(x = full_data, row.names = F, na = '',
-              file = file.path(path, "raw-driver-data", "raw-greenup-v061",
-                               "_partial-extracted", export_name))
+    write_subset_csv(
+      df = full_data,
+      output_path = file.path(path, "raw-driver-data", "raw-greenup-v061",
+                              "_partial-extracted", export_name),
+      key_cols = c("LTER", "Shapefile_Name", "cycle", "year"),
+      subset_targets = subset_targets,
+      na = ""
+    )
     
     # End message
     message("Finished wrangling output for ", a_year) } 
@@ -223,7 +244,7 @@ for(a_cycle in 0:1){
   message("Finished wrangling outputs for cycle ", a_cycle) }
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
              # Green-Up Day - Summarize ----
@@ -294,8 +315,13 @@ dplyr::glimpse(greenup_export)
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized greenup data
-write.csv(x = greenup_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_greenup_2_v061.csv"))
+write_subset_csv(
+  df = greenup_export,
+  output_path = file.path(path, "extracted-data", "si-extract_greenup_2_v061.csv"),
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_greenup_2_v061.csv"),

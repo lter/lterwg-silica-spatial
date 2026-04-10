@@ -19,9 +19,28 @@
 # Make sure googledrive library is loaded
 library(googledrive)
 
-# Authorize Google Drive
-## Without this done first `source`ing any of these scripts will fail
-googledrive::drive_auth()
+# Optional no-drive mode for non-interactive runs on Aurora.
+skip_drive_auth <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) == "true"
+if (skip_drive_auth) {
+  message("Skipping drive_auth because SILICA_SKIP_DRIVE_AUTH=TRUE.")
+} else {
+  # Authorize Google Drive
+  ## Without this done first `source`ing any of these scripts will fail
+  googledrive::drive_auth()
+}
+
+# Optional upload skip for headless runs.
+skip_drive_upload <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_UPLOAD", "false")) == "true"
+if (skip_drive_upload) {
+  assignInNamespace(
+    x = "drive_upload",
+    value = function(...) {
+      message("Skipping drive_upload because SILICA_SKIP_DRIVE_UPLOAD=TRUE.")
+      invisible(NULL)
+    },
+    ns = "googledrive"
+  )
+}
 
 ## ------------------------------------------------------- ##
                   # Wrangle Watersheds -----

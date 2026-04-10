@@ -25,20 +25,35 @@ rm(list = ls())
 # Identify path to location of shared data
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
+# Shared key normalization helpers (includes Congo-basin legacy aliases)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+
+excluded_missing_shp_lter <- c(
+  "ARC", "BcCZO", "BNZ", "Congo Basin", "Catalina Jemez", "Coal Creek11",
+  "Finnish Environmental Institute", "HYBAM", "KNZ", "KRR", "LMP", "LUQ",
+  "MCM", "PIE", "Tanguro(Jankowski)", "USGS"
+)
+
 # Define the Drive folder for exporting checks / diagnostics to
 check_folder <- googledrive::as_id("https://drive.google.com/drive/u/1/folders/1-IawEkFjfkrzAlgolvS1KTTm0pEW9K9h")
+skip_drive_auth <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) == "true"
+skip_drive_upload <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_UPLOAD", "false")) == "true"
 
 
 ## ------------------------------------------------------- ##
 # Reference Table Acquisition ----
 ## ------------------------------------------------------- ##
 
-# Grab ID of the GoogleSheet with site coordinates
-googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
-  dplyr::filter(name == "Site_Reference_Table") %>%
-  googledrive::drive_download(file = ., overwrite = T,
-                              path = file.path(path, "site-coordinates",
-                                               "silica-coords_RAW.xlsx"))
+if (skip_drive_auth) {
+  message("Skipping Drive download of site reference table because SILICA_SKIP_DRIVE_AUTH=TRUE.")
+} else {
+  googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
+    dplyr::filter(name == "Site_Reference_Table") %>%
+    googledrive::drive_download(file = ., overwrite = T,
+                                path = file.path(path, "site-coordinates",
+                                                 "silica-coords_RAW.xlsx"))
+}
 
 # Read in site coordinates (i.e., ref table)
 coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
@@ -49,11 +64,14 @@ coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
   dplyr::distinct() %>%
   ## Rename some columns
   dplyr::rename(expert_area_km2 = drainSqKm,
-                crs_code = Shapefile_CRS_EPSG) |>
+                crs_code = Shapefile_CRS_EPSG) %>%
+  dplyr::mutate(.LTER_KEY = normalize_lter_key(LTER)) |>
   filter(is.na(Shapefile_Name)!=T|
-           is.na(Shapefile_Name)==T& !LTER %in% c("ARC","BcCZO", "BNZ", "Cameroon", "Catalina Jemez", "Coal Creek11", "Finnish Environmental Institute", 
-                                                  "HYBAM", "KNZ", "KRR", "LMP", "LUQ", "MCM", "PIE", "Tanguro(Jankowski)", "USGS")
-         & (!is.na(Latitude)&!is.na(Longitude)))
+           is.na(Shapefile_Name)==T& !.LTER_KEY %in% normalize_lter_key(excluded_missing_shp_lter)
+         & (!is.na(Latitude)&!is.na(Longitude))) %>%
+  dplyr::select(-.LTER_KEY)
+
+coord_df <- filter_to_target_records(coord_df, subset_targets = subset_targets)
 
 # Glimpse this
 dplyr::glimpse(coord_df)
@@ -87,29 +105,46 @@ sort(unique(server_files$file_type))
 # Combine Shapefiles ----
 ## ------------------------------------------------------- ##
 
-# Identify just the .shp files
+# Identify just the .shp files and build a lowercase key for robust matching
 raw_sheds <- server_files %>%
-  # Filter to only shp
   dplyr::filter(file_type == ".shp") %>%
-  # Pull out just the name column
-  dplyr::pull(files) %>%
-  ## Drop file extension to match with reference table
-  gsub(pattern = "\\.shp", replacement = "", x = .)
+  dplyr::transmute(
+    server_shp_name = gsub(pattern = "\\.shp", replacement = "", x = files),
+    shp_key = tolower(server_shp_name)
+  ) %>%
+  dplyr::distinct()
+
+# Warn if multiple on-disk files collapse to the same lowercase key
+dup_raw <- raw_sheds %>%
+  dplyr::count(shp_key) %>%
+  dplyr::filter(n > 1)
+if (nrow(dup_raw) > 0) {
+  warning(
+    "Some shapefiles share the same lowercase filename key. ",
+    "Please de-duplicate on-disk names before running."
+  )
+}
+
+# Build a matching key in the reference table
+coord_df <- coord_df %>%
+  dplyr::mutate(shp_key = tolower(Shapefile_Name))
 
 # Compare shapefiles we have with those that are named in the reference table
-supportR::diff_check(old = unique(coord_df$Shapefile_Name), 
-                     new = unique(raw_sheds))
+supportR::diff_check(old = unique(coord_df$shp_key), 
+                     new = unique(raw_sheds$shp_key))
 ## Any 'in old but not new' = shapefiles named in reference table but not on Aurora
 ## Any 'in new but not old' = shapefiles in Aurora that aren't in the reference table
 
 # Wrangle river coordinates
 good_sheds <- coord_df %>%
-  # Filter to only shapefiles in ref. table & on Aurora
-  dplyr::filter(Shapefile_Name %in% raw_sheds) %>%
+  # Attach matching on-disk shapefile name (case-insensitive)
+  dplyr::left_join(raw_sheds, by = "shp_key") %>%
+  # Keep only shapefiles in ref table and on Aurora
+  dplyr::filter(!is.na(server_shp_name)) %>%
   # Drop any non-unique rows (shouldn't be any but good to double check)
   dplyr::distinct() %>%
   # Condense what remains to ensure no duplicates
-  dplyr::group_by(LTER, Shapefile_Name, crs_code) %>%
+  dplyr::group_by(LTER, Shapefile_Name, server_shp_name, crs_code) %>%
   dplyr::summarize(expert_area_km2 = mean(expert_area_km2, na.rm = T),
                    Latitude = dplyr::first(Latitude),
                    Longitude = dplyr::first(Longitude)) %>%
@@ -128,12 +163,57 @@ good_sheds %>%
 # Create an empty object to store combined shapefiles
 all_shps <- NULL
 
+known_crs_overrides <- tibble::tribble(
+  ~shp_key, ~crs_override,
+  "amazon_manacapuru", "ESRI:54012",
+  "amazon_santoantonio", "ESRI:54012",
+  "amazon_vergemgrande", "ESRI:54012",
+  "atalaya_aval", "ESRI:54012",
+  "borja", "ESRI:54012",
+  "caracarai", "ESRI:54012",
+  "cuidad_bolivar", "ESRI:54012",
+  "franscisco", "ESRI:54012",
+  "itaituba", "ESRI:54012",
+  "itapeua", "ESRI:54012",
+  "langa_tabiki", "ESRI:54012",
+  "manacapuru", "ESRI:54012",
+  "nazareth", "ESRI:54012",
+  "porto_velho", "ESRI:54012",
+  "rio_ica", "ESRI:54012",
+  "rio_japura", "ESRI:54012",
+  "rio_jurua", "ESRI:54012",
+  "rio_jutai", "ESRI:54012",
+  "rio_madeira", "ESRI:54012",
+  "rio_negro", "ESRI:54012",
+  "rio_purus", "ESRI:54012",
+  "rurrenabaque", "ESRI:54012",
+  "saut_maripa", "ESRI:54012",
+  "congo_brazzaville", "ESRI:54012",
+  "niger_bamako", "ESRI:54012",
+  "elberiver", "ESRI:54012",
+  "awout_messam", "EPSG:32632",
+  "nyong_ayos", "EPSG:32632",
+  "nyong_mbalmayo", "EPSG:32632",
+  "nyong_olama", "EPSG:32632",
+  "soo_pontsoo", "EPSG:32632",
+  "vilajoen_vesistoalue", "EPSG:3067"
+)
+
 # Turn off spherical processing
 sf::sf_use_s2(F)
 
-# For each shapefile we have:
-for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
+# For each on-disk shapefile we have:
+for(focal_name in sort(unique(good_sheds$server_shp_name))){
   
+  # Identify table metadata for this shapefile
+  focal_info <- good_sheds %>%
+    dplyr::filter(server_shp_name == focal_name)
+
+  focal_override <- known_crs_overrides %>%
+    dplyr::filter(shp_key == tolower(focal_name)) %>%
+    dplyr::slice_head(n = 1) %>%
+    dplyr::pull(crs_override)
+
   # Read in the shapefile
   focal_shp_raw <- sf::st_read(file.path(path, "artisanal-shapefiles-2",
                                          paste0(focal_name, ".shp")), quiet = T)
@@ -141,7 +221,17 @@ for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
   
   # If CRS is missing (for some reason), manually set what the CRS *should* be
   if(is.na(sf::st_crs(focal_shp_raw))){
-    sf::st_crs(focal_shp_raw) <- dplyr::filter(coord_df, Shapefile_Name == focal_name)$crs_code
+    crs_guess <- focal_info$crs_code[!is.na(focal_info$crs_code)][1]
+
+    if (!is.na(focal_override) && nzchar(focal_override)) {
+      sf::st_crs(focal_shp_raw) <- sf::st_crs(focal_override)
+      message("Assigned known CRS override ", focal_override, " to shapefile: ", focal_name)
+    } else if (!is.na(crs_guess)) {
+      sf::st_crs(focal_shp_raw) <- crs_guess
+      message("Assigned reference-table CRS ", crs_guess, " to shapefile: ", focal_name)
+    } else {
+      stop("Missing CRS for shapefile '", focal_name, "' and no override was available.", call. = FALSE)
+    }
   }
   
   # Make sure CRS is WGS84 (EPSG code 4326)
@@ -155,10 +245,6 @@ for(focal_name in sort(unique(good_sheds$Shapefile_Name))){
   focal_area <- focal_shp_wgs84 %>%
     sf::st_area(x = .) %>%
     units::set_units(x = ., km^2)
-  
-  # Identify other relevant information we'll want to attach to the shapefile
-  focal_info <- good_sheds %>%
-    dplyr::filter(Shapefile_Name == focal_name)
   
   # Wrangle raw shapfiles as needed
   focal_shp <- focal_shp_wgs84 %>%
@@ -207,6 +293,23 @@ final_shps <- all_shps %>%
 # Take one last look
 dplyr::glimpse(final_shps)
 
+if (!exists("subset_targets", inherits = FALSE)) {
+  subset_targets <- load_site_subset()
+}
+
+merge_subset_shapes <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true" &&
+  file.exists(file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"))
+
+if (merge_subset_shapes) {
+  existing_artisanal <- sf::st_read(
+    file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"),
+    quiet = TRUE
+  )
+  final_shps <- merge_subset_sf(existing_artisanal, final_shps, key_cols = c("LTER", "shp_nm"))
+  message("Merged subset artisanal shapefiles into existing silica-watersheds_artisanal.shp")
+}
+
 # Export the combine shapefile for all rivers
 sf::st_write(obj = final_shps, delete_layer = T,
              dsn = file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"))
@@ -237,13 +340,22 @@ shps_df %>%
 dir.create(path = file.path(path, "shape_checks"), showWarnings = F)
 
 # Export locally
-write.csv(shps_df, file = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"), 
-          row.names = F, na = '')
+write_subset_csv(
+  df = shps_df,
+  output_path = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"),
+  key_cols = c("LTER", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
 
 # Upload to Drive
-googledrive::drive_upload(media = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"), 
-                          overwrite = T, 
-                          path = check_folder)
+if (skip_drive_upload) {
+  message("Skipping drive_upload for artisanal shape checks because SILICA_SKIP_DRIVE_UPLOAD=TRUE.")
+} else {
+  googledrive::drive_upload(media = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"), 
+                            overwrite = T, 
+                            path = check_folder)
+}
 
 # Tidy up environment
 rm(list = ls()); gc()

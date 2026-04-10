@@ -25,14 +25,36 @@ rm(list = ls())
 # Identify path to location of shared data
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
 
-# source("wrangle-artisanal-watersheds.R")
-# source("wrangle-hydrosheds.R")
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+
+# Optional rebuilds before combining:
+#   SILICA_REBUILD_ARTISANAL=TRUE to regenerate silica-watersheds_artisanal.shp
+#   SILICA_REBUILD_HYDROSHEDS=TRUE to regenerate silica-watersheds_hydrosheds.shp
+if (toupper(Sys.getenv("SILICA_REBUILD_ARTISANAL", unset = "FALSE")) == "TRUE") {
+  source("wrangle-artisanal-watersheds.R")
+}
+
+if (toupper(Sys.getenv("SILICA_REBUILD_HYDROSHEDS", unset = "FALSE")) == "TRUE") {
+  source("wrangle-hydrosheds.R")
+}
 
 ## ------------------------------------------------------- ##
                   # Acquire Shapefiles ----
 ## ------------------------------------------------------- ##
-artisan <- sf::st_read(file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"))
-hydro <- sf::st_read(file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
+artisan_path <- file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp")
+hydro_full_path <- file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp")
+hydro_subset_path <- file.path(path, "site-coordinates", "silica-watersheds_hydrosheds_subset.shp")
+
+hydro_path <- if (!is.null(subset_targets) && file.exists(hydro_subset_path)) {
+  message("Using subset hydrosheds shapefile: ", hydro_subset_path)
+  hydro_subset_path
+} else {
+  hydro_full_path
+}
+
+artisan <- sf::st_read(artisan_path)
+hydro <- sf::st_read(hydro_path)
 
 all_shps <- dplyr::bind_rows(artisan, hydro)
 dplyr::glimpse(all_shps)

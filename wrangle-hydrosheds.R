@@ -18,17 +18,31 @@ rm(list = ls())
 
 # Identify path to location of shared data
 (path <- scicomptools::wd_loc(local = F, remote_path = file.path('/', "home", "shares", "lter-si", "si-watershed-extract")))
+
+# Shared key normalization helpers (includes Congo-basin legacy aliases)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+
+excluded_missing_shp_lter <- c(
+  "ARC", "BcCZO", "BNZ", "Congo Basin", "Catalina Jemez", "Coal Creek11",
+  "Finnish Environmental Institute", "HYBAM", "KNZ", "KRR", "LMP", "LUQ",
+  "MCM", "PIE", "Tanguro(Jankowski)", "USGS"
+)
+skip_drive_auth <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) == "true"
                 
 ## ------------------------------------------------------- ##
           # Reference Table Acquisition ----
 ## ------------------------------------------------------- ##
 
-# Grab ID of the GoogleSheet with site coordinates
-googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
-  dplyr::filter(name == "Site_Reference_Table") %>%
-  googledrive::drive_download(file = ., overwrite = T,
-                              path = file.path(path, "site-coordinates",
-                                               "silica-coords_RAW.xlsx"))
+if (skip_drive_auth) {
+  message("Skipping Drive download of site reference table because SILICA_SKIP_DRIVE_AUTH=TRUE.")
+} else {
+  googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
+    dplyr::filter(name == "Site_Reference_Table") %>%
+    googledrive::drive_download(file = ., overwrite = T,
+                                path = file.path(path, "site-coordinates",
+                                                 "silica-coords_RAW.xlsx"))
+}
 
 ## ------------------------------------------------------- ##
 # Site Coordinate Acquisition ----
@@ -43,28 +57,51 @@ coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
   dplyr::distinct() %>%
   ## Rename some columns
   dplyr::rename(expert_area_km2 = drainSqKm,
-                crs_code = Shapefile_CRS_EPSG) |>
+                crs_code = Shapefile_CRS_EPSG) %>%
+  filter_to_target_records(subset_targets = subset_targets) %>%
+  dplyr::mutate(.LTER_KEY = normalize_lter_key(LTER)) |>
   filter(is.na(Shapefile_Name)!=T|
-           is.na(Shapefile_Name)==T& !LTER %in% c("ARC","BcCZO", "BNZ", "Cameroon", "Catalina Jemez", "Coal Creek11", "Finnish Environmental Institute", 
-                                                  "HYBAM", "KNZ", "KRR", "LMP", "LUQ", "MCM", "PIE", "Tanguro(Jankowski)", "USGS")
-         & (!is.na(Latitude)&!is.na(Longitude)))
+           is.na(Shapefile_Name)==T & (!.LTER_KEY %in% normalize_lter_key(excluded_missing_shp_lter) |
+                                         !is.null(subset_targets))
+         & (!is.na(Latitude)&!is.na(Longitude))) %>%
+  dplyr::select(-.LTER_KEY)
 
 # Glimpse this
 dplyr::glimpse(coord_df)
 coord_df|> filter(is.na(Shapefile_Name)) |> pull(LTER) |> unique()
 
+# Identify shapefile names that already have artisanal polygons
+artisanal_shp_keys <- character(0)
+artisanal_path <- file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp")
+if (file.exists(artisanal_path)) {
+  artisanal <- sf::st_read(artisanal_path, quiet = TRUE)
+  if ("shp_nm" %in% names(artisanal)) {
+    names(artisanal)[names(artisanal) == "shp_nm"] <- "Shapefile_Name"
+  }
+  artisanal_shp_keys <- artisanal %>%
+    sf::st_drop_geometry() %>%
+    dplyr::transmute(.SHP_KEY = normalize_site_key(Shapefile_Name)) %>%
+    dplyr::filter(!is.na(.SHP_KEY)) %>%
+    dplyr::distinct() %>%
+    dplyr::pull(.SHP_KEY)
+}
+
 # Do some necessary processing
 good_sheds2 <- coord_df %>%
-  # Filter to only shapefiles in ref. table & on Aurora
-  dplyr::filter(is.na(Shapefile_Name)) %>%
+  # Keep rows with coordinates and without an existing artisanal polygon.
+  # This includes rows with missing Shapefile_Name and rows with named shapefiles
+  # that are absent from the artisanal watershed layer.
+  dplyr::mutate(.SHP_KEY = normalize_site_key(Shapefile_Name)) %>%
+  dplyr::filter(!is.na(Latitude), !is.na(Longitude)) %>%
+  dplyr::filter(is.na(.SHP_KEY) | !.SHP_KEY %in% artisanal_shp_keys) %>%
   # Drop any non-unique rows (shouldn't be any but good to double check)
   dplyr::distinct() %>%
   # Condense what remains to ensure no duplicates
-  dplyr::group_by(LTER, Stream_Name, Discharge_File_Name, Latitude, Longitude) %>%
+  dplyr::group_by(LTER, Shapefile_Name, Stream_Name, Discharge_File_Name, Latitude, Longitude) %>%
   dplyr::summarize(expert_area_km2 = mean(expert_area_km2, na.rm = T),
                    Latitude = dplyr::first(Latitude),
-                   Longitude = dplyr::first(Longitude)) %>%
-  dplyr::ungroup()
+                   Longitude = dplyr::first(Longitude),
+                   .groups = "drop")
 
 # Check that out
 dplyr::glimpse(good_sheds2)
@@ -110,8 +147,25 @@ str(arctic)
 ## PFAF_1 = separates continents from one another
 ## PFAF_# + N = progressively finer separation
 
-# Bind our files into a single (admittedly giant) object
-all_basins <- rbind(africa, arctic, north_am, oceania, south_am)
+basin_lookup <- list(
+  "1" = africa,
+  "2" = europe,
+  "3" = siberia,
+  "4" = asia,
+  "5" = oceania,
+  "6" = south_am,
+  "7" = north_am,
+  "8" = arctic,
+  "9" = greenland
+)
+
+# Bind our files into a single (admittedly giant) object when targeted mode is active.
+# Otherwise preserve the narrower historical default to avoid widening old runs.
+all_basins <- if (is.null(subset_targets)) {
+  rbind(africa, arctic, north_am, oceania, south_am)
+} else {
+  dplyr::bind_rows(basin_lookup)
+}
 
 # For ease of manipulation get just the HYBAS_ID
 # These uniquely identify the most specific level so they work upstream too (no pun intended)
@@ -170,8 +224,13 @@ sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
 # 8 = Arctic (North America); 9 = Greenland 
 
 # Prepare only needed HydroSheds 'continents'
-## Update this for canada/murray darling
-basin_needs <- rbind(oceania, north_am, arctic)
+needed_codes <- sort(unique(stringr::str_sub(sites_actual$HYBAS_ID, 1, 1)))
+needed_codes <- needed_codes[needed_codes %in% names(basin_lookup)]
+basin_needs <- dplyr::bind_rows(basin_lookup[needed_codes])
+
+if (nrow(basin_needs) == 0) {
+  stop("No HydroSHEDS basin slices were selected for the target sites.", call. = FALSE)
+}
 
 # Attach the twelfth Pfafstetter code by matching with HYBAS_ID
 sites_actual$PFAF_12 <- basin_needs$PFAF_12[match(sites_actual$HYBAS_ID, 
@@ -309,8 +368,12 @@ dplyr::glimpse(hydro_poly)
 ## ------------------------------------------------------- ##
 
 ## Need hydrosheds to have unique shapefile names (shp_nm)
-sites_actual <- cbind(sites_actual, "hydrosheds"=1:nrow(sites_actual)) 
-sites_actual$shp_nm <-paste0(sites_actual$LTER, sites_actual$hydrosheds)
+sites_actual <- cbind(sites_actual, "hydrosheds" = seq_len(nrow(sites_actual)))
+sites_actual$shp_nm <- dplyr::if_else(
+  !is.na(sites_actual$Shapefile_Name) & nchar(trimws(sites_actual$Shapefile_Name)) > 0,
+  sites_actual$Shapefile_Name,
+  paste0(sites_actual$LTER, "_hydrosheds_", sites_actual$hydrosheds)
+)
 
 poly_actual <- sites_actual %>%
   sf::st_drop_geometry() %>%
@@ -324,50 +387,32 @@ poly_actual <- sites_actual %>%
 
 dplyr::glimpse(poly_actual)
 
-# Export the combine shapefile for all rivers
+# Export the combined shapefile for all rivers
+if (!exists("subset_targets", inherits = FALSE)) {
+  subset_targets <- load_site_subset()
+}
+
+subset_hydro_mode <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
+hydro_out_path <- if (subset_hydro_mode) {
+  file.path(path, "site-coordinates", "silica-watersheds_hydrosheds_subset.shp")
+} else {
+  file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp")
+}
+
+if (subset_hydro_mode) {
+  message("Writing subset-only hydrosheds shapefile: ", hydro_out_path)
+} else if (file.exists(hydro_out_path)) {
+  existing_hydro <- sf::st_read(hydro_out_path, quiet = TRUE)
+  poly_actual <- merge_subset_sf(existing_hydro, poly_actual, key_cols = c("LTER", "shp_nm"))
+  message("Merged subset hydrosheds polygons into existing silica-watersheds_hydrosheds.shp")
+}
+
 sf::st_write(obj = poly_actual, delete_layer = T,
-             dsn = file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
-
-## Want to see that shapefile: 
-# Path to the shapefile you exported
-shapefile_path <- file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp")
-
-# Read the shapefile
-poly_actual <- sf::st_read(shapefile_path)
-
-# Plot the shapefile
-ggplot(data = poly_actual) +
-  geom_sf(aes(fill = real_ar)) +  # Color polygons by the real_area column
-  scale_fill_viridis_c() +         # Use a color scale for better visualization
-  theme_minimal() +                # Clean plot appearance
-  labs(title = "HydroSHEDS Watersheds",
-       fill = "Drainage Area (sq km)")
-
-## This shapefile is only the Canada and Australia sites. We want ALL sites: 
-## ------------------------------------------------------- ##
-# Acquire Shapefiles ----
-## ------------------------------------------------------- ##
-watersheds <- sf::st_read(file.path(path, "site-coordinates", "silica-watersheds.shp"))
-hydrosheds <- sf::st_read(file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp"))
-
-all_shps <- dplyr::bind_rows(watersheds, hydrosheds)
-
-# Plot the shapefile
-ggplot(data = all_shps) +
-  geom_sf(aes(fill = real_ar)) +  # Color polygons by the real_area column
-  scale_fill_viridis_c() +         # Use a color scale for better visualization
-  theme_minimal() +                # Clean plot appearance
-  labs(title = "HydroSHEDS Watersheds",
-       fill = "Drainage Area (sq km)")
-
-
-# Export the combine shapefile for all rivers
-sf::st_write(obj = all_shps, delete_layer = T,
-             dsn = file.path(path, "site-coordinates", "silica-watersheds_hydrosheds_DR_2.shp"))
+             dsn = hydro_out_path)
 
 # Tidy up environment
 rm(list = ls()); gc()
 
 # End ----
-
-

@@ -62,8 +62,17 @@ sheds <- sheds %>%
 # Check that out
 dplyr::glimpse(sheds)
 
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
         # MODIS16A2 (v. 061) - Identify Files ----
@@ -73,13 +82,20 @@ rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 file_list <- list()
 
 # ## NEW SITES for Data Release 2 ##
-for(region in c("north-america-usa", "north-america-arctic",
-                "cropped-russia-west", "cropped-russia-west-2",
-                "cropped-russia-center", "cropped-russia-east",
-                "puerto-rico", "scandinavia",
-                "amazon", "australia",
-                "canada",  "congo",
-                "germany", "united-kingdom")){
+default_regions <- c("north-america-usa", "north-america-arctic",
+                     "cropped-russia-west", "cropped-russia-west-2",
+                     "cropped-russia-center", "cropped-russia-east",
+                     "puerto-rico", "scandinavia",
+                     "amazon", "australia",
+                     "canada", "congo",
+                     "germany", "united-kingdom")
+
+region_set <- resolve_target_regions(
+  subset_targets = subset_targets,
+  default_regions = default_regions
+)
+
+for(region in region_set){
 
 ## NEW SITES for Data Release 2 ##
 # for(region in c("congo")){
@@ -108,15 +124,15 @@ file_all <- file_list %>%
   # Drop raw columns if no longer needed
   dplyr::select(-date_raw, -date)
 
-# Filter to remove the year 2000 and only include years up to 2021
+# Filter to remove partial year 2000 records; keep all later years present
 file_all <- file_all %>%
-  dplyr::filter(year != "2000", as.numeric(year) <= 2023)
+  dplyr::filter(year != "2000")
 
 # Glimpse it
 dplyr::glimpse(file_all)
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
 
 ## ------------------------------------------------------- ##
             # Evapotranspiration - Extract ----
@@ -147,7 +163,7 @@ not_done <- file_all %>%
   dplyr::filter(!year_day %in% done_files$year_day)
 
 # Create a definitive object of files to extract
-file_set <- not_done # Uncomment if want to only do only undone extractions
+file_set <- if (merge_subset_outputs) file_all else not_done
 # file_set <- file_all # Uncomment if want to do all extractions
 
 ## Trying to start after known corrupt file:
@@ -180,7 +196,7 @@ file_all %>%
 
 
 # Create a definitive object of files to extract
-file_set <- not_done # Uncomment if want to only do only undone extractions
+file_set <- if (merge_subset_outputs) file_all else not_done
 # file_set <- file_all # Uncomment if want to do all extractions
 
 
@@ -253,9 +269,14 @@ for(annum in sort(unique(file_set$year))) {
       dplyr::ungroup()
     
     # Export the day's processed data
-    write.csv(x = full_data, row.names = FALSE, na = '',
-              file = file.path(path, "raw-driver-data", focal_driver,
-                               "_partial-extracted", export_name))
+    write_subset_csv(
+      df = full_data,
+      output_path = file.path(path, "raw-driver-data", focal_driver,
+                              "_partial-extracted", export_name),
+      key_cols = c("LTER", "Shapefile_Name", "year", "doy"),
+      subset_targets = subset_targets,
+      na = ""
+    )
     message("Processing ended for day of year: ", day_num)
   }
   message("Processing ended year: ", annum)
@@ -427,8 +448,13 @@ dplyr::glimpse(et_export)
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized data
-write.csv(x = et_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv")) ## Changed Nov 2024 to reflect new MODIS version for all sites
+write_subset_csv(
+  df = et_export,
+  output_path = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv"),
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+) ## Changed Nov 2024 to reflect new MODIS version for all sites
 
 
 # Upload to GoogleDrive

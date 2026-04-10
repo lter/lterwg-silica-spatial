@@ -61,9 +61,18 @@ sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, sha
 # Check that out
 dplyr::glimpse(sheds)
 
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 ## ------------------------------------------------------- ##
                   # Air Temp - Extract ----
 ## ------------------------------------------------------- ##
@@ -111,8 +120,8 @@ for(k in 1:layer_ct){
     purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
     # Filter out NAs
     dplyr::filter(!is.na(value)) %>%
-    # Convert from Kelvin to Celsius
-    dplyr::mutate(value_c = value - 273.15) %>%
+    # NOAA air.mon.mean.nc is already in degrees C
+    dplyr::mutate(value_c = value) %>%
     # Average temperature within river ID
     dplyr::group_by(LTER, Shapefile_Name) %>%
     dplyr::summarize(value_avg = mean(value_c, na.rm = T)) %>%
@@ -222,12 +231,42 @@ dplyr::glimpse(air_export)
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
+air_out_file <- file.path(path, "extracted-data", "si-extract_air-temp_2.csv")
+legacy_air_files <- file.path(
+  path, "extracted-data",
+  c(
+    "si-extract_air-temp_2_cameroon_sites.csv",
+    "si-extract_air-temp_2_cameroon_site.csv",
+    "si-extract_air-temp_cameroon_sites_2.csv"
+  )
+)
+legacy_air_files <- legacy_air_files[file.exists(legacy_air_files)]
+
+if (length(legacy_air_files) > 0) {
+  stamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  invisible(lapply(legacy_air_files, function(old_file) {
+    new_file <- paste0(old_file, ".deprecated_", stamp)
+    ok <- file.rename(old_file, new_file)
+    if (!ok) {
+      warning("Failed to rename legacy file: ", old_file, call. = FALSE)
+    } else {
+      message("Deprecated legacy file naming: ", basename(old_file), " -> ", basename(new_file))
+    }
+    invisible(ok)
+  }))
+}
+
 # Export the summarized lithology data
-write.csv(x = air_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_air-temp_2_cameroon_sites.csv"))
+write_subset_csv(
+  df = air_export,
+  output_path = air_out_file,
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_air-temp_2_cameroon_sites.csv"),
+googledrive::drive_upload(media = air_out_file,
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

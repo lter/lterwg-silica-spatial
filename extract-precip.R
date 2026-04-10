@@ -61,9 +61,18 @@ sheds <- sheds %>% select (-c(Stream_Name.x, Stream_Name.y, expert_area_km2, sha
 # Check that out
 dplyr::glimpse(sheds)
 
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = "site-subset-helpers.R")
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 ## ------------------------------------------------------- ##
                     # Precip - Extract ----
 ## ------------------------------------------------------- ##
@@ -246,8 +255,13 @@ dplyr::glimpse(prec_export)
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
 # Export the summarized lithology data
-write.csv(x = prec_export, na = '', row.names = F,
-          file = file.path(path, "extracted-data", "si-extract_precip_2.csv"))
+write_subset_csv(
+  df = prec_export,
+  output_path = file.path(path, "extracted-data", "si-extract_precip_2.csv"),
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
 
 # Upload to GoogleDrive
 googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_precip_2.csv"),

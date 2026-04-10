@@ -60,7 +60,7 @@ dplyr::glimpse(sheds)
 
 
 # Clean up environment
-rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
 
 ## ------------------------------------------------------- ##
               # Land Cover - Extract ----
