@@ -446,11 +446,12 @@ dplyr::glimpse(et_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
+evapo_out_file <- silica_driver_output_file(path, "si-extract_evapo_v061")
 
 # Export the summarized data
 write_subset_csv(
   df = et_export,
-  output_path = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv"),
+  output_path = evapo_out_file,
   key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
   subset_targets = subset_targets,
   na = ""
@@ -458,7 +459,7 @@ write_subset_csv(
 
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_evapo_2-v061.csv"),
+googledrive::drive_upload(media = evapo_out_file,
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

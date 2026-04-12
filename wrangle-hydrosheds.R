@@ -22,6 +22,7 @@ rm(list = ls())
 # Shared key normalization helpers (includes Congo-basin legacy aliases)
 source(file = "site-subset-helpers.R")
 subset_targets <- load_site_subset()
+forced_hydrosheds_targets <- load_forced_hydrosheds_targets(subset_targets)
 
 excluded_missing_shp_lter <- c(
   "ARC", "BcCZO", "BNZ", "Congo Basin", "Catalina Jemez", "Coal Creek11",
@@ -84,6 +85,14 @@ if (file.exists(artisanal_path)) {
     dplyr::filter(!is.na(.SHP_KEY)) %>%
     dplyr::distinct() %>%
     dplyr::pull(.SHP_KEY)
+}
+
+if (!is.null(forced_hydrosheds_targets) && ".SHP_KEY" %in% names(forced_hydrosheds_targets)) {
+  forced_shp_keys <- forced_hydrosheds_targets %>%
+    dplyr::filter(!is.na(.SHP_KEY)) %>%
+    dplyr::pull(.SHP_KEY) %>%
+    unique()
+  artisanal_shp_keys <- setdiff(artisanal_shp_keys, forced_shp_keys)
 }
 
 # Do some necessary processing

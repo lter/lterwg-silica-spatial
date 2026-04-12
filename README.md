@@ -8,13 +8,37 @@
 
 Scripts in this repository are described below:
 
-- **total-workflow.R** - Runs (1) `wrangle-watersheds.R` then (2) all `extract-[...].R` scripts plus a deletion of superseded "partial extract" CSVs and finished by running (3) `combine-drivers.R`. See below for descriptions of each of those scripts
+- **total-workflow.R** - Main full-workflow entrypoint. Runs (1) `wrangle-watersheds.R`, (2) the active `extract-[...].R` scripts, and (3) the current combine path via `tools/combine_from_site_ref_local.R`. Legacy land cover is skipped by default.
 
 - **wrangle-watersheds.R** - Processes watershed shapefiles into a single shapefile with all watersheds included. Starting shapefiles retrieved from site experts / various online sources. See the Reference Table for more information on these files (e.g., name, origin, CRS, etc.)
 
-- **extract-[...].R** - These scripts are each responsible for extracting, summarizing, and exporting the spatial data type included in the script name. Each script uses the watersheds identified by "wrangle-watersheds.R" but is otherwise completely independent of other scripts in this repo
+- **extract-[...].R** - Active driver extractors. Current production outputs are date-stamped. The active production set is soil, lithology, elevation, permafrost, precipitation, air temperature, NPP, greenup, evapotranspiration, and snow fraction.
 
-- **combine-drivers.R** - This script identifies all drivers that have been extracted and combines them into a single, analysis-ready file. This saves the analytical team(s) from needing to do this joining themselves.
+- **tools/combine_from_site_ref_local.R** - Current combine script. Joins extracted driver tables against the site reference table, writes the canonical combined CSV, and emits QA / rerun manifests.
+
+- **combine-drivers.R** - Legacy compatibility wrapper that now forwards to `tools/combine_from_site_ref_local.R`.
+
+
+### Current production path
+
+- `wrangle-watersheds.R`
+- `extract-soil.R`
+- `extract-lithology.R`
+- `extract-elevation.R`
+- `extract-permafrost.R`
+- `extract-precip.R`
+- `extract-airtemp.R`
+- `extract-npp.R`
+- `extract-greenup.R`
+- `extract-evapo.R`
+- `extract-snowfrac.R`
+- `tools/combine_from_site_ref_local.R`
+
+### Legacy / compatibility
+
+- `extract-landcover.R` is retained only as a legacy compatibility stub.
+- `combine-drivers.R` is retained only as a compatibility wrapper.
+- subset reruns use `tools/build_targeted_rerun_manifest.R` and `tools/run_targeted_subset_workflow.R`.
 
 #### Ancillary Scripts
 

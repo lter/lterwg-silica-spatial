@@ -451,20 +451,19 @@ dplyr::glimpse(snow_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
+snow_out_file <- silica_driver_output_file(path, paste0("si-extract_", col_prefix, "_v061"))
 
 # Export the summarized snow data
 write_subset_csv(
   df = snow_export,
-  output_path = file.path(path, "extracted-data", 
-                          paste0("si-extract_", col_prefix, "_2_v061.csv")),
+  output_path = snow_out_file,
   key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
   subset_targets = subset_targets,
   na = ""
 )
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", 
-                                            paste0("si-extract_", col_prefix, "_2_v061.csv")),
+googledrive::drive_upload(media = snow_out_file,
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

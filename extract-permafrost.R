@@ -127,19 +127,19 @@ dplyr::glimpse(pf_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
+permafrost_out_file <- silica_driver_output_file(path, "si-extract_permafrost")
 
 # Export the summarized elevation and slope data
 write_subset_csv(
   df = pf_export,
-  output_path = file.path(path, "extracted-data", "si-extract_permafrost_2.csv"),
+  output_path = permafrost_out_file,
   key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
   subset_targets = subset_targets,
   na = ""
 )
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", 
-                                            "si-extract_permafrost_2.csv"),
+googledrive::drive_upload(media = permafrost_out_file,
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

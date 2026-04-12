@@ -231,7 +231,7 @@ dplyr::glimpse(air_export)
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
 
-air_out_file <- file.path(path, "extracted-data", "si-extract_air-temp_2.csv")
+air_out_file <- silica_driver_output_file(path, "si-extract_air-temp")
 legacy_air_files <- file.path(
   path, "extracted-data",
   c(

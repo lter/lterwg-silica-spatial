@@ -42,9 +42,17 @@ if (toupper(Sys.getenv("SILICA_REBUILD_HYDROSHEDS", unset = "FALSE")) == "TRUE")
 ## ------------------------------------------------------- ##
                   # Acquire Shapefiles ----
 ## ------------------------------------------------------- ##
-artisan_path <- file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp")
+artisan_full_path <- file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp")
+artisan_subset_path <- file.path(path, "site-coordinates", "silica-watersheds_artisanal_subset.shp")
 hydro_full_path <- file.path(path, "site-coordinates", "silica-watersheds_hydrosheds.shp")
 hydro_subset_path <- file.path(path, "site-coordinates", "silica-watersheds_hydrosheds_subset.shp")
+
+artisan_path <- if (!is.null(subset_targets) && file.exists(artisan_subset_path)) {
+  message("Using subset artisanal shapefile: ", artisan_subset_path)
+  artisan_subset_path
+} else {
+  artisan_full_path
+}
 
 hydro_path <- if (!is.null(subset_targets) && file.exists(hydro_subset_path)) {
   message("Using subset hydrosheds shapefile: ", hydro_subset_path)

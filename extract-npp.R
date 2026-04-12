@@ -263,18 +263,19 @@ dplyr::glimpse(npp_export)
 
 # Create folder to export to
 dir.create(path = file.path(path, "extracted-data"), showWarnings = F)
+npp_out_file <- silica_driver_output_file(path, "si-extract_npp_v061")
 
 # Export the summarized npp data
 write_subset_csv(
   df = npp_export,
-  output_path = file.path(path, "extracted-data", "si-extract_npp_2_v061.csv"),
+  output_path = npp_out_file,
   key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
   subset_targets = subset_targets,
   na = ""
 )
 
 # Upload to GoogleDrive
-googledrive::drive_upload(media = file.path(path, "extracted-data", "si-extract_npp_2_v061.csv"),
+googledrive::drive_upload(media = npp_out_file,
                           overwrite = T,
                           path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
 

@@ -44,3 +44,8 @@ vignettes/*.pdf
 
 # Folders to ignore
 site-coordinates/
+
+# Generated workflow artifacts
+logs/
+qa/*.csv
+qa/*.log

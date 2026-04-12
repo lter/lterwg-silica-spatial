@@ -28,6 +28,7 @@ rm(list = ls())
 # Shared key normalization helpers (includes Congo-basin legacy aliases)
 source(file = "site-subset-helpers.R")
 subset_targets <- load_site_subset()
+forced_hydrosheds_targets <- load_forced_hydrosheds_targets(subset_targets)
 
 excluded_missing_shp_lter <- c(
   "ARC", "BcCZO", "BNZ", "Congo Basin", "Catalina Jemez", "Coal Creek11",
@@ -72,6 +73,20 @@ coord_df <- readxl::read_excel(path = file.path(path, "site-coordinates",
   dplyr::select(-.LTER_KEY)
 
 coord_df <- filter_to_target_records(coord_df, subset_targets = subset_targets)
+
+if (!is.null(forced_hydrosheds_targets)) {
+  coord_df <- coord_df %>%
+    dplyr::mutate(
+      .LTER_KEY = normalize_lter_key(LTER),
+      .STREAM_KEY = normalize_site_key(Stream_Name),
+      .SHP_KEY = normalize_site_key(Shapefile_Name)
+    ) %>%
+    dplyr::anti_join(
+      forced_hydrosheds_targets,
+      by = c(".LTER_KEY", ".STREAM_KEY", ".SHP_KEY")
+    ) %>%
+    dplyr::select(-.LTER_KEY, -.STREAM_KEY, -.SHP_KEY)
+}
 
 # Glimpse this
 dplyr::glimpse(coord_df)
@@ -297,22 +312,22 @@ if (!exists("subset_targets", inherits = FALSE)) {
   subset_targets <- load_site_subset()
 }
 
-merge_subset_shapes <- !is.null(subset_targets) &&
-  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true" &&
-  file.exists(file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"))
+subset_artisanal_mode <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
 
-if (merge_subset_shapes) {
-  existing_artisanal <- sf::st_read(
-    file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"),
-    quiet = TRUE
-  )
-  final_shps <- merge_subset_sf(existing_artisanal, final_shps, key_cols = c("LTER", "shp_nm"))
-  message("Merged subset artisanal shapefiles into existing silica-watersheds_artisanal.shp")
+artisanal_out_path <- if (subset_artisanal_mode) {
+  file.path(path, "site-coordinates", "silica-watersheds_artisanal_subset.shp")
+} else {
+  file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp")
 }
 
-# Export the combine shapefile for all rivers
+if (subset_artisanal_mode) {
+  message("Writing subset-only artisanal shapefile: ", artisanal_out_path)
+}
+
+# Export the combined shapefile for all rivers
 sf::st_write(obj = final_shps, delete_layer = T,
-             dsn = file.path(path, "site-coordinates", "silica-watersheds_artisanal.shp"))
+             dsn = artisanal_out_path)
 
 # Process the shapefile object a bit to make a flat table variant
 shps_df <- all_shps %>%
@@ -340,9 +355,10 @@ shps_df %>%
 dir.create(path = file.path(path, "shape_checks"), showWarnings = F)
 
 # Export locally
+shape_check_file <- file.path(path, "shape_checks", paste0("artisanal_shape_area_check_", silica_output_date(), ".csv"))
 write_subset_csv(
   df = shps_df,
-  output_path = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"),
+  output_path = shape_check_file,
   key_cols = c("LTER", "Shapefile_Name"),
   subset_targets = subset_targets,
   na = ""
@@ -352,7 +368,7 @@ write_subset_csv(
 if (skip_drive_upload) {
   message("Skipping drive_upload for artisanal shape checks because SILICA_SKIP_DRIVE_UPLOAD=TRUE.")
 } else {
-  googledrive::drive_upload(media = file.path(path, "shape_checks", "artisanal_shape_area_check_2.csv"), 
+  googledrive::drive_upload(media = shape_check_file, 
                             overwrite = T, 
                             path = check_folder)
 }

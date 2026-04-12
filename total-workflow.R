@@ -74,8 +74,13 @@ gc()
         # Land Cover -----
 ## ------------------------- ##
 
-# Re-extract (global, static)
-source(file = "extract-landcover.R", echo = T)
+# Legacy land cover is deprecated; enable only when explicitly requested
+run_legacy_landcover <- tolower(Sys.getenv("SILICA_RUN_LEGACY_LANDCOVER", "false")) == "true"
+if (run_legacy_landcover) {
+  source(file = "extract-landcover.R", echo = T)
+} else {
+  message("Skipping legacy land cover extraction.")
+}
 
 # Garbage collection
 gc()
@@ -255,7 +260,12 @@ gc()
 ## ------------------------------------------------------- ##
 
 # Combine all extracted drivers
-source(file = "combine-drivers.R", echo = T)
+use_legacy_combine <- tolower(Sys.getenv("SILICA_USE_LEGACY_COMBINE", "false")) == "true"
+if (use_legacy_combine) {
+  source(file = "combine-drivers.R", echo = T)
+} else {
+  source(file = file.path("tools", "combine_from_site_ref_local.R"), echo = T)
+}
 
 # Do garbage collection & clear environment
 gc()

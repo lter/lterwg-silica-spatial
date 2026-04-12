@@ -74,6 +74,57 @@ load_site_subset <- function() {
   subset_targets
 }
 
+# Identify subset rows that should bypass artisanal polygons and use HydroSHEDS.
+# Supported flags in the subset CSV:
+#   Force_HydroSHEDS = TRUE/FALSE
+#   Watershed_Source = "hydrosheds" / "artisanal"
+load_forced_hydrosheds_targets <- function(subset_targets = NULL) {
+  if (is.null(subset_targets) || nrow(subset_targets) == 0) {
+    return(NULL)
+  }
+
+  src_vals <- if ("Watershed_Source" %in% names(subset_targets)) {
+    normalize_site_key(subset_targets$Watershed_Source)
+  } else {
+    rep(NA_character_, nrow(subset_targets))
+  }
+
+  force_vals <- if ("Force_HydroSHEDS" %in% names(subset_targets)) {
+    normalize_site_key(subset_targets$Force_HydroSHEDS)
+  } else {
+    rep(NA_character_, nrow(subset_targets))
+  }
+
+  keep <- (!is.na(src_vals) & src_vals == "hydrosheds") |
+    (!is.na(force_vals) & force_vals %in% c("true", "t", "1", "yes", "y"))
+
+  forced <- subset_targets[keep, , drop = FALSE]
+  if (nrow(forced) == 0) {
+    return(NULL)
+  }
+
+  forced %>%
+    dplyr::mutate(
+      .LTER_KEY = normalize_lter_key(LTER),
+      .STREAM_KEY = normalize_site_key(Stream_Name),
+      .SHP_KEY = if ("Shapefile_Name" %in% names(.)) normalize_site_key(Shapefile_Name) else NA_character_
+    ) %>%
+    dplyr::distinct(.LTER_KEY, .STREAM_KEY, .SHP_KEY)
+}
+
+silica_output_date <- function() {
+  stamp <- Sys.getenv("SILICA_OUTPUT_DATE", unset = format(Sys.Date(), "%Y%m%d"))
+  stamp <- gsub("[^0-9]", "", stamp)
+  if (!grepl("^[0-9]{8}$", stamp)) {
+    stop("SILICA_OUTPUT_DATE must resolve to YYYYMMDD, got: ", stamp, call. = FALSE)
+  }
+  stamp
+}
+
+silica_driver_output_file <- function(root_path, stem, ext = "csv") {
+  file.path(root_path, "extracted-data", paste0(stem, "_", silica_output_date(), ".", ext))
+}
+
 # Filter a generic site-like dataframe to subset targets
 filter_to_target_records <- function(df, subset_targets = NULL,
                                      lter_col = "LTER",
