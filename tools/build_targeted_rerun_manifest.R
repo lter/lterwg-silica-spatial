@@ -91,7 +91,10 @@ fixed_crs_named <- tribble(
 
 hydrosheds_candidates <- ref_key %>%
   filter(
-    is.na(Shapefile_Name),
+    (
+      is.na(Shapefile_Name) |
+      str_detect(coalesce(Shapefile_Source, ""), regex("hydroshed", ignore_case = TRUE))
+    ),
     (
       LTER == "WesternAustralia" |
       (!is.na(drainSqKm) & drainSqKm >= large_basin_km2) |
