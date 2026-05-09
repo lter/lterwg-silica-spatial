@@ -270,6 +270,38 @@ rm(list = setdiff(ls(), c('path', 'good_sheds2', 'sites_actual', 'basin_needs', 
 # source("hydrosheds_custom_fxns.R")
 source(file.path("tools", "hydrosheds_custom_fxns.R"))
 
+normalize_upstream_id_df <- function(df, source_label = "unknown") {
+  required_cols <- c("focal_poly", "hybas_id")
+  missing_cols <- setdiff(required_cols, names(df))
+  if (length(missing_cols) > 0) {
+    stop(
+      "Upstream HydroSHEDS ID table is missing required columns (",
+      paste(missing_cols, collapse = ", "),
+      ") in ",
+      source_label,
+      call. = FALSE
+    )
+  }
+
+  out <- data.frame(
+    focal_poly = suppressWarnings(as.numeric(df$focal_poly)),
+    hybas_id = suppressWarnings(as.numeric(df$hybas_id))
+  )
+
+  bad_focal <- !is.na(df$focal_poly) & trimws(as.character(df$focal_poly)) != "" & is.na(out$focal_poly)
+  bad_hybas <- !is.na(df$hybas_id) & trimws(as.character(df$hybas_id)) != "" & is.na(out$hybas_id)
+
+  if (any(bad_focal) || any(bad_hybas)) {
+    stop(
+      "Failed to coerce HydroSHEDS upstream IDs to numeric in ",
+      source_label,
+      call. = FALSE
+    )
+  }
+
+  out
+}
+
 
 # Identify focal polygons where we've already identified upstream polygon IDs
 found_polys <- dir(path = file.path(path, 'hydrosheds-basin-ids'),
@@ -286,7 +318,13 @@ for(focal_poly in found_ids){
   
   # Read CSV
   id_df <- read.csv(file = file.path(path, "hydrosheds-basin-ids",
-                                     paste0(focal_poly, "_Upstream_IDs.csv")))
+                                     paste0(focal_poly, "_Upstream_IDs.csv")),
+                    stringsAsFactors = FALSE,
+                    check.names = FALSE)
+  id_df <- normalize_upstream_id_df(
+    id_df,
+    source_label = paste0("cached upstream ID file for focal poly ", focal_poly)
+  )
   
   # Add to list
   id_list[[focal_poly]] <- id_df
@@ -317,6 +355,10 @@ if(length(unk_polys) != 0){
     # Make a dataframe of this
     hydro_df <- data.frame(focal_poly = rep(focal_poly, (length(fxn_out) + 1)),
                            hybas_id = c(focal_poly, fxn_out))
+    hydro_df <- normalize_upstream_id_df(
+      hydro_df,
+      source_label = paste0("generated upstream IDs for focal poly ", focal_poly)
+    )
     
     # Save this out
     write.csv(x = hydro_df, file = poly_file, na = '', row.names = F)
