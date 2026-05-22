@@ -7,6 +7,9 @@
 
 # User-specific files
 .Ruserdata
+.DS_Store
+__pycache__/
+*.pyc
 
 # Project files
 *.Rproj
@@ -47,5 +50,9 @@ site-coordinates/
 
 # Generated workflow artifacts
 logs/
-qa/*.csv
-qa/*.log
+.Rlibs/
+.libPaths*
+-e/
+Rplots.pdf
+qa/
+generated_outputs/

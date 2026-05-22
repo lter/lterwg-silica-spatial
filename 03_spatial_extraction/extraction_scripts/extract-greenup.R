@@ -1,0 +1,334 @@
+## ------------------------------------------------------- ##
+        # Silica WG - Extract Spatial Data - Greenup
+## ------------------------------------------------------- ##
+# Written by:
+## Angel Chen, Nick Lyon
+
+# Purpose:
+## Uses the watershed shapefiles built by "02_watershed_delineation/03_combine-artisanal-hydrosheds.R"
+## Extract the following data: GREEN-UP
+
+## ------------------------------------------------------- ##
+                       # Housekeeping ----
+## ------------------------------------------------------- ##
+# Load needed libraries
+
+# Do not clear the session/environment here. This script may be sourced by the
+# workflow.
+
+source(file.path(getwd(), "tools", "workflow_paths.R"))
+load_workflow_packages(c("tidyverse", "sf", "stars", "terra", "exactextractr", "googledrive", "readxl"))
+
+# Silence `summarize`
+options(dplyr.summarise.inform = F)
+
+# Identify path to location of shared data
+(path <- resolve_silica_data_root())
+site_coord_dir <- silica_site_coordinates_dir(path)
+raw_driver_dir <- silica_raw_driver_data_dir(path)
+
+# Load in site names with lat/longs
+sites <- read_silica_site_reference(site_coord_dir) %>%
+  ## Pare down to minimum needed columns
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name) %>%
+  ## Drop duplicate rows (if any)
+  dplyr::distinct() 
+# Remove any watersheds without a shapefile
+# dplyr::filter(!is.na(Shapefile_Name) &
+#                 nchar(Shapefile_Name) != 0 &
+#                 !Shapefile_Name %in% c("?", "MISSING"))
+
+# Check it out
+dplyr::glimpse(sites)
+
+# Grab the shapefiles the previous script (see PURPOSE section) created
+sheds <- sf::st_read(dsn = silica_watershed_file(path)) %>%
+  # Expand names to what they were before
+  dplyr::rename(Shapefile_Name = shp_nm,
+                Stream_Name = Strm_Nm,
+                expert_area_km2 = exp_area,
+                shape_area_km2 = real_area)
+
+## combine sites and sheds to get ALL sheds (including hydrosheds) and their metadata (from the sites dataframe)
+sheds <- sheds %>%
+  dplyr::left_join(y = sites, by = c("LTER", "Shapefile_Name"))
+
+sheds$Stream_Name <- ifelse(!is.na(sheds$Stream_Name.x), sheds$Stream_Name.x, sheds$Stream_Name.y)
+sheds$Discharge_File_Name <- ifelse(!is.na(sheds$Dsc_F_N), sheds$Dsc_F_N, sheds$Discharge_File_Name)
+sheds <- sheds %>%
+  dplyr::select(-dplyr::any_of(c(
+    "Stream_Name.x", "Stream_Name.y", "expert_area_km2", "shape_area_km2",
+    "exp_are", "hydrshd", "real_ar", "Dsc_F_N"
+  )))
+
+# Check that out
+dplyr::glimpse(sheds)
+
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = file.path(getwd(), "tools", "subset_and_output_helpers.R"))
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
+
+# Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+## ------------------------------------------------------- ##
+           # Green-Up Day - Identify Files ----
+## ------------------------------------------------------- ##
+
+# Make an empty list
+file_list <- list()
+
+# NEW SITES for Data Release 2 ##
+default_regions <- c("north-america-usa", "north-america-arctic",
+                     "cropped-russia-west", "cropped-russia-west-2",
+                     "cropped-russia-center", "cropped-russia-east",
+                     "puerto-rico", "scandinavia",
+                     "amazon", "australia",
+                     "canada", "congo",
+                     "germany", "united-kingdom")
+
+region_set <- resolve_target_regions(
+  subset_targets = subset_targets,
+  default_regions = default_regions
+)
+
+for(region in region_set){
+  
+# NEW SITES for Data Release 2 ##
+# for(region in c("congo", "germany")){
+  
+  # This part is new -- we want to allow old and new versions of MODIS
+  # Identify files in that folder
+  file_df <- data.frame("region" = region,
+                        "files" = dir(path = file.path(raw_driver_dir,
+                                                       "raw-greenup-v061", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MCD12Q2.061_Greenup_")) 
+  
+  
+  # Add that set of files to the list
+  file_list[[region]] <- file_df }
+
+# Wrangle the list
+file_all <- file_list %>%
+  # Unlist the loop's output
+  purrr::list_rbind() %>%
+  # Identify date from file name
+  dplyr::mutate(date_raw = stringr::str_extract(string = files, 
+                                                pattern = "_doy[[:digit:]]{7}")) %>%
+  # Simplify that column
+  dplyr::mutate(date = gsub(pattern = "_doy", replacement = "", x = date_raw)) %>%
+  # Identify year
+  dplyr::mutate(year = stringr::str_sub(string = date, start = 1, end = 4)) %>%
+  # Drop 'raw' version
+  dplyr::select(-date_raw) %>%
+  # Identify greenup cycle
+  dplyr::mutate(cycle = stringr::str_extract(string = files, 
+                                             pattern = "_[[:digit:]]{1}_")) %>%
+  # Simplify that column
+  dplyr::mutate(cycle = gsub(pattern = "_", replacement = "", x = cycle))
+
+# Glimpse it
+dplyr::glimpse(file_all)
+
+# Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+
+## ------------------------------------------------------- ##
+                # Green-Up Day - Extract ----
+## ------------------------------------------------------- ##
+
+# Specify driver
+focal_driver <- "raw-greenup-v061"
+partial_dir <- silica_partial_extract_dir(raw_driver_dir, focal_driver, subset_targets)
+
+# Identify files we've already extracted from
+done_files <- data.frame("files" = dir(partial_dir)) %>%
+   tidyr::separate(col = files, remove = F,
+                   into = c("junk", "junk2", "year", "cycle", "file_ext")) %>%
+  dplyr::mutate(cycle = gsub(pattern = "[[:alpha:]]", replacement = "", x = cycle)) %>%
+  # Make a year-cycle column
+   dplyr::mutate(year_cycle = paste0(year, "_", cycle))
+
+# Remove completed files from the set of all possible files
+not_done <- file_all %>%
+   dplyr::mutate(year_cycle = paste0(year, "_", cycle)) %>%
+   dplyr::filter(!year_cycle %in% done_files$year_cycle)
+
+# Create a definitive object of files to extract
+file_set <- if (merge_subset_outputs) file_all else not_done
+file_set <- filter_target_year_rows(file_set, year_col = "year")
+# file_set <- file_all # Uncomment if want to do all extractions
+
+# For both of the cycles (0 & 1)
+for(a_cycle in 0:1){
+  
+  # Global start message
+  message("Processing begun for cycle ", a_cycle)
+  
+  # Subset to correct cycle
+  cycle_files <- dplyr::filter(file_set, cycle == a_cycle)
+  
+  # For each year in that cycle
+  for (a_year in sort(unique(cycle_files$year))){
+    
+    # Starting message
+    message("Beginning cycle ", a_cycle, " extraction for ", a_year)
+    
+    # Subset to one year
+    one_year_data <- dplyr::filter(cycle_files, year == a_year)
+    
+    # Make a list to house extracted information for a year
+    year_list <- list()
+    
+    # Loop across region
+    for (i in 1:nrow(one_year_data)){
+      # Message
+      message("Processing raster ", i, " of ", nrow(one_year_data))
+      
+      # Read in the raster
+      gr_raster <- terra::rast(file.path(raw_driver_dir, "raw-greenup-v061",
+                                         one_year_data$region[i], one_year_data$files[i]))
+      
+      # Extract all possible information from that dataframe
+      ex_data <- exactextractr::exact_extract(x = gr_raster, y = sheds, 
+                                              include_cols = c("LTER", "Shapefile_Name"),
+                                              progress = FALSE) %>%
+        # Unlist to dataframe
+        purrr::list_rbind() %>%
+        # Drop coverage fraction column
+        dplyr::select(-coverage_fraction) %>%         
+        # Make new relevant columns
+        dplyr::mutate(cycle = a_cycle,
+                      year = a_year,
+                      .after = Shapefile_Name)
+      
+      # Add this dataframe to the list we made 
+      year_list[[i]] <- ex_data
+      
+      # End message
+      message("Finished extracting raster ", i, " of ", nrow(one_year_data)) }
+    
+    # Assemble a file name for this extraction
+    export_name <- paste0("greenup_extract_", a_year, "_cycle", a_cycle, ".csv")
+    
+    # Wrangle the output of the within-year extraction
+    full_data <- year_list %>%
+      # Unlist to dataframe
+      purrr::list_rbind() %>%
+      # Handle the summarization within river (potentially across multiple rasters' pixels)
+      dplyr::group_by(LTER, Shapefile_Name, cycle, year) %>%
+      dplyr::summarize(days_since_jan1_1970 = floor(mean(value, na.rm = T))) %>%
+      dplyr::ungroup() %>%
+      # Convert the days since Jan 1, 1970 to the actual date
+      dplyr::mutate(greenup_cycle_YYYYMMDD = lubridate::as_date(days_since_jan1_1970, 
+                                                                origin = "1970-01-01")) %>%
+      # Drop unnecessary column(s)
+      dplyr::select(-days_since_jan1_1970)
+    
+    # Export this file for a given year
+    write_subset_csv(
+      df = full_data,
+      output_path = file.path(partial_dir, export_name),
+      key_cols = c("LTER", "Shapefile_Name", "cycle", "year"),
+      subset_targets = subset_targets,
+      na = ""
+    )
+    
+    # End message
+    message("Finished wrangling output for ", a_year) } 
+  
+  # Global end message
+  message("Finished wrangling outputs for cycle ", a_cycle) }
+
+# Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+
+## ------------------------------------------------------- ##
+             # Green-Up Day - Summarize ----
+## ------------------------------------------------------- ##
+
+# Identify extracted files
+done_greenup <- dir(partial_dir)
+
+# Make an empty list for storing data
+out_list <- list()
+
+# Read all of these files in
+for(k in 1:length(done_greenup)){
+  
+  # Read in the kth file
+  file_v1 <- read.csv(file = file.path(partial_dir, done_greenup[k]))
+  
+  # Wrangle that file a bit
+  file_v2 <- file_v1 %>%
+    # Pivot longer
+    tidyr::pivot_longer(cols = greenup_cycle_YYYYMMDD,
+                        names_to = "junk", values_to = "date") %>%
+    # Assemble a more informative date column name
+    dplyr::mutate(name = paste0("greenup_cycle", cycle, "_", year, "MMDD")) %>%
+    # Drop (now) unwanted columns
+    dplyr::select(-junk, -cycle, -year) %>%
+    # Pivot wider again
+    tidyr::pivot_wider(names_from = name, values_from = date)
+  
+  # Add it to the list
+  out_list[[k]] <- file_v2
+  
+  # Finish
+  message("Retrieved file ", k, " of ", length(done_greenup)) }
+
+## ------------------------------------------------------- ##
+                    # Green-Up Day - Export ----
+## ------------------------------------------------------- ##
+
+# Wrangle output list
+out_df <- out_list %>%
+  # Unlist via left joining
+  purrr::reduce(dplyr::left_join, by = c("LTER", "Shapefile_Name")) %>%
+  # Move columns around
+  dplyr::relocate(contains("2001"), contains("2002"), contains("2003"),
+                  contains("2004"), contains("2005"), contains("2006"),
+                  contains("2007"), contains("2008"), contains("2009"),
+                  contains("2010"), contains("2011"), contains("2012"),
+                  contains("2013"), contains("2014"), contains("2015"),
+                  contains("2016"), contains("2017"), contains("2018"),
+                  contains("2019"),  contains("2020"), contains("2021"),
+                  .after = Shapefile_Name) 
+
+# Glimpse this too
+dplyr::glimpse(out_df)
+
+# Let's get ready to export
+greenup_export <- sheds %>%
+  # Join the greenup data
+  dplyr::left_join(y = out_df, by = c("LTER", "Shapefile_Name"))%>%
+  # this drops the geometry column, which causes issues on export
+  sf::st_drop_geometry()  
+
+# Check it out
+dplyr::glimpse(greenup_export)
+
+# Create folder to export to
+greenup_out_file <- silica_driver_output_file(path, "si-extract_greenup_v061")
+
+# Export the summarized greenup data
+write_subset_csv(
+  df = greenup_export,
+  output_path = greenup_out_file,
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
+
+# Upload to GoogleDrive
+googledrive::drive_upload(media = greenup_out_file,
+                         overwrite = T,
+                         path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+
+# End ----

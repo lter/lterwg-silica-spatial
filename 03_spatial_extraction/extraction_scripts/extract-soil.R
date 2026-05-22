@@ -1,0 +1,243 @@
+## ------------------------------------------------------- ##
+      # Silica WG - Extract Spatial Data - Soil Order
+## ------------------------------------------------------- ##
+# Written by:
+## Nick J Lyon
+
+# Purpose:
+## Uses the watershed shapefiles built by "02_watershed_delineation/03_combine-artisanal-hydrosheds.R"
+## Extract the following data: SOIL ORDER
+
+## ------------------------------------------------------- ##
+                      # Housekeeping ----
+## ------------------------------------------------------- ##
+# Load needed libraries
+
+# Do not clear the session/environment here. This script may be sourced by the
+# workflow.
+
+source(file.path(getwd(), "tools", "workflow_paths.R"))
+load_workflow_packages(c("tidyverse", "sf", "stars", "terra", "exactextractr", "googledrive", "readxl"))
+
+# Silence `summarize`
+options(dplyr.summarise.inform = F)
+
+# Identify path to location of shared data
+(path <- resolve_silica_data_root())
+site_coord_dir <- silica_site_coordinates_dir(path)
+raw_driver_dir <- silica_raw_driver_data_dir(path)
+
+# Load in site names with lat/longs
+sites <- read_silica_site_reference(site_coord_dir) %>%
+  ## Pare down to minimum needed columns
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name) %>%
+  ## Drop duplicate rows (if any)
+  dplyr::distinct() 
+  # Remove any watersheds without a shapefile
+  # dplyr::filter(!is.na(Shapefile_Name) &
+  #                 nchar(Shapefile_Name) != 0 &
+  #                 !Shapefile_Name %in% c("?", "MISSING"))
+
+# Check it out
+dplyr::glimpse(sites)
+
+# Grab the shapefiles the previous script (see PURPOSE section) created
+sheds <- sf::st_read(dsn = silica_watershed_file(path)) %>%
+  # Expand names to what they were before
+  dplyr::rename(Shapefile_Name = shp_nm,
+                Stream_Name = Strm_Nm,
+                expert_area_km2 = exp_area,
+                shape_area_km2 = real_area)
+
+## combine sites and sheds to get ALL sheds (including hydrosheds) and their metadata (from the sites dataframe)
+sheds <- sheds %>%
+  dplyr::left_join(y = sites, by = c("LTER", "Shapefile_Name"))
+
+sheds$Stream_Name <- ifelse(!is.na(sheds$Stream_Name.x), sheds$Stream_Name.x, sheds$Stream_Name.y)
+sheds$Discharge_File_Name <- ifelse(!is.na(sheds$Dsc_F_N), sheds$Dsc_F_N, sheds$Discharge_File_Name)
+sheds <- sheds %>%
+  dplyr::select(-dplyr::any_of(c(
+    "Stream_Name.x", "Stream_Name.y", "expert_area_km2", "shape_area_km2",
+    "exp_are", "hydrshd", "real_ar", "Dsc_F_N"
+  )))
+
+# Check that out
+dplyr::glimpse(sheds)
+
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = file.path(getwd(), "tools", "subset_and_output_helpers.R"))
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
+
+# Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+## ------------------------------------------------------- ##
+              # Soil Order - Extract ----
+## ------------------------------------------------------- ##
+# Pull in the raw lithology data
+soil_raw <- terra::rast(x = file.path(raw_driver_dir, "raw-soil",
+                                      "TAXOUSDA_250m_suborder_classes.tif"))
+
+# Check CRS
+crs(soil_raw)
+
+# Experimental plotting
+# plot(soil_raw, reset = F, axes = T)
+# plot(sheds, add = T, axes = T)
+
+# Strip out rocks from our polygons
+soil_out <- exactextractr::exact_extract(x = soil_raw, y = sheds,
+                                         include_cols = c("LTER", "Shapefile_Name")) %>%
+  # Above returns a list so switch it to a dataframe
+  purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+  # Filter out NAs
+  dplyr::filter(!is.na(value)) %>%
+  # Count pixels per category and river
+  dplyr::group_by(LTER, Shapefile_Name, value) %>%
+  dplyr::summarize(pixel_ct = dplyr::n()) %>%
+  dplyr::ungroup() 
+
+# Check that dataframe
+dplyr::glimpse(soil_out)
+
+## ------------------------------------------------------- ##
+              # Soil Order - Index Prep ----
+## ------------------------------------------------------- ##
+# Read in soil order index
+soil_index_raw <- read.csv(file = file.path(raw_driver_dir, "raw-soil",
+                                        "TAXOUSDA_250m_suborder_classes_legend.csv"))
+
+# Glimpse it
+dplyr::glimpse(soil_index_raw)
+
+# See if there are any differences between "Group" and "Generic"
+unique(soil_index_raw$Group)
+unique(soil_index_raw$Generic)
+
+# Simplify this object to just what we need
+soil_index <- soil_index_raw %>%
+  # Coerce soil class columns to lowercase
+  dplyr::mutate(specific_soil = tolower(x = Group),
+                generic_soil = tolower(x = Generic)) %>%
+  # Pare down to only desired columns
+  ## Also rename integer code column to match how it is called in the extracted dataframe
+  dplyr::select(value = Number, specific_soil, generic_soil) %>%
+  # Drop the group column (pending Silica input to the contrary)
+  dplyr::select(-specific_soil)
+
+# Glimpse this as well
+dplyr::glimpse(soil_index)
+
+## ------------------------------------------------------- ##
+                # Soil Order - Summarize ----
+## ------------------------------------------------------- ##
+
+# Compare values in index to extracted values from raster
+## Just to make sure it seems like we got the correct legend
+range(soil_out$value, na.rm = T)
+range(soil_index$value, na.rm = T)
+
+# Summarize that dataframe to be more manageable
+soil_v2 <- soil_out %>%
+  # Attach more descriptive names to these integer codes
+  dplyr::left_join(y = soil_index, by = "value") %>%
+  # Drop the integer code now
+  dplyr::select(-value) %>%
+  # Recalculate number of pixels per category with new informative groups
+  dplyr::group_by(LTER, Shapefile_Name, generic_soil) %>%
+  dplyr::summarize(pixel_ct_v2 = sum(pixel_ct, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Calculate number of pixels of all types per river
+  dplyr::group_by(LTER, Shapefile_Name) %>%
+  dplyr::mutate(total_pixels = sum(pixel_ct_v2, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Calculate percent of total per rock type
+  dplyr::mutate(perc_total = (pixel_ct_v2 / total_pixels) * 100) %>%
+  # Remove now-unneeded columns
+  dplyr::select(-pixel_ct_v2, -total_pixels)
+
+# Glimpse this
+dplyr::glimpse(soil_v2)
+
+# Check range of percents
+range(as.integer(soil_v2$perc_total))
+
+# Look at included soils
+sort(unique(soil_v2$generic_soil))
+
+# Pivot to wide format
+soil_wide <- soil_v2 %>%
+  # Add "soil" to each soil category before pivoting
+  dplyr::mutate(generic_soil = paste0("soil_", generic_soil)) %>%
+  # Now pivot
+  tidyr::pivot_wider(names_from = generic_soil,
+                     values_from = perc_total)
+
+# Glimpse that
+dplyr::glimpse(soil_wide)
+
+# Then identify "major" (i.e., dominant) soil types per river
+soil_major <- soil_v2 %>%
+  # Filter to only max of each rock type per river
+  dplyr::group_by(LTER, Shapefile_Name) %>%
+  filter(perc_total == max(perc_total)) %>%
+  dplyr::ungroup() %>%
+  # Remove the percent total
+  dplyr::select(-perc_total) %>%
+  # Pivot back to wide format
+  tidyr::pivot_wider(names_from = generic_soil,
+                     values_from = generic_soil) %>%
+  # Paste all the non-NAs (i.e., the dominant rocks) into a single column
+  tidyr::unite(col = major_soil, -LTER, -Shapefile_Name, na.rm = T, sep = "; ")
+
+# Glimpse it
+dplyr::glimpse(soil_major)
+
+# Combine the full information to the "major" one
+soil_actual <- soil_wide %>%
+  dplyr::left_join(y = soil_major, by = c("LTER", "Shapefile_Name")) %>%
+  dplyr::relocate(major_soil, .after = Shapefile_Name)
+
+# Examine
+dplyr::glimpse(soil_actual)
+
+## ------------------------------------------------------- ##
+                  # Soil Order - Export ----
+## ------------------------------------------------------- ##
+# Let's get ready to export
+soil_export <- sheds %>%
+  dplyr::left_join(y = soil_actual, by = c("LTER", "Shapefile_Name")) %>%
+  # this drops the geometry column, which causes issues on export
+  sf::st_drop_geometry()  
+
+# Check it out
+dplyr::glimpse(soil_export)
+
+# Create folder to export to
+soil_out_file <- silica_driver_output_file(path, "si-extract_soil")
+
+# Export the summarized lithology data
+write_subset_csv(
+  df = soil_export,
+  output_path = soil_out_file,
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+)
+
+# Upload to GoogleDrive
+googledrive::drive_upload(media = soil_out_file,
+                          overwrite = T,
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+
+# End ----
+
+
+# Do not clear the caller environment at the end of a sourced workflow step.
+gc()
