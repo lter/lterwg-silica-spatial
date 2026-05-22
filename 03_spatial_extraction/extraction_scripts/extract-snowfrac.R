@@ -164,8 +164,10 @@ not_done <- file_all %>%
   dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
   dplyr::filter(!year_day %in% done_files$year_day)
 
+resume_partials <- tolower(Sys.getenv("SILICA_RESUME_PARTIALS", "false")) == "true"
+
 # Create a definitive object of files to extract
-file_set <- if (merge_subset_outputs) file_all else not_done
+file_set <- if (merge_subset_outputs && !resume_partials) file_all else not_done
 file_set <- filter_target_year_rows(file_set, year_col = "year")
 # file_set <- file_all # Uncomment if want to (re-)do all extractions
 
@@ -203,26 +205,38 @@ for(annum in sort(unique(file_set$year))){
       message("Begun for file ", j, " of ", nrow(simp_df))
       
       # Read in raster
-      snow_rast <- terra::rast(file.path(raw_driver_dir, focal_driver,
-                                       simp_df$region[j], simp_df$files[j]))
+      raster_path <- file.path(raw_driver_dir, focal_driver, simp_df$region[j], simp_df$files[j])
+      message("Reading snow raster: ", raster_path)
+      snow_rast <- terra::rast(raster_path)
       
       # Extract all possible information from that dataframe
-      ex_data <- exactextractr::exact_extract(x = snow_rast, y = sheds, 
-                                              include_cols = c("LTER", "Shapefile_Name"),
-                                              progress = FALSE) %>%
-        # Unlist to dataframe
-        purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-        # Drop coverage fraction column
-        dplyr::select(-coverage_fraction) %>%
-        # Drop NA values that were "extracted"
-        ## I.e., those that are outside of the current raster bounding nox
-        dplyr::filter(!is.na(value)) %>%
-        # Make new relevant columns
-        dplyr::mutate(year = as.numeric(simp_df$year[j]),
-                      doy = as.numeric(simp_df$doy[j]),
-                      .after = Shapefile_Name) %>%
-        # Attach the reference table for understanding the 'value' integer
-        dplyr::left_join(y = snow_reftable, by = "value")
+      ex_data <- tryCatch(
+        {
+          exactextractr::exact_extract(x = snow_rast, y = sheds,
+                                       include_cols = c("LTER", "Shapefile_Name"),
+                                       progress = FALSE) %>%
+            # Unlist to dataframe
+            purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
+            # Drop coverage fraction column
+            dplyr::select(-coverage_fraction) %>%
+            # Drop NA values that were "extracted"
+            ## I.e., those that are outside of the current raster bounding nox
+            dplyr::filter(!is.na(value)) %>%
+            # Make new relevant columns
+            dplyr::mutate(year = as.numeric(simp_df$year[j]),
+                          doy = as.numeric(simp_df$doy[j]),
+                          .after = Shapefile_Name) %>%
+            # Attach the reference table for understanding the 'value' integer
+            dplyr::left_join(y = snow_reftable, by = "value")
+        },
+        error = function(e) {
+          stop(
+            "Could not read snow raster: ", raster_path, "\n",
+            conditionMessage(e),
+            call. = FALSE
+          )
+        }
+      )
       
       # Add this dataframe to the list we made within the larger for loop
       doy_list[[j]] <- ex_data

@@ -160,8 +160,10 @@ not_done <- file_all %>%
   dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
   dplyr::filter(!year_day %in% done_files$year_day)
 
+resume_partials <- tolower(Sys.getenv("SILICA_RESUME_PARTIALS", "false")) == "true"
+
 # Create a definitive object of files to extract
-file_set <- if (merge_subset_outputs) file_all else not_done
+file_set <- if (merge_subset_outputs && !resume_partials) file_all else not_done
 file_set <- filter_target_year_rows(file_set, year_col = "year")
 # file_set <- file_all # Uncomment if want to do all extractions
 
@@ -193,7 +195,7 @@ file_all %>%
 
 
 # Create a definitive object of files to extract
-file_set <- if (merge_subset_outputs) file_all else not_done
+file_set <- if (merge_subset_outputs && !resume_partials) file_all else not_done
 file_set <- filter_target_year_rows(file_set, year_col = "year")
 # file_set <- file_all # Uncomment if want to do all extractions
 
@@ -220,19 +222,31 @@ for(annum in sort(unique(file_set$year))) {
       message("Begun for file ", j, " of ", nrow(simp_df))
       
       # Read in the raster
-      et_rast <- terra::rast(file.path(raw_driver_dir, focal_driver,
-                                       simp_df$region[j], simp_df$files[j]))
+      raster_path <- file.path(raw_driver_dir, focal_driver, simp_df$region[j], simp_df$files[j])
+      message("Reading evapotranspiration raster: ", raster_path)
+      et_rast <- terra::rast(raster_path)
       
       # Extract all information from the raster
-      extracted_data <- exactextractr::exact_extract(x = et_rast, y = sheds,
-                                                     include_cols = c("LTER", "Shapefile_Name"),
-                                                     progress = FALSE) %>%
-        purrr::list_rbind() %>%
-        dplyr::select(-coverage_fraction) %>%
-        dplyr::filter(!is.na(value)) %>%
-        dplyr::mutate(year = as.numeric(simp_df$year[j]),
-                      doy = as.numeric(simp_df$doy[j]),
-                      .after = Shapefile_Name)
+      extracted_data <- tryCatch(
+        {
+          exactextractr::exact_extract(x = et_rast, y = sheds,
+                                       include_cols = c("LTER", "Shapefile_Name"),
+                                       progress = FALSE) %>%
+            purrr::list_rbind() %>%
+            dplyr::select(-coverage_fraction) %>%
+            dplyr::filter(!is.na(value)) %>%
+            dplyr::mutate(year = as.numeric(simp_df$year[j]),
+                          doy = as.numeric(simp_df$doy[j]),
+                          .after = Shapefile_Name)
+        },
+        error = function(e) {
+          stop(
+            "Could not read evapotranspiration raster: ", raster_path, "\n",
+            conditionMessage(e),
+            call. = FALSE
+          )
+        }
+      )
       
       # Capture records where value > 3000 (for diagnostics)
       removed <- extracted_data %>% dplyr::filter(value > 3270)
