@@ -4,8 +4,6 @@ This repo holds the code we use to build watershed polygons, extract spatial
 drivers, and combine/check those outputs before they go into the harmonized
 silica dataset.
 
-Final data files are not stored in GitHub. They live in Box.
-
 ## Folder Map
 
 - `01_pre_aurora_run/`
