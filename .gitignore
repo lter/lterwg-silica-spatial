@@ -7,6 +7,9 @@
 
 # User-specific files
 .Ruserdata
+.DS_Store
+__pycache__/
+*.pyc
 
 # Project files
 *.Rproj
@@ -44,3 +47,12 @@ vignettes/*.pdf
 
 # Folders to ignore
 site-coordinates/
+
+# Generated workflow artifacts
+logs/
+.Rlibs/
+.libPaths*
+-e/
+Rplots.pdf
+qa/
+generated_outputs/

@@ -1,0 +1,469 @@
+## ------------------------------------------------------- ##
+   # Silica WG - Extract Spatial Data - Evapotranspiration
+## ------------------------------------------------------- ##
+# Written by:
+## Nick J Lyon, Sidney A Bush
+
+# Purpose:
+## Uses the watershed shapefiles built by "02_watershed_delineation/03_combine-artisanal-hydrosheds.R"
+## Extract the following data: EVAPOTRANSPIRATION
+
+## ------------------------------------------------------- ##
+                      # Housekeeping ----
+## ------------------------------------------------------- ##
+
+# Load needed libraries
+
+# Do not clear the session/environment here. This script may be sourced by the
+# workflow.
+
+source(file.path(getwd(), "tools", "workflow_paths.R"))
+load_workflow_packages(c("tidyverse", "sf", "stars", "terra", "exactextractr", "googledrive", "readxl", "dplyr"))
+
+# Silence `summarize`
+options(dplyr.summarise.inform = F)
+
+# Identify path to location of shared data
+(path <- resolve_silica_data_root())
+site_coord_dir <- silica_site_coordinates_dir(path)
+raw_driver_dir <- silica_raw_driver_data_dir(path)
+
+# Load in site names with lat/longs
+sites <- read_silica_site_reference(site_coord_dir) %>%
+  ## Pare down to minimum needed columns
+  dplyr::select(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name) %>%
+  ## Drop duplicate rows (if any)
+  dplyr::distinct() 
+# Remove any watersheds without a shapefile
+# dplyr::filter(!is.na(Shapefile_Name) &
+#                 nchar(Shapefile_Name) != 0 &
+#                 !Shapefile_Name %in% c("?", "MISSING"))
+
+# Check it out
+dplyr::glimpse(sites)
+
+# Grab the shapefiles the previous script (see PURPOSE section) created
+sheds <- sf::st_read(dsn = silica_watershed_file(path)) %>%
+  # Expand names to what they were before
+  dplyr::rename(Shapefile_Name = shp_nm,
+                Stream_Name = Strm_Nm,
+                expert_area_km2 = exp_area,
+                shape_area_km2 = real_area)
+
+## combine sites and sheds to get ALL sheds (including hydrosheds) and their metadata (from the sites dataframe)
+sheds <- sheds %>%
+  dplyr::left_join(y = sites, by = c("LTER", "Shapefile_Name"))
+
+sheds$Stream_Name <- ifelse(!is.na(sheds$Stream_Name.x), sheds$Stream_Name.x, sheds$Stream_Name.y)
+sheds$Discharge_File_Name <- ifelse(!is.na(sheds$Dsc_F_N), sheds$Dsc_F_N, sheds$Discharge_File_Name)
+sheds <- sheds %>%
+  dplyr::select(-dplyr::any_of(c(
+    "Stream_Name.x", "Stream_Name.y", "expert_area_km2", "shape_area_km2",
+    "exp_are", "hydrshd", "real_ar", "Dsc_F_N"
+  )))
+
+# Check that out
+dplyr::glimpse(sheds)
+
+# Optionally filter to a target site subset (set SILICA_SITE_SUBSET_FILE env var)
+source(file = file.path(getwd(), "tools", "subset_and_output_helpers.R"))
+subset_targets <- load_site_subset()
+subset_data <- filter_to_target_sites(sites = sites, sheds = sheds, subset_targets = subset_targets)
+sites <- subset_data$sites
+sheds <- subset_data$sheds
+merge_subset_outputs <- !is.null(subset_targets) &&
+  tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
+
+# Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds')))
+
+## ------------------------------------------------------- ##
+        # MODIS16A2 (v. 061) - Identify Files ----
+## ------------------------------------------------------- ##
+
+# Make an empty list
+file_list <- list()
+
+# ## NEW SITES for Data Release 2 ##
+default_regions <- c("north-america-usa", "north-america-arctic",
+                     "cropped-russia-west", "cropped-russia-west-2",
+                     "cropped-russia-center", "cropped-russia-east",
+                     "puerto-rico", "scandinavia",
+                     "amazon", "australia",
+                     "canada", "congo",
+                     "germany", "mali",
+                     "united-kingdom")
+
+region_set <- resolve_target_regions(
+  subset_targets = subset_targets,
+  default_regions = default_regions
+)
+
+for(region in region_set){
+
+## NEW SITES for Data Release 2 ##
+# for(region in c("congo")){
+  
+  # This part is new -- we want to allow old and new versions of MODIS
+  # Identify files in that folder
+  file_df <- data.frame("region" = region,
+                        "files" = dir(path = file.path(raw_driver_dir,
+                                                       "raw-evapo-v061", region))) %>% 
+    dplyr::filter(stringr::str_detect(string=files, pattern="MOD16A2GF.061_ET_500m_")) 
+  
+  # Add that set of files to the list
+  file_list[[region]] <- file_df }
+
+# Wrangle the list
+file_all <- file_list %>%
+  purrr::list_rbind() %>%
+  # Extract date from filename
+  dplyr::mutate(date_raw = stringr::str_extract(string = files, pattern = "_doy[[:digit:]]{7}")) %>%
+  dplyr::mutate(date = gsub("_doy", "", date_raw)) %>%
+  dplyr::mutate(
+    year = stringr::str_sub(string = date, start = 1, end = 4),
+    doy = stringr::str_sub(string = date, start = 5, end = 7),
+    year_day = as.numeric(paste0(year, doy)) # Combine year and doy
+  ) %>%
+  # Drop raw columns if no longer needed
+  dplyr::select(-date_raw, -date)
+
+# Filter to remove partial year 2000 records; keep all later years present
+file_all <- file_all %>%
+  dplyr::filter(year != "2000")
+
+# Glimpse it
+dplyr::glimpse(file_all)
+
+# Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all')))
+
+## ------------------------------------------------------- ##
+            # Evapotranspiration - Extract ----
+## ------------------------------------------------------- ##
+# Specify driver
+focal_driver <- "raw-evapo-v061"
+
+# Make a short name for that driver
+driver_short <- "evapotrans"
+
+partial_dir <- silica_partial_extract_dir(raw_driver_dir, focal_driver, subset_targets)
+
+# Identify files we've already extracted from
+done_files <- data.frame("files" = dir(partial_dir)) %>%
+  tidyr::separate(col = files, remove = F,
+                  into = c("junk", "junk2", "year", "doy", "file_ext")) %>%
+  # Make a year-day column
+  dplyr::mutate(year_day = paste0(year, "_", doy))
+
+# Remove completed files from the set of all possible files
+not_done <- file_all %>%
+  dplyr::mutate(year_day = paste0(year, "_", doy)) %>%
+  dplyr::filter(!year_day %in% done_files$year_day)
+
+resume_partials <- tolower(Sys.getenv("SILICA_RESUME_PARTIALS", "false")) == "true"
+
+# Create a definitive object of files to extract
+file_set <- if (merge_subset_outputs && !resume_partials) file_all else not_done
+file_set <- filter_target_year_rows(file_set, year_col = "year")
+file_set <- filter_target_region_year_rows(file_set, driver = "evapo", region_col = "region", year_col = "year")
+# file_set <- file_all # Uncomment if want to do all extractions
+
+## Trying to start after known corrupt file:
+# Identify files we've already extracted from
+done_files <- data.frame("files" = dir(partial_dir)) %>%
+  dplyr::mutate(doy = stringr::str_extract(files, "doy\\d{7}"), # Extract the DOY part
+    year_day = as.numeric(stringr::str_sub(doy, 4, 10)) # Convert to numeric year_day
+  )
+
+
+# # Remove completed files from the set of all possible files
+# not_done <- file_all %>%
+#   dplyr::mutate(doy = stringr::str_extract(files, "doy\\d{7}")) %>%  # Extract the DOY part
+#   dplyr::mutate(year_day = stringr::str_sub(doy, 4, 10))  # Extract the year and DOY
+
+file_all %>%
+  dplyr::group_by(region) %>%
+  dplyr::summarize(total_files = n()) 
+#   %>%
+#   left_join(not_done %>% dplyr::group_by(region) %>%
+#               dplyr::summarize(filtered_files = n()), by = "region") %>%
+#   print()
+# 
+# not_done %>%
+#   dplyr::group_by(region) %>%
+#   dplyr::summarize(n_files = n()) %>%
+#   print()
+
+
+# Create a definitive object of files to extract
+file_set <- if (merge_subset_outputs && !resume_partials) file_all else not_done
+file_set <- filter_target_year_rows(file_set, year_col = "year")
+file_set <- filter_target_region_year_rows(file_set, driver = "evapo", region_col = "region", year_col = "year")
+# file_set <- file_all # Uncomment if want to do all extractions
+
+
+# Extract all possible information from each
+# Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
+# Create an empty list to hold diagnostic info for removed records
+removed_diagnostics <- list()
+
+# Loop over each year
+for(annum in sort(unique(file_set$year))) {
+  message("Processing begun for year: ", annum)
+  one_year <- dplyr::filter(file_set, year == annum)
+  
+  # Loop over each day-of-year within the year
+  for(day_num in sort(unique(one_year$doy))) {
+    message("Processing begun for day of year: ", day_num)
+    export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv")
+    simp_df <- dplyr::filter(one_year, doy == day_num)
+    doy_list <- list()
+    
+    # Loop over each raster file for the current day-of-year
+    for(j in 1:nrow(simp_df)) {
+      message("Begun for file ", j, " of ", nrow(simp_df))
+      
+      # Read in the raster
+      raster_path <- file.path(raw_driver_dir, focal_driver, simp_df$region[j], simp_df$files[j])
+      message("Reading evapotranspiration raster: ", raster_path)
+      et_rast <- terra::rast(raster_path)
+      
+      # Extract all information from the raster
+      extracted_data <- tryCatch(
+        {
+          exactextractr::exact_extract(x = et_rast, y = sheds,
+                                       include_cols = c("LTER", "Shapefile_Name"),
+                                       progress = FALSE) %>%
+            purrr::list_rbind() %>%
+            dplyr::select(-coverage_fraction) %>%
+            dplyr::filter(!is.na(value)) %>%
+            dplyr::mutate(year = as.numeric(simp_df$year[j]),
+                          doy = as.numeric(simp_df$doy[j]),
+                          .after = Shapefile_Name)
+        },
+        error = function(e) {
+          stop(
+            "Could not read evapotranspiration raster: ", raster_path, "\n",
+            conditionMessage(e),
+            call. = FALSE
+          )
+        }
+      )
+      
+      # Capture records where value > 3000 (for diagnostics)
+      removed <- extracted_data %>% dplyr::filter(value > 3270)
+      if(nrow(removed) > 0) {
+        removed <- removed %>% 
+          dplyr::mutate(region = simp_df$region[j],
+                        file = simp_df$files[j])
+        removed_diagnostics[[length(removed_diagnostics) + 1]] <- removed
+        removed_sites <- sort(unique(as.character(removed$Shapefile_Name)))
+        message("Diagnostic: Removed ", nrow(removed), " records for site: ",
+                paste(removed_sites, collapse = ", "), " in year: ", simp_df$year[j],
+                " doy: ", simp_df$doy[j])
+      }
+      
+      # Now filter to keep only valid records 
+      ex_data <- extracted_data %>% 
+        dplyr::filter(value <= 3270 & value >= -3276.7)
+      
+      # Print unique value counts for current extraction
+      print("Unique value counts for current file extraction:")
+      print(ex_data %>% dplyr::count(value, sort = TRUE))
+      
+      # Add the cleaned data to the list for this day-of-year
+      doy_list[[j]] <- ex_data
+      message("Finished extracting raster ", j, " of ", nrow(simp_df))
+    }
+    
+    # Combine the extractions for the current day-of-year and summarize by site
+    full_data <- doy_list %>%
+      purrr::list_rbind() %>%
+      dplyr::group_by(LTER, Shapefile_Name, year, doy) %>%
+      dplyr::summarize(value = mean(value, na.rm = TRUE)) %>%
+      dplyr::ungroup()
+    
+    # Export the day's processed data
+    write_subset_csv(
+      df = full_data,
+      output_path = file.path(partial_dir, export_name),
+      key_cols = c("LTER", "Shapefile_Name", "year", "doy"),
+      subset_targets = subset_targets,
+      na = ""
+    )
+    message("Processing ended for day of year: ", day_num)
+  }
+  message("Processing ended year: ", annum)
+}
+
+# # After processing all files, combine and export diagnostic data if any exist
+# if(length(removed_diagnostics) > 0) {
+#   diagnostics_df <- purrr::list_rbind(removed_diagnostics)
+#   write.csv(diagnostics_df, file = file.path(path, "extracted-data", "evapotrans_removed_diagnostics.csv"),
+#             row.names = FALSE)
+#   message("Diagnostic data for removed records saved.")
+# } else {
+#   message("No records with values >3270 were found.")
+# }
+# 
+# # Clean up environment
+# rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all', 'focal_driver')))
+
+## ------------------------------------------------------- ##
+            # Evapotranspiration - Summarize ----
+## ------------------------------------------------------- ##
+
+# Identify extracted data
+done_files <- dir(partial_dir)
+
+# Make an empty list
+full_out <- list()
+
+# Read all of these files in
+for(k in 1:length(done_files)){
+  
+  # Read in the kth file
+  full_out[[k]] <- read.csv(file = file.path(partial_dir, done_files[k])) %>%
+    dplyr::mutate(Shapefile_Name = as.character(Shapefile_Name))
+  
+  # Finish
+  message("Retrieved file ", k, " of ", length(done_files))}
+
+# Wrangle output
+## Updates to avoid logical error
+out_df <- full_out %>%
+  # Make sure character columns are characters
+  purrr::map(.x = .,
+             .f = dplyr::mutate, dplyr::across(.cols = dplyr::all_of(c("LTER")), 
+                                               .fns = as.character)) %>%
+  # Unlist the list
+  purrr::list_rbind() %>% 
+  # 
+
+    # Account for scaler value
+  ## See "Layers" dropdown here: https://lpdaac.usgs.gov/products/mod16a2v006/
+  # dplyr::mutate(unscaled_val = value * 0.1) %>%
+  # Get a daily value (divide by 8 for all but last composite period and by 5 for that one)
+  dplyr::mutate(daily_val = ifelse(test = (doy == 361),
+                                   yes = (value / 5),
+                                   no = (value / 8)) )
+  # Drop old column
+  # dplyr::select(-value)
+  # dplyr::select(-unscaled_val, -value)
+
+
+# Glimpse it
+dplyr::glimpse(out_df)
+
+# Make an empty list
+next_list <- list()
+
+# Now we need to get that daily value attached to all days in that 8-day increment
+for(i in 1:7){
+  
+  # Increase all days of year by 1
+  next_day <- out_df %>%
+    dplyr::mutate(doy = doy + i)
+  
+  # Add to list
+  next_list[[i]] <- next_day
+  
+  # Add success message
+  message("Day ", i + 1, " dataframe created") }
+
+# Unbind the list
+out_df_v2 <- next_list %>%
+  purrr::list_rbind() %>%
+  # Attach the first day of each 8-day period (original value)
+  dplyr::bind_rows(y = out_df) %>%
+  # Remove extra days created by adding too much to the final 8-day increment (not truly 8 days)
+  dplyr::filter(doy <= 365) %>%
+  dplyr::mutate(
+    date = as.Date(paste0(year, "-01-01")) + (doy - 1),
+    month = format(date, "%m")
+  )
+
+# Glimpse this as well
+dplyr::glimpse(out_df_v2)
+
+# Summarize within month across years
+year_df <- out_df_v2 %>%
+  # Do summarization
+  dplyr::group_by(LTER, Shapefile_Name, year) %>%
+  dplyr::summarize(value = sum(daily_val, na.rm = T)) %>%
+  dplyr::ungroup() %>%
+  # Make more informative year column
+  dplyr::mutate(name = paste0("evapotrans_", year, "_kg_m2")) %>%
+  # Drop simple year column
+  dplyr::select(-year) %>%
+  # Pivot to wide format
+  tidyr::pivot_wider(names_from = name,
+                     values_from = value)
+
+# Glimpse this
+dplyr::glimpse(year_df)
+
+month_lookup <- c(
+  "01" = "jan", "02" = "feb", "03" = "mar", "04" = "apr",
+  "05" = "may", "06" = "jun", "07" = "jul", "08" = "aug",
+  "09" = "sep", "10" = "oct", "11" = "nov", "12" = "dec"
+)
+
+month_df <- out_df_v2 %>%
+  dplyr::group_by(LTER, Shapefile_Name, year, month) %>%
+  dplyr::summarize(value = sum(daily_val, na.rm = TRUE), .groups = "drop") %>%
+  dplyr::group_by(LTER, Shapefile_Name, month) %>%
+  dplyr::summarize(value = mean(value, na.rm = TRUE), .groups = "drop") %>%
+  dplyr::mutate(
+    month_label = unname(month_lookup[month]),
+    name = paste0("evapotrans_", month_label, "_kg_m2")
+  ) %>%
+  dplyr::select(-month, -month_label) %>%
+  tidyr::pivot_wider(names_from = name, values_from = value)
+
+et_actual <- year_df %>%
+  dplyr::left_join(month_df, by = c("LTER", "Shapefile_Name"))
+
+et_actual <- et_actual %>%
+  dplyr::mutate(
+    LTER = toupper(as.character(LTER)),
+    Shapefile_Name = toupper(as.character(Shapefile_Name))
+  )
+
+## ------------------------------------------------------- ##
+            # Evapotranspiration - Export ----
+## ------------------------------------------------------- ##
+# Let's get ready to export
+et_export <- sheds %>%
+  dplyr::mutate(
+    LTER = toupper(as.character(LTER)),
+    Shapefile_Name = toupper(as.character(Shapefile_Name))
+  ) %>%
+  # Join the rock data
+  dplyr::left_join(y = et_actual, by = c("LTER", "Shapefile_Name"))%>%
+  # this drops the geometry column, which causes issues on export
+  sf::st_drop_geometry()  
+
+# Check it out
+dplyr::glimpse(et_export)
+
+# Create folder to export to
+evapo_out_file <- silica_driver_output_file(path, "si-extract_evapo_v061")
+
+# Export the summarized data
+write_subset_csv(
+  df = et_export,
+  output_path = evapo_out_file,
+  key_cols = c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"),
+  subset_targets = subset_targets,
+  na = ""
+) ## Changed Nov 2024 to reflect new MODIS version for all sites
+
+
+# Upload to GoogleDrive
+googledrive::drive_upload(media = evapo_out_file,
+                          overwrite = T,
+                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+
+# End ----
