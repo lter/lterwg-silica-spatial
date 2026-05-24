@@ -1,62 +1,74 @@
-# 04_combine_qaqc
+# Combine And Check Spatial Outputs
 
-This stage does two related jobs:
+Use this folder after the driver extraction files have been pulled back from
+Aurora.
 
-1. rebuild one fresh local combined spatial table from the extracted driver CSVs
-2. compare that fresh table against the legacy vetted combined file and write QA/QC review outputs
+This step does two things:
 
-Main scripts:
+- rebuilds one combined spatial table from the extracted driver CSVs
+- compares that table to older combined files so gaps are easier to spot
+
+## Main Files
 
 - `00_qaqc_config.R`
-  Main user-editable config for this stage.
+  Paths and filenames for this step.
+
 - `01_import-and-qaqc.R`
-  Entry script for combine and QA/QC.
+  Runs the combine/check step.
+
 - `combine_from_site_ref_local.R`
-  Local rebuild of the combined extraction table from extracted driver files.
+  Rebuilds the combined table from the local extracted driver files.
+
 - `../tools/run_combine_and_harmonization_workflow.R`
-  Recommended end-to-end runner for a new user. It rebuilds the local combined
-  table, runs this QA/QC stage, then launches 05 harmonization.
+  Runs combine/checks and then harmonization in one pass.
 
-Primary reference input for this stage:
+## Main Input
 
-- `<data_root>/silica-shapefiles/site-coordinates/silica-coords_RAW.xlsx`
+This step uses:
 
-This stage does not use the WRTDS site reference CSV as its main reference
-table. It uses the site-coordinates workbook configured in `00_qaqc_config.R`.
+```text
+<data_root>/silica-shapefiles/site-coordinates/silica-coords_RAW.xlsx
+```
 
-Known LTER alias fixes that matter for old-versus-new matching are documented
-in `tools/lter_name_aliases.csv`, and known stream-name aliases are documented
-in `tools/stream_name_aliases.csv`. Both are applied in the combine helpers.
+It does not use the WRTDS reference CSV as the main site list.
 
-Supporting files:
+Known name fixes are in:
 
-- `templates/site_followup_notes_template.csv`
-  Optional manual annotation template for site follow-up review.
-- `examples/`
-  Small reference outputs.
+- `tools/lter_name_aliases.csv`
+- `tools/stream_name_aliases.csv`
 
-Typical order for a new user:
+## Usual Run
 
-1. Restart the R session for a clean run.
-2. Confirm your local spatial data root exists and contains:
+1. Restart R.
+
+2. Make sure the Box data folder has:
    - `si-extracted-data/`
    - `silica-shapefiles/site-coordinates/silica-coords_RAW.xlsx`
+
 3. Run:
-   - `Rscript tools/run_combine_and_harmonization_workflow.R`
-4. Inspect QA/QC outputs under `<data_root>/review/`.
 
-If you need to run only this stage:
+```bash
+Rscript tools/run_combine_and_harmonization_workflow.R
+```
 
-1. Rebuild the fresh local combined table:
-   - `Rscript 04_combine_qaqc/combine_from_site_ref_local.R`
-2. Run the QA/QC stage:
-   - `Rscript 04_combine_qaqc/01_import-and-qaqc.R`
+4. Check the review files under:
 
-Notes:
+```text
+<data_root>/review/
+```
 
-- `01_import-and-qaqc.R` now auto-detects the newest candidate new combined
-  file from either:
-  - `<data_root>/si-extracted-data/all_data_extractions/`
-  - `<data_root>/si-extracted-data/`
-- The legacy comparison baseline is still controlled by
-  `old_combined_filename` in `00_qaqc_config.R`.
+## Run Only This Step
+
+If you only want to rebuild and check the combined spatial table:
+
+```bash
+Rscript 04_combine_qaqc/combine_from_site_ref_local.R
+Rscript 04_combine_qaqc/01_import-and-qaqc.R
+```
+
+## Notes
+
+- The older comparison file is controlled by `old_combined_filename` in
+  `00_qaqc_config.R`.
+- If `new_combined_filename` is blank, the script looks for the newest combined
+  file in the expected data folders.

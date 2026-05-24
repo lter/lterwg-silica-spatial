@@ -1,37 +1,47 @@
-# 05_harmonization
+# Harmonization
 
-This stage builds harmonized driver tables after the combined spatial dataset
-has been reviewed.
+Use this after the combined spatial table has been rebuilt and checked.
 
-Main scripts:
+This step formats the spatial drivers for the final harmonized dataset.
+
+## Main Files
 
 - `00_harmonization_config.R`
 - `00_harmonization_functions.R`
 - `01_build-harmonized-drivers.R`
 - `../tools/run_combine_and_harmonization_workflow.R`
-  Recommended end-to-end runner for a new user.
 
-Reference inputs used here:
+## Inputs
 
-- `Site_Reference_Table - WRTDS_Reference_Table_LTER_V2.csv`
-  from the harmonization input directory configured in `00_harmonization_config.R`
-- the newest vetted combined spatial dataset from one of:
-  - `<data_root>/review/harmonization/combined-spatial-dataset_*.csv`
-  - `<data_root>/si-extracted-data/all_data_extractions/all-data_si-extract_[34]_*.csv`
-  - `<data_root>/si-extracted-data/all-data_si-extract_3_*.csv`
+This step uses the site reference table from the harmonization input folder set
+in `00_harmonization_config.R`.
 
-Run this stage only after `04_combine_qaqc` outputs are vetted.
+It also needs the newest checked combined spatial file. The script looks in the
+usual locations, including:
 
-Typical order:
+- `<data_root>/review/harmonization/combined-spatial-dataset_*.csv`
+- `<data_root>/si-extracted-data/all_data_extractions/all-data_si-extract_[34]_*.csv`
+- `<data_root>/si-extracted-data/all-data_si-extract_3_*.csv`
 
-1. Preferred:
-   - `Rscript tools/run_combine_and_harmonization_workflow.R`
-2. Harmonization only:
-   - `Rscript 05_harmonization/01_build-harmonized-drivers.R`
+## Usual Run
 
-Notes:
+The easiest way is to run combine/checks and harmonization together:
 
-- `01_build-harmonized-drivers.R` is now source-safe and does not clear the
-  session.
-- If you need to force a specific vetted combined file, set:
-  - `SILICA_HARMONIZATION_COMBINED_FILE=/abs/path/to/combined.csv`
+```bash
+Rscript tools/run_combine_and_harmonization_workflow.R
+```
+
+To run only harmonization:
+
+```bash
+Rscript 05_harmonization/01_build-harmonized-drivers.R
+```
+
+## Notes
+
+- `01_build-harmonized-drivers.R` does not clear your R session.
+- To force one specific combined spatial file, set:
+
+```bash
+SILICA_HARMONIZATION_COMBINED_FILE=/abs/path/to/combined.csv
+```

@@ -1,22 +1,26 @@
-# 03_spatial_extraction
+# Spatial Extraction
 
-This stage runs the actual spatial extraction workflow.
+This is where the spatial driver extraction runs.
 
-Main subfolders:
+## What Is In Here
 
 - `modes/`
-  User-facing execution modes such as full runs, targeted subset runs, and update-years runs.
+  Scripts for the different ways we run extraction: all sites, a smaller subset,
+  or newer years only.
+
 - `extraction_scripts/`
-  Driver-specific extraction scripts. This is the canonical location for
-  `extract-*.R` files used by the workflow.
+  One script per driver, like `extract-evapo.R`, `extract-snowfrac.R`, and
+  `extract-airtemp.R`.
+
 - `aurora/`
-  Shell wrappers for running extraction on Aurora.
+  Shell scripts for running extraction on Aurora.
+
 - `examples/`
-  Small input templates such as `subset_file_template.csv`.
+  Small files showing the expected input format.
 
-Typical order:
+## Usual Order
 
-1. Finish `01_pre_aurora_run` if you need a targeted HydroSHEDS rerun.
-2. Make sure `02_watershed_delineation` outputs are ready.
-3. Run the extraction mode you need.
-4. Then move to `04_combine_qaqc`.
+1. Use `01_pre_aurora_run/` if you need to decide what should be rerun.
+2. Make sure the watershed files are ready.
+3. Run the extraction script or mode you need.
+4. Move to `04_combine_qaqc/` to rebuild and check the combined table.

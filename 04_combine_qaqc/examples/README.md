@@ -1,10 +1,8 @@
-# 04_combine_qaqc Examples
+# Examples
 
-This folder holds small example or legacy review outputs that are useful for
-reference but are not required workflow inputs.
+This folder is just for small example files and older reference outputs.
 
-Files here should not be treated as the canonical location for current review
-results. Real combine/QAQC outputs are written under:
+Current combine/check outputs are written to the Box data folder, usually:
 
 - `<data_root>/review/harmonization/`
 - `<data_root>/review/year_extension/`
