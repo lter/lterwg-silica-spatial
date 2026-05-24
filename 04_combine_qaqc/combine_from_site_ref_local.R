@@ -305,6 +305,7 @@ read_driver_with_fallbacks <- function(family, extracted_dir, base_keys, explici
   if (!length(candidates)) return(NULL)
 
   family_df <- NULL
+  key_display_df <- NULL
   used_files <- character(0)
 
   base_lookup <- base_keys %>%
@@ -362,6 +363,12 @@ read_driver_with_fallbacks <- function(family, extracted_dir, base_keys, explici
     }
     d <- d %>% distinct(across(all_of(join_keys)), .keep_all = TRUE)
 
+    key_display_df <- bind_rows(
+      key_display_df,
+      d %>% select(all_of(c(keys, join_keys)))
+    ) %>%
+      distinct(across(all_of(join_keys)), .keep_all = TRUE)
+
     keep <- setdiff(names(d), c(keys, join_keys))
     d <- d[, c(join_keys, keep), drop = FALSE]
 
@@ -371,6 +378,7 @@ read_driver_with_fallbacks <- function(family, extracted_dir, base_keys, explici
 
   if (is.null(family_df)) return(NULL)
   attr(family_df, "used_files") <- used_files
+  attr(family_df, "key_display") <- key_display_df
   family_df
 }
 
@@ -530,6 +538,22 @@ for (family in families_to_add) {
     missing_driver_files <- c(missing_driver_files, explicit_files)
     message("Skipping missing family: ", family)
     next
+  }
+
+  driver_key_display <- attr(d, "key_display")
+  if (!is.null(driver_key_display) && nrow(driver_key_display) > 0) {
+    extra_driver_rows <- anti_join(
+      driver_key_display,
+      out %>% select(all_of(c(keys, join_keys))),
+      by = join_keys
+    )
+
+    if (nrow(extra_driver_rows) > 0) {
+      out <- bind_rows(
+        out,
+        extra_driver_rows %>% select(all_of(c(keys, join_keys)))
+      )
+    }
   }
 
   glimpse_checkpoint(d, paste("driver family", family), glimpse_dir)

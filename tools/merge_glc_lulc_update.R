@@ -34,54 +34,61 @@ simple_classes <- c(
   "Wetland_Marsh"
 )
 
-landclass_to_simple <- c(
-  "Rainfed_cropland" = "Cropland",
-  "Herbaceous_cover_cropland" = "Cropland",
-  "Tree_or_shrub_cover_cropland" = "Cropland",
-  "Irrigated_cropland" = "Cropland",
-  "Open_evergreen_broadleaved_forest" = "Forest",
-  "Closed_evergreen_broadleaved_forest" = "Forest",
-  "Open_deciduous_broadleaved_forest" = "Forest",
-  "Closed_deciduous_broadleaved_forest" = "Forest",
-  "Open_evergreen_needle_leaved_forest" = "Forest",
-  "Closed_evergreen_needle_leaved_forest" = "Forest",
-  "Open_deciduous_needle_leaved_forest" = "Forest",
-  "Closed_deciduous_needle_leaved_forest" = "Forest",
-  "Open_mixed_leaf_forest" = "Forest",
-  "Closed_mixed_leaf_forest" = "Forest",
-  "Shrubland" = "Grassland_Shrubland",
-  "Evergreen_shrubland" = "Grassland_Shrubland",
-  "Deciduous_shrubland" = "Grassland_Shrubland",
-  "Grassland" = "Grassland_Shrubland",
-  "Sparse_vegetation" = "Grassland_Shrubland",
-  "Sparse_shrubland" = "Grassland_Shrubland",
-  "Sparse_herbaceous" = "Grassland_Shrubland",
-  "Bare_areas" = "Bare",
-  "Consolidated_bare_areas" = "Bare",
-  "Unconsolidated_bare_areas" = "Bare",
-  "Lichens_and_mosses" = "Bare",
-  "Impervious_surfaces" = "Impervious",
-  "Swamp" = "Wetland_Marsh",
-  "Marsh" = "Wetland_Marsh",
-  "Flooded_flat" = "Wetland_Marsh",
-  "Mangrove" = "Tidal_Wetland",
-  "Tidal_flat" = "Tidal_Wetland",
-  "Salt_marsh" = "Tidal_Wetland",
-  "Saline" = "Salt_Water",
-  "Water_body" = "Water",
-  "Permanent_ice_and_snow" = "Ice_Snow",
-  "Filled_value" = "Filled_Value"
+glc_class_crosswalk <- tribble(
+  ~LC_ID, ~LandClass, ~Simple_Class,
+  "0", "Filled_value", "Filled_Value",
+  "10", "Rainfed_cropland", "Cropland",
+  "11", "Herbaceous_cover_cropland", "Cropland",
+  "12", "Tree_or_shrub_cover_cropland", "Cropland",
+  "20", "Irrigated_cropland", "Cropland",
+  "50", "Evergreen_broadleaved_forest", "Forest",
+  "51", "Open_evergreen_broadleaved_forest", "Forest",
+  "52", "Closed_evergreen_broadleaved_forest", "Forest",
+  "61", "Open_deciduous_broadleaved_forest", "Forest",
+  "62", "Closed_deciduous_broadleaved_forest", "Forest",
+  "71", "Open_evergreen_needle_leaved_forest", "Forest",
+  "72", "Closed_evergreen_needle_leaved_forest", "Forest",
+  "81", "Open_deciduous_needle_leaved_forest", "Forest",
+  "82", "Closed_deciduous_needle_leaved_forest", "Forest",
+  "91", "Open_mixed_leaf_forest", "Forest",
+  "92", "Closed_mixed_leaf_forest", "Forest",
+  "120", "Shrubland", "Grassland_Shrubland",
+  "121", "Evergreen_shrubland", "Grassland_Shrubland",
+  "122", "Deciduous_shrubland", "Grassland_Shrubland",
+  "130", "Grassland", "Grassland_Shrubland",
+  "140", "Lichens_and_mosses", "Bare",
+  "150", "Sparse_vegetation", "Grassland_Shrubland",
+  "152", "Sparse_shrubland", "Grassland_Shrubland",
+  "153", "Sparse_herbaceous", "Grassland_Shrubland",
+  "181", "Swamp", "Wetland_Marsh",
+  "182", "Marsh", "Wetland_Marsh",
+  "183", "Flooded_flat", "Wetland_Marsh",
+  "184", "Saline", "Salt_Water",
+  "185", "Mangrove", "Tidal_Wetland",
+  "186", "Salt_marsh", "Tidal_Wetland",
+  "187", "Tidal_flat", "Tidal_Wetland",
+  "190", "Impervious_surfaces", "Impervious",
+  "200", "Bare_areas", "Bare",
+  "201", "Consolidated_bare_areas", "Bare",
+  "202", "Unconsolidated_bare_areas", "Bare",
+  "210", "Water_body", "Water",
+  "220", "Permanent_ice_and_snow", "Ice_Snow"
 )
+
+landclass_to_simple <- setNames(glc_class_crosswalk$Simple_Class, glc_class_crosswalk$LandClass)
+lc_id_to_landclass <- setNames(glc_class_crosswalk$LandClass, glc_class_crosswalk$LC_ID)
+lc_id_to_simple <- setNames(glc_class_crosswalk$Simple_Class, glc_class_crosswalk$LC_ID)
 
 interp_series <- function(years, values) {
   stopifnot(length(years) == length(values))
+  years <- as.integer(years)
 
   if (!all(c(1985, 1990, 1995) %in% years)) {
     stop("Expected five-year anchors 1985, 1990, and 1995 in new GLC input.")
   }
 
-  annual_years <- years[years >= 2000]
-  if (!identical(sort(annual_years), 2000:2022)) {
+  annual_years <- sort(unique(years[years >= 2000]))
+  if (!identical(annual_years, 2000:2022)) {
     stop("Expected annual GLC years 2000:2022 in new GLC input.")
   }
 
@@ -114,8 +121,32 @@ message("Updating ", length(updated_sites), " Stream_Name values.")
 
 source_years <- new_glc %>%
   mutate(
-    Simple_Class = unname(landclass_to_simple[LandClass])
-  ) %>%
+    LC_ID = if ("LC_ID" %in% names(.)) as.character(LC_ID) else NA_character_,
+    LandClass = if_else(
+      (is.na(LandClass) | LandClass == "") & !is.na(LC_ID),
+      unname(lc_id_to_landclass[LC_ID]),
+      LandClass
+    ),
+    Simple_Class = coalesce(
+      unname(landclass_to_simple[LandClass]),
+      unname(lc_id_to_simple[LC_ID])
+    )
+  )
+
+unmapped_classes <- source_years %>%
+  filter(is.na(Simple_Class)) %>%
+  distinct(LC_ID, LandClass) %>%
+  arrange(LC_ID, LandClass)
+
+if (nrow(unmapped_classes) > 0) {
+  stop(
+    "Unmapped GLC classes remain after applying the full-to-simple crosswalk: ",
+    paste(capture.output(print(unmapped_classes, n = Inf)), collapse = " "),
+    call. = FALSE
+  )
+}
+
+source_years <- source_years %>%
   filter(!is.na(Simple_Class)) %>%
   group_by(Stream_Name, Year, Simple_Class) %>%
   summarise(Area_m2 = sum(Area_m2, na.rm = TRUE), .groups = "drop") %>%
@@ -134,12 +165,13 @@ source_years <- new_glc %>%
   )
 
 interpolated_1985_2022 <- source_years %>%
+  arrange(Stream_Name, Simple_Class, Year) %>%
   group_by(Stream_Name, Simple_Class) %>%
-  summarise(
+  group_modify(~ tibble(
     Year = 1985:2022,
-    LandClass_sum = interp_series(Year, LandClass_sum),
-    .groups = "drop"
-  )
+    LandClass_sum = interp_series(.x$Year, .x$LandClass_sum)
+  )) %>%
+  ungroup()
 
 pre_1985 <- interpolated_1985_2022 %>%
   filter(Year == 1985) %>%
@@ -160,4 +192,8 @@ combined_lulc <- master_lulc %>%
 
 write_csv(combined_lulc, output_path)
 
+crosswalk_output <- file.path(dirname(output_path), "GLC_FCS30D_full_to_simple_class_translation.csv")
+write_csv(glc_class_crosswalk, crosswalk_output)
+
 message("Wrote: ", output_path)
+message("Wrote: ", crosswalk_output)

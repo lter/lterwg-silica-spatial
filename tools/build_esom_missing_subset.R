@@ -8,7 +8,7 @@ source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
 args <- commandArgs(trailingOnly = TRUE)
 
-default_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions"
+default_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
 data_root <- if (length(args) >= 1 && nzchar(args[[1]])) args[[1]] else default_root
 date_tag <- if (length(args) >= 2 && nzchar(args[[2]])) args[[2]] else format(Sys.Date(), "%Y%m%d")
 hydro_threshold_km2 <- if (length(args) >= 3 && nzchar(args[[3]])) suppressWarnings(as.numeric(args[[3]])) else 100

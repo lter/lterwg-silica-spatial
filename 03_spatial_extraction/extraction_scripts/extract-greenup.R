@@ -91,7 +91,8 @@ default_regions <- c("north-america-usa", "north-america-arctic",
                      "puerto-rico", "scandinavia",
                      "amazon", "australia",
                      "canada", "congo",
-                     "germany", "united-kingdom")
+                     "germany", "mali",
+                     "united-kingdom")
 
 region_set <- resolve_target_regions(
   subset_targets = subset_targets,

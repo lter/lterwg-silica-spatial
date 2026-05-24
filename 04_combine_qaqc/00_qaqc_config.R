@@ -33,7 +33,7 @@ latest_matching_path <- function(paths) {
 
 # One user-editable root path for the local spatial extraction tree
 
-data_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions"
+data_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
 data_root <- env_or_default("SILICA_QAQC_DATA_ROOT", data_root)
 
 if (!dir.exists(data_root)) {

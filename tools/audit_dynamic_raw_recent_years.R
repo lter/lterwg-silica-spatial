@@ -7,7 +7,7 @@ raw_driver_dir <- silica_raw_driver_data_dir(root)
 out_dir <- file.path(root, "review", "rerun", "coverage_checks_20260522")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-regions <- c(
+base_regions <- c(
   "north-america-usa",
   "north-america-arctic",
   "cropped-russia-west",
@@ -22,6 +22,13 @@ regions <- c(
   "congo",
   "germany",
   "united-kingdom"
+)
+
+driver_regions <- list(
+  evapo = c(base_regions, "mali"),
+  greenup = c(base_regions, "mali"),
+  npp = c(base_regions, "mali"),
+  snow = base_regions
 )
 
 drivers <- list(
@@ -56,7 +63,7 @@ expected_files <- function(driver_name, year) {
 rows <- list()
 for (driver_name in names(drivers)) {
   cfg <- drivers[[driver_name]]
-  for (region in regions) {
+  for (region in driver_regions[[driver_name]]) {
     for (year in cfg$years) {
       n <- count_files(cfg$dir, cfg$pattern, region, year)
       expected <- expected_files(driver_name, year)

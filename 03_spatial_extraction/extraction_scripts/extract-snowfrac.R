@@ -169,6 +169,7 @@ resume_partials <- tolower(Sys.getenv("SILICA_RESUME_PARTIALS", "false")) == "tr
 # Create a definitive object of files to extract
 file_set <- if (merge_subset_outputs && !resume_partials) file_all else not_done
 file_set <- filter_target_year_rows(file_set, year_col = "year")
+file_set <- filter_target_region_year_rows(file_set, driver = "snow", region_col = "region", year_col = "year")
 # file_set <- file_all # Uncomment if want to (re-)do all extractions
 
 # Extract all possible information from each

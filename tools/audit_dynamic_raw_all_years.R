@@ -13,7 +13,7 @@ dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 # window is aligned to 2002 for all dynamic drivers.
 complete_record_start_year <- 2002L
 
-regions <- c(
+base_regions <- c(
   "north-america-usa",
   "north-america-arctic",
   "cropped-russia-west",
@@ -28,6 +28,13 @@ regions <- c(
   "congo",
   "germany",
   "united-kingdom"
+)
+
+driver_regions <- list(
+  evapo = c(base_regions, "mali"),
+  greenup = c(base_regions, "mali"),
+  npp = c(base_regions, "mali"),
+  snow = base_regions
 )
 
 drivers <- list(
@@ -73,7 +80,7 @@ count_files <- function(driver_dir, pattern, region, year) {
 rows <- list()
 for (driver_name in names(drivers)) {
   cfg <- drivers[[driver_name]]
-  for (region in regions) {
+  for (region in driver_regions[[driver_name]]) {
     for (year in cfg$years) {
       within_product_window <- year %in% cfg$product_years
       expected <- if (within_product_window) cfg$expected else NA_integer_

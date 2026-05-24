@@ -14,7 +14,7 @@ env_or_default <- function(env_name, default_value) {
 
 data_root <- env_or_default(
   "SILICA_QAQC_DATA_ROOT",
-  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions"
+  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
 )
 
 date_tag <- env_or_default("SILICA_AUDIT_DATE", format(Sys.Date(), "%Y%m%d"))

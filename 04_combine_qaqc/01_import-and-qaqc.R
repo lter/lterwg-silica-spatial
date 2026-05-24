@@ -4,8 +4,8 @@
 # this script rather than clearing the workspace inside the workflow code.
 
 # Example
-# scp bush@aurora.nceas.ucsb.edu:/home/shares/lter-si/si-watershed-extract/extracted-data/*.csv /Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions/extracted-data/
-# scp bush@aurora.nceas.ucsb.edu:/home/shares/lter-si/si-watershed-extract/site-coordinates/* /Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions/site-coordinates/
+# scp bush@aurora.nceas.ucsb.edu:/home/shares/lter-si/si-watershed-extract/extracted-data/*.csv /Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/extracted-data/
+# scp bush@aurora.nceas.ucsb.edu:/home/shares/lter-si/si-watershed-extract/site-coordinates/* /Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/site-coordinates/
 # so this workflow can import the latest combined and driver extraction files
 # from that local data root
 # Harmonization imports two core files

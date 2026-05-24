@@ -32,7 +32,7 @@ latest_matching_path <- function(pattern) {
 
 data_root <- env_or_default(
   "SILICA_QAQC_DATA_ROOT",
-  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions"
+  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
 )
 
 combined_file <- env_or_default(

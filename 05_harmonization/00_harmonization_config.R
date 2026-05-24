@@ -48,7 +48,7 @@ latest_combined_file <- function(data_root) {
 
 data_root <- env_or_default(
   "SILICA_QAQC_DATA_ROOT",
-  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions"
+  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
 )
 
 # Latest vetted combined table from 04_combine_qaqc

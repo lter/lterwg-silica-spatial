@@ -1,106 +1,94 @@
-# Spatial Data Root Cleanup Plan
+# Spatial Data Root Cleanup Notes
 
 Target root:
 
-- `/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions`
+- `/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions`
 
-## Current Canonical Workflow Paths
+## Current Working Paths
 
-These are the paths the repo should treat as canonical now.
+These are the folders to use first.
 
-- Extracted driver CSVs:
-  - `si-extracted-data/`
-- Historical combined archives:
-  - `si-extracted-data/all_data_extractions/`
-- Site reference workbook:
+- Current final outputs:
+  - `final-data/`
+- Current full spatial dataset:
+  - `final-data/full-dataset/`
+- Current ESOM spatial outputs:
+  - `final-data/esom/`
+- Current audit summaries:
+  - `final-data/audit-summaries/`
+- Current driver patch artifacts:
+  - `final-data/driver-patches/`
+- GEE/GLC land-cover outputs:
+  - `gee-glc-lulc-outputs/`
+- AppEEARS extraction outputs:
+  - `appeears-spatial-extractions/`
+- Source shapefiles and site reference files:
   - `silica-shapefiles/site-coordinates/silica-coords_RAW.xlsx`
-- Review outputs:
-  - `review/`
-- Harmonization master inputs:
+- Harmonization master inputs still used by scripts:
   - `spatial_data_harmonization/master_datasets/`
-- Other master inputs:
-  - `master/`
 
-## What Is Messy Right Now
+## Cleanup Already Done
 
-- Fresh local rebuilds are written directly into `si-extracted-data/`, while older
-  combined files live under `si-extracted-data/all_data_extractions/`.
-- Active rerun patch CSVs are mixed into the same folder as stable driver CSVs.
-- Review outputs exist both in current folders and in `_archive_current_workflow_cleanup_20260411/`.
-- There are multiple historical folders with overlapping purpose:
-  - `checks/`
-  - `data_checking/`
-  - `harmonization_current/`
-  - `qa/`
-  - archived cleanup folders
+- Box has a `final-data/` folder with full-dataset, ESOM, audit, and driver-patch subfolders.
+- Box has a `gee-glc-lulc-outputs/` folder for raw GEE exports, upload targets, and merged checkpoints.
+- Box has an `appeears-spatial-extractions/` folder with current extraction outputs separated from archived tests and superseded runs.
+- GitHub `generated_outputs/rerun/` is split into active final run helpers, AppEEARS helpers, GEE targets, and archived reruns.
+- GitHub `generated_outputs/final_combine/` keeps only the current useful combine checkpoints plus an archive folder.
+- `.DS_Store` and `__pycache__` files were removed from the repo.
 
-## Safe Changes Already Made In Repo
+## Current Final Run State
 
-- `04_combine_qaqc/00_qaqc_config.R`
-  - now auto-detects the newest new combined file from either:
-    - `si-extracted-data/all_data_extractions/`
-    - `si-extracted-data/`
-- `05_harmonization/00_harmonization_config.R`
-  - now prefers the vetted combined file under:
-    - `review/harmonization/combined-spatial-dataset_*.csv`
-  - then falls back to older combined locations
-- `tools/run_combine_and_harmonization_workflow.R`
-  - provides a single end-to-end runner
+- The year-fill extraction is still in progress.
+- `generated_outputs/rerun/active-final-run/` now contains only the current targeted year-fill subset files, targeted evapo/snow manifests, the fast driver script, and the year-fill merge script.
+- Completed pre-year-fill scripts were moved to `generated_outputs/rerun/archived-reruns/completed-final-v4-pre-year-fill-20260522-23/`.
+- The slow broad year-fill script was archived so it is not run accidentally.
 
-These changes mean the workflow is less fragile even before physical cleanup.
+## Land-Cover Files
+
+- `DSi_LULC_filled_interpolated_Simple_20260524_nor27.csv` is the current GEE/GLC land-cover master.
+- `GLC_FCS30D_full_to_simple_class_translation.csv` records how detailed GLC classes were grouped into the simple classes.
+- Both files are copied to:
+  - `spatial_data_harmonization/master_datasets/`
+  - `gee-glc-lulc-outputs/merged-master-checkpoints/`
+  - `final-data/full-dataset/`
 
 ## Do Not Move Yet
 
-Do not move or delete any of these until the current rerun, recombine, and
-harmonization pass are complete:
+Do not move or delete these until the year-fill merge and final audit pass:
 
-- `si-extracted-data/si-extract_*20260518_aurora-final-unresolved-hydrosheds-rerun-20260518.csv`
-- the newest `all-data_si-extract_3_*.csv`
-- `review/harmonization/*.csv`
+- `generated_outputs/rerun/active-final-run/`
+- `final-data/full-dataset/all-data_si-extract_4_20260523_final-extract-merge-v4-airtemp2025-domain-spatial-data-extractions.csv`
 - `silica-shapefiles/site-coordinates/silica-coords_RAW.xlsx`
-- `spatial_data_harmonization/master_datasets/DSi_LULC_filled_interpolated_Simple.csv`
+- `spatial_data_harmonization/master_datasets/DSi_LULC_filled_interpolated_Simple_20260524_nor27.csv`
+- `/private/tmp/final_v4_year_fill_20260523/`
 
-## Cleanup To Do After Current Workflow Lands
+## Cleanup After Year-Fill Lands
 
-1. Archive stale patch CSVs out of `si-extracted-data/`
-   - move dated rerun patch files into a subfolder such as:
-   - `si-extracted-data/extraction_exports/patch_runs_archive/`
+1. Run the year-fill merge script and copy the merged final v4 output into `final-data/full-dataset/`.
 
-2. Separate stable combined outputs from transient rebuilds
-   - keep vetted combined outputs under:
-   - `review/harmonization/`
-   - optionally copy milestone combined outputs into:
-   - `si-extracted-data/all_data_extractions/`
+2. Move the pre-year-fill combine checkpoint into `generated_outputs/final_combine/archive/` once the year-fill checkpoint is verified.
 
-3. Leave only active driver files at top level in `si-extracted-data/`
-   - legacy base driver CSVs
-   - newest active rerun patch files only if still needed
+3. Copy final audit summaries into `final-data/audit-summaries/` and archive older audit folders that are now superseded.
 
-4. Consolidate historical review folders
-   - review old contents of:
-   - `checks/`
-   - `data_checking/`
-   - `harmonization_current/`
-   - `qa/`
-   - move genuinely obsolete outputs into a dated archive folder
+4. Clean Aurora only after local final audit passes:
+   - old run-output folders
+   - one-off review CSVs
+   - downloaded AppEEARS staging folders no longer needed
 
-5. Permanently patch the site reference workbook inputs
-   - add the missing HydroSHEDS `Shapefile_Name` values for:
-   - `Fazenda Vista Alegre`
-   - `Labrea`
-   - `Tabatinga`
-   - `S65C`
-   - `NOR27`
-   - `North Sylamore`
+5. Remove large local AppEEARS staging folders under `/private/tmp/` only after Aurora and Box copies are verified.
 
-## Recommended User Workflow
+6. Commit the code changes and generated helper structure once final v4 is verified.
 
-After the current rerun is complete:
+## Current Commands To Finish
 
-1. Pull patch CSVs into `si-extracted-data/`
-2. Run:
-   - `Rscript tools/run_combine_and_harmonization_workflow.R`
-3. Review:
-   - `review/harmonization/`
-   - `review/year_extension/`
-4. Only then do physical cleanup/archive moves
+After evapo finishes:
+
+```bash
+bash generated_outputs/rerun/active-final-run/run_final_v4_year_fill_driver_fast_on_aurora_20260524.sh snow
+```
+
+After snow finishes:
+
+```bash
+bash generated_outputs/rerun/active-final-run/merge_final_v4_year_fill_patch_20260523.sh
+```

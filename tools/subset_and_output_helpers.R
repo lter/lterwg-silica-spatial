@@ -338,6 +338,69 @@ filter_target_year_rows <- function(df, year_col = "year") {
   df[!is.na(year_vals) & year_vals %in% target_years, , drop = FALSE]
 }
 
+filter_target_region_year_rows <- function(df, driver, region_col = "region", year_col = "year") {
+  manifest_file <- trimws(Sys.getenv("SILICA_TARGET_REGION_YEAR_FILE", unset = ""))
+  if (!nzchar(manifest_file)) {
+    return(df)
+  }
+  if (!file.exists(manifest_file)) {
+    stop("SILICA_TARGET_REGION_YEAR_FILE does not exist: ", manifest_file, call. = FALSE)
+  }
+  if (!all(c(region_col, year_col) %in% names(df))) {
+    return(df)
+  }
+
+  manifest <- read.csv(manifest_file, stringsAsFactors = FALSE, check.names = FALSE)
+  required <- c("driver", "region", "year")
+  missing_cols <- setdiff(required, names(manifest))
+  if (length(missing_cols)) {
+    stop(
+      "Target region-year manifest is missing columns: ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  manifest <- manifest %>%
+    dplyr::transmute(
+      driver = normalize_site_key(driver),
+      region = normalize_region_key(region),
+      year = suppressWarnings(as.integer(year))
+    ) %>%
+    dplyr::filter(
+      driver == normalize_site_key(.env$driver),
+      !is.na(region),
+      nzchar(region),
+      !is.na(year)
+    ) %>%
+    dplyr::distinct()
+
+  if (nrow(manifest) == 0) {
+    warning("No target region-year rows for driver ", driver, ". Keeping zero rows.", call. = FALSE)
+    return(df[0, , drop = FALSE])
+  }
+
+  df_keyed <- df %>%
+    dplyr::mutate(
+      .target_region = normalize_region_key(.data[[region_col]]),
+      .target_year = suppressWarnings(as.integer(as.character(.data[[year_col]])))
+    ) %>%
+    dplyr::inner_join(
+      manifest,
+      by = c(".target_region" = "region", ".target_year" = "year")
+    ) %>%
+    dplyr::select(-dplyr::any_of(c(".target_region", ".target_year", "driver")))
+
+  message(
+    "Dynamic files restricted by region-year manifest for ",
+    driver,
+    ": ",
+    nrow(df_keyed),
+    " file rows"
+  )
+  df_keyed
+}
+
 silica_should_merge_output <- function(subset_targets = NULL, output_path = NULL) {
   merge_subset <- !is.null(subset_targets) &&
     tolower(Sys.getenv("SILICA_MERGE_SUBSET_OUTPUTS", "false")) == "true"
@@ -965,6 +1028,7 @@ resolve_target_regions <- function(subset_targets = NULL, default_regions) {
       "krr",
       "lmp",
       "luq",
+      "mali",
       "md",
       "niva",
       "nwt",
@@ -997,6 +1061,7 @@ resolve_target_regions <- function(subset_targets = NULL, default_regions) {
       "north-america-usa",
       "north-america-usa",
       "puerto-rico",
+      "mali",
       "australia",
       "scandinavia",
       "north-america-usa",

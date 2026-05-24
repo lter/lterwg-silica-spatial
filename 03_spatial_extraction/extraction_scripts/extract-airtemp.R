@@ -105,6 +105,13 @@ out_list <- list()
 # Identify how many layers are in this
 (layer_ct <- length(names(air_rast)))
 
+# Some NetCDF readers do not expose NOAA's time coordinate through terra.
+# The file is monthly from January 1948, so infer dates if terra returns NA.
+air_dates <- as.Date(terra::time(air_rast))
+if (length(air_dates) != layer_ct || all(is.na(air_dates))) {
+  air_dates <- seq.Date(as.Date("1948-01-01"), by = "month", length.out = layer_ct)
+}
+
 # We'll need to strip each layer separately
 for(k in 1:layer_ct){
   
@@ -115,7 +122,7 @@ for(k in 1:layer_ct){
   rotated <- terra::rotate(x = air_rast[[focal_layer]])
   
   # Identify time of this layer
-  layer_time <- terra::time(x = rotated)
+  layer_time <- air_dates[[k]]
   
   # Strip out the relevant bit
   small_out_df <- exactextractr::exact_extract(x = rotated, y = sheds, 

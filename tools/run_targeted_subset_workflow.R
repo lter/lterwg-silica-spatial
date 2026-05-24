@@ -36,10 +36,14 @@ subset_path <- normalizePath(subset_path, mustWork = TRUE)
 
 message("Using subset file: ", subset_path)
 
+if (requireNamespace("sf", quietly = TRUE)) {
+  sf::sf_use_s2(FALSE)
+}
+
 set_default_env <- function(name, value) {
   current <- Sys.getenv(name, unset = NA_character_)
   if (is.na(current) || !nzchar(current)) {
-    Sys.setenv(structure(value, names = name))
+    do.call(Sys.setenv, stats::setNames(list(value), name))
   }
 }
 
@@ -95,6 +99,19 @@ dynamic_scripts <- c(
   file.path("03_spatial_extraction", "extraction_scripts", "extract-evapo.R"),
   file.path("03_spatial_extraction", "extraction_scripts", "extract-snowfrac.R")
 )
+
+dynamic_driver_names <- c("precip", "airtemp", "npp", "greenup", "evapo", "snow")
+only_dynamic <- trimws(Sys.getenv("SILICA_DYNAMIC_DRIVER_NAMES", unset = ""))
+if (nzchar(only_dynamic)) {
+  requested_dynamic <- trimws(unlist(strsplit(only_dynamic, ",", fixed = TRUE), use.names = FALSE))
+  requested_dynamic <- tolower(gsub("[^a-z0-9]+", "", requested_dynamic))
+  keep_dynamic <- dynamic_driver_names %in% requested_dynamic
+  if (!any(keep_dynamic)) {
+    stop("SILICA_DYNAMIC_DRIVER_NAMES did not match any dynamic scripts: ", only_dynamic, call. = FALSE)
+  }
+  dynamic_scripts <- dynamic_scripts[keep_dynamic]
+  message("Dynamic scripts restricted to: ", paste(dynamic_driver_names[keep_dynamic], collapse = ", "))
+}
 
 extract_scripts <- c(
   if (run_static_drivers) static_scripts else character(0),

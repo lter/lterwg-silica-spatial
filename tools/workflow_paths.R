@@ -10,7 +10,7 @@ use_project_rlibs <- function() {
 }
 
 silica_default_box_data_root <- function() {
-  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions"
+  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
 }
 
 load_workflow_packages <- function(packages) {
@@ -29,6 +29,8 @@ resolve_silica_data_root <- function() {
   }
 
   candidates <- c(
+    file.path(getwd(), "spatial-data-extractions"),
+    file.path(dirname(getwd()), "spatial-data-extractions"),
     file.path(getwd(), "spatial_data_extractions"),
     file.path(dirname(getwd()), "spatial_data_extractions"),
     file.path(getwd(), "si-watershed-extract"),

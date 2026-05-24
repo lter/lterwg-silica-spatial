@@ -52,7 +52,7 @@ if (!nzchar(staging_dir)) {
 staging_dir <- normalizePath(staging_dir, mustWork = TRUE)
 repo_root <- getwd()
 
-default_data_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial_data_extractions"
+default_data_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
 data_root <- Sys.getenv("SILICA_QAQC_DATA_ROOT", unset = default_data_root)
 if (!dir.exists(data_root)) {
   stop("Missing SILICA_QAQC_DATA_ROOT/data_root: ", data_root, call. = FALSE)
@@ -118,6 +118,7 @@ first_non_missing <- function(x) {
   keep <- !(is.na(x) | trimws(as.character(x)) == "")
   if (!any(keep)) {
     if (is.numeric(x)) return(NA_real_)
+    if (is.character(x)) return(NA_character_)
     return(NA)
   }
   x[which(keep)[1]]
@@ -180,6 +181,28 @@ merge_prefer_old <- function(old_file, new_file, sanitize_new = FALSE) {
   old <- old[, all_cols, drop = FALSE]
   new <- new[, all_cols, drop = FALSE]
 
+  align_merge_types <- function(old, new) {
+    for (nm in all_cols) {
+      old_col <- old[[nm]]
+      new_col <- new[[nm]]
+
+      if (is.character(old_col) || is.character(new_col) || grepl("MMDD$", nm)) {
+        old[[nm]] <- as.character(old_col)
+        new[[nm]] <- as.character(new_col)
+      } else if (is.logical(old_col) && all(is.na(old_col)) && is.numeric(new_col)) {
+        old[[nm]] <- rep(NA_real_, length(old_col))
+      } else if (is.logical(new_col) && all(is.na(new_col)) && is.numeric(old_col)) {
+        new[[nm]] <- rep(NA_real_, length(new_col))
+      }
+    }
+
+    list(old = old, new = new)
+  }
+
+  aligned <- align_merge_types(old, new)
+  old <- aligned$old
+  new <- aligned$new
+
   shared_keys <- intersect(old$key, new$key)
   old_only_keys <- setdiff(old$key, new$key)
   new_only_keys <- setdiff(new$key, old$key)
@@ -207,16 +230,23 @@ canonical_plus_legacy <- merge_prefer_old(canonical_file, legacy_file, sanitize_
 canonical_plus_legacy_file <- file.path(output_root, paste0("canonical_plus_legacy_", run_date, "_", run_label, ".csv"))
 write.csv(canonical_plus_legacy, canonical_plus_legacy_file, row.names = FALSE, na = "")
 
-final_master <- merge_prefer_old(patch_output, canonical_plus_legacy_file, sanitize_new = FALSE)
+if (normalizePath(patch_base_file, mustWork = TRUE) != normalizePath(canonical_file, mustWork = TRUE)) {
+  final_master <- merge_prefer_old(patch_output, patch_base_file, sanitize_new = FALSE)
+} else {
+  final_master <- merge_prefer_old(patch_output, canonical_plus_legacy_file, sanitize_new = FALSE)
+}
 join_artifact_cols <- grep("^(geom|Shpfl_N)(\\.|$)", names(final_master), value = TRUE)
 if (length(join_artifact_cols) > 0) {
   final_master <- final_master %>% select(-all_of(join_artifact_cols))
 }
 final_master <- fill_major_rock_from_percentages(final_master)
+final_output_dir <- Sys.getenv(
+  "SILICA_FINAL_OUTPUT_DIR",
+  unset = file.path(data_root, "si-extracted-data", "all_data_extractions")
+)
+dir.create(final_output_dir, recursive = TRUE, showWarnings = FALSE)
 final_out_file <- file.path(
-  data_root,
-  "si-extracted-data",
-  "all_data_extractions",
+  final_output_dir,
   paste0("all-data_si-extract_4_", run_date, "_", run_label, ".csv")
 )
 write.csv(final_master, final_out_file, row.names = FALSE, na = "")
