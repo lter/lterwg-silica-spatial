@@ -19,6 +19,11 @@ first_existing_path <- function(candidates, label) {
 latest_combined_file <- function(data_root) {
   candidates <- c(
     list.files(
+      file.path(data_root, "final-data", "full-dataset"),
+      pattern = "^all-data_si-extract_.*\\.csv$",
+      full.names = TRUE
+    ),
+    list.files(
       file.path(data_root, "review", "harmonization"),
       pattern = "^combined-spatial-dataset_.*\\.csv$",
       full.names = TRUE
@@ -38,7 +43,7 @@ latest_combined_file <- function(data_root) {
 
   if (!length(candidates)) {
     stop(
-      "No combined spatial data files found under review/harmonization, si-extracted-data/all_data_extractions, or si-extracted-data.",
+      "No combined spatial data files found under final-data/full-dataset, review/harmonization, si-extracted-data/all_data_extractions, or si-extracted-data.",
       call. = FALSE
     )
   }
@@ -59,7 +64,10 @@ combined_file <- env_or_default(
 
 # Harmonization outputs
 review_root <- file.path(data_root, "review")
-output_dir <- file.path(review_root, "harmonization")
+output_dir <- env_or_default(
+  "SILICA_HARMONIZATION_OUTPUT_DIR",
+  file.path(review_root, "harmonization")
+)
 date_tag <- env_or_default("SILICA_HARMONIZATION_DATE", format(Sys.Date(), "%Y%m%d"))
 
 # Extra lookup tables and draft harmonization inputs

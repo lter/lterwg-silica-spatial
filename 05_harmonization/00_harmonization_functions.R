@@ -1,6 +1,8 @@
 suppressPackageStartupMessages({
   library(dplyr)
   library(data.table)
+  library(tidyr)
+  library(stringr)
 })
 
 # Shared cleanup from combine_qaqc
@@ -141,26 +143,28 @@ read_daily_discharge_input <- function(path) {
     filter(!is.na(Stream_ID), Stream_ID != "", !is.na(Date), !is.na(Q))
 }
 
-# Compute site-level discharge metrics from daily Q
-# RBI uses absolute day-to-day change
-# recession_slope uses a log-log fit on recession days only
-compute_discharge_metrics <- function(daily_q, min_recession_days = 50L) {
+# Compute discharge metrics over a grouping window.
+# RBI uses absolute day-to-day change divided by total discharge.
+# RCS is the log-log recession slope from recession days only.
+compute_discharge_metrics_by_group <- function(daily_q, group_cols, min_recession_days = 50L) {
   q_diff <- daily_q %>%
-    arrange(Stream_ID, Date) %>%
-    group_by(Stream_ID) %>%
+    arrange(across(all_of(c(group_cols, "Date")))) %>%
+    group_by(across(all_of(group_cols))) %>%
     mutate(
       dQ = Q - lag(Q),
       change_dQ = Q / lag(Q),
-      dQ_dt = dQ / as.numeric(Date - lag(Date))
+      day_gap = as.numeric(Date - lag(Date)),
+      dQ_dt = dQ / day_gap
     ) %>%
-    filter(!is.na(dQ_dt)) %>%
-    filter(!(change_dQ < 0.7))
+    ungroup() %>%
+    filter(!is.na(dQ_dt), !is.na(change_dQ), day_gap > 0) %>%
+    filter(change_dQ >= 0.7)
 
   recession_slopes <- q_diff %>%
-    filter(dQ < 0) %>%
+    filter(dQ < 0, Q > 0) %>%
     mutate(recession_slope_day = -dQ_dt) %>%
-    group_by(Stream_ID) %>%
-    filter(!if_any(where(is.numeric), ~ . == Inf | . == -Inf)) %>%
+    filter(is.finite(recession_slope_day), recession_slope_day > 0) %>%
+    group_by(across(all_of(group_cols))) %>%
     summarise(
       n_recession_days = n(),
       recession_slope = if (n_recession_days >= min_recession_days) {
@@ -171,24 +175,53 @@ compute_discharge_metrics <- function(daily_q, min_recession_days = 50L) {
       },
       .groups = "drop"
     ) %>%
-    filter(!is.na(recession_slope), recession_slope >= 0)
+    mutate(
+      recession_slope = if_else(
+        is.finite(recession_slope) & recession_slope >= 0,
+        recession_slope,
+        NA_real_
+      ),
+      RCS = recession_slope
+    )
 
   flashiness <- daily_q %>%
-    group_by(Stream_ID) %>%
-    arrange(Date) %>%
+    arrange(across(all_of(c(group_cols, "Date")))) %>%
+    group_by(across(all_of(group_cols))) %>%
     mutate(
       dQ = Q - lag(Q),
       abs_dQ = abs(dQ)
     ) %>%
+    ungroup() %>%
     filter(!is.na(abs_dQ)) %>%
+    group_by(across(all_of(group_cols))) %>%
     summarise(
       total_discharge = sum(Q, na.rm = TRUE),
       total_change = sum(abs_dQ, na.rm = TRUE),
-      RBI = total_change / total_discharge,
+      RBI = if_else(total_discharge > 0, total_change / total_discharge, NA_real_),
       .groups = "drop"
     )
 
-  full_join(recession_slopes, flashiness, by = "Stream_ID")
+  full_join(recession_slopes, flashiness, by = group_cols)
+}
+
+# Compute site-level discharge metrics from daily Q
+compute_discharge_metrics <- function(daily_q, min_recession_days = 50L) {
+  compute_discharge_metrics_by_group(
+    daily_q = daily_q,
+    group_cols = "Stream_ID",
+    min_recession_days = min_recession_days
+  )
+}
+
+# Compute annual discharge metrics from daily Q
+compute_annual_discharge_metrics <- function(daily_q, min_recession_days = 20L) {
+  daily_q %>%
+    mutate(Year = as.integer(format(Date, "%Y"))) %>%
+    filter(!is.na(Year)) %>%
+    compute_discharge_metrics_by_group(
+      group_cols = c("Stream_ID", "Year"),
+      min_recession_days = min_recession_days
+    )
 }
 
 # KG class
@@ -369,8 +402,151 @@ gap_fill_basin_slope_values <- function(df, us_slope_path, krycklan_slope_path, 
 
 # Output writing
 
-# Write the harmonized table and a simple non-missing summary
-write_harmonization_outputs <- function(df, output_dir, date_tag) {
+# Annual and site-average spatial driver tables
+
+annual_driver_specs <- tibble::tribble(
+  ~value_col, ~regex, ~type,
+  "temp_degC", "^temp_([0-9]{4})_degC$", "numeric",
+  "precip_mm_per_day", "^precip_([0-9]{4})_mm_per_day$", "numeric",
+  "evapotrans_kg_m2", "^evapotrans_([0-9]{4})_kg_m2$", "numeric",
+  "npp_kgC_m2_year", "^npp_([0-9]{4})_kgC_m2_year$", "numeric",
+  "greenup_cycle0_date", "^greenup_cycle0_([0-9]{4})MMDD$", "date",
+  "greenup_cycle1_date", "^greenup_cycle1_([0-9]{4})MMDD$", "date",
+  "snow_num_days", "^snow_([0-9]{4})_num_days$", "numeric",
+  "snow_max_prop_area", "^snow_([0-9]{4})_max_prop_area$", "numeric"
+)
+
+annual_driver_columns <- function(df) {
+  unique(unlist(lapply(annual_driver_specs$regex, function(rx) grep(rx, names(df), value = TRUE))))
+}
+
+extract_one_annual_driver <- function(df, spec) {
+  cols <- grep(spec$regex, names(df), value = TRUE)
+  if (!length(cols)) {
+    return(NULL)
+  }
+
+  base_cols <- intersect(
+    c("Stream_ID", "LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name", "key"),
+    names(df)
+  )
+
+  out <- df[, c(base_cols, cols), drop = FALSE] %>%
+    pivot_longer(
+      cols = all_of(cols),
+      names_to = "source_column",
+      values_to = spec$value_col
+    ) %>%
+    mutate(
+      Year = as.integer(str_match(source_column, spec$regex)[, 2])
+    ) %>%
+    select(-source_column)
+
+  if (spec$type == "numeric") {
+    out[[spec$value_col]] <- suppressWarnings(as.numeric(out[[spec$value_col]]))
+  }
+
+  if (spec$type == "date") {
+    date_value <- suppressWarnings(as.Date(out[[spec$value_col]]))
+    out[[spec$value_col]] <- as.character(date_value)
+    doy_col <- sub("_date$", "_doy", spec$value_col)
+    out[[doy_col]] <- as.integer(format(date_value, "%j"))
+  }
+
+  out
+}
+
+build_annual_driver_table <- function(df, annual_discharge = NULL, wrtds_q = NULL) {
+  pieces <- lapply(seq_len(nrow(annual_driver_specs)), function(i) {
+    extract_one_annual_driver(df, annual_driver_specs[i, ])
+  })
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+
+  if (!length(pieces)) {
+    return(data.frame())
+  }
+
+  join_cols <- intersect(
+    c("Stream_ID", "LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name", "key", "Year"),
+    names(pieces[[1]])
+  )
+
+  annual <- Reduce(function(x, y) {
+    full_join(x, y, by = intersect(join_cols, names(y)))
+  }, pieces) %>%
+    arrange(LTER, Stream_Name, Discharge_File_Name, Shapefile_Name, Year)
+
+  if (!is.null(wrtds_q) && nrow(wrtds_q)) {
+    annual <- annual %>%
+      left_join(
+        wrtds_q %>% select(Stream_ID, Year, Q),
+        by = c("Stream_ID", "Year")
+      )
+  }
+
+  if (!is.null(annual_discharge) && nrow(annual_discharge)) {
+    annual <- annual %>%
+      left_join(annual_discharge, by = c("Stream_ID", "Year"))
+  }
+
+  annual
+}
+
+build_site_average_driver_table <- function(df, annual_table) {
+  drop_annual_cols <- annual_driver_columns(df)
+  site_base <- df[, setdiff(names(df), drop_annual_cols), drop = FALSE]
+
+  if (!nrow(annual_table)) {
+    site_base$n_annual_driver_years <- NA_integer_
+    return(site_base)
+  }
+
+  mean_cols <- intersect(
+    c(
+      "temp_degC",
+      "precip_mm_per_day",
+      "evapotrans_kg_m2",
+      "npp_kgC_m2_year",
+      "greenup_cycle0_doy",
+      "greenup_cycle1_doy",
+      "snow_num_days",
+      "snow_max_prop_area",
+      "Q",
+      "RBI",
+      "recession_slope",
+      "RCS"
+    ),
+    names(annual_table)
+  )
+
+  annual_means <- annual_table %>%
+    mutate(.has_annual_driver_value = rowSums(!is.na(pick(all_of(mean_cols)))) > 0) %>%
+    group_by(Stream_ID) %>%
+    summarise(
+      n_annual_driver_years = n_distinct(Year[.has_annual_driver_value]),
+      across(
+        all_of(mean_cols),
+        list(
+          mean = ~ if (all(is.na(.))) NA_real_ else mean(., na.rm = TRUE),
+          n = ~ sum(!is.na(.))
+        ),
+        .names = "annual_{.fn}_{.col}"
+      ),
+      .groups = "drop"
+    )
+
+  site_base %>%
+    left_join(annual_means, by = "Stream_ID")
+}
+
+# Write the harmonized tables and a simple non-missing summary
+write_harmonization_outputs <- function(
+  df,
+  output_dir,
+  date_tag,
+  annual_table = NULL,
+  site_average_table = NULL
+) {
   out_file <- file.path(
     output_dir,
     harmonization_file_name("harmonized-spatial-drivers", date_tag)
@@ -390,5 +566,25 @@ write_harmonization_outputs <- function(df, output_dir, date_tag) {
   write.csv(df, out_file, row.names = FALSE, na = "")
   write.csv(variable_summary, summary_file, row.names = FALSE)
 
-  list(out_file = out_file, summary_file = summary_file)
+  out <- list(out_file = out_file, summary_file = summary_file)
+
+  if (!is.null(annual_table) && nrow(annual_table)) {
+    annual_file <- file.path(
+      output_dir,
+      harmonization_file_name("harmonized-spatial-drivers-annual", date_tag)
+    )
+    write.csv(annual_table, annual_file, row.names = FALSE, na = "")
+    out$annual_file <- annual_file
+  }
+
+  if (!is.null(site_average_table) && nrow(site_average_table)) {
+    site_average_file <- file.path(
+      output_dir,
+      harmonization_file_name("harmonized-spatial-drivers-site-averages", date_tag)
+    )
+    write.csv(site_average_table, site_average_file, row.names = FALSE, na = "")
+    out$site_average_file <- site_average_file
+  }
+
+  out
 }
