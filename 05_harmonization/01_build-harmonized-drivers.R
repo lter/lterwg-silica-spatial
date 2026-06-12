@@ -77,6 +77,12 @@ if (add_max_daylength) {
 }
 
 # Step 8
+# Add GEE/GLC simple-class land-cover columns
+if (add_gee_glc_land_cover_columns && nzchar(lulc_file) && file.exists(lulc_file)) {
+  harmonized <- add_gee_glc_land_cover(harmonized, lulc_file)
+}
+
+# Step 9
 # Build yearly and site-average driver tables from the same merged input.
 annual_drivers <- build_annual_driver_table(
   harmonized,
@@ -85,7 +91,7 @@ annual_drivers <- build_annual_driver_table(
 )
 site_average_drivers <- build_site_average_driver_table(harmonized, annual_drivers)
 
-# Step 9
+# Step 10
 # Write the harmonized output tables
 write_harmonization_outputs(
   harmonized,

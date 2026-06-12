@@ -155,6 +155,7 @@ not_done <- file_all %>%
 # Create a definitive object of files to extract
 file_set <- file_all
 file_set <- filter_target_year_rows(file_set, year_col = "year")
+file_set <- filter_target_region_year_rows(file_set, driver = "npp", region_col = "region", year_col = "year")
 
 # Loop across years...
 for (a_year in unique(file_set$year)){

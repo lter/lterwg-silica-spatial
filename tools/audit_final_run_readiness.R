@@ -56,28 +56,32 @@ out_dir <- env_or_default(
 )
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-combined_file <- latest_existing(c(
-  env_or_default("SILICA_FINAL_COMBINED_FILE", ""),
-  file.path(
-    data_root,
-    "si-extracted-data",
-    "all_data_extractions",
-    paste0("all-data_si-extract_4_", date_tag, "_", audit_label, ".csv")
-  ),
-  Sys.glob(file.path(
-    data_root,
-    "si-extracted-data",
-    "all_data_extractions",
-    "all-data_si-extract_4_*.csv"
-  )),
-  Sys.glob(file.path(
-    getwd(),
-    "generated_outputs",
-    "final_combine",
-    "*",
-    "canonical_plus_legacy_*.csv"
+explicit_combined_file <- env_or_default("SILICA_FINAL_COMBINED_FILE", "")
+combined_file <- if (nzchar(explicit_combined_file)) {
+  explicit_combined_file
+} else {
+  latest_existing(c(
+    file.path(
+      data_root,
+      "si-extracted-data",
+      "all_data_extractions",
+      paste0("all-data_si-extract_4_", date_tag, "_", audit_label, ".csv")
+    ),
+    Sys.glob(file.path(
+      data_root,
+      "si-extracted-data",
+      "all_data_extractions",
+      "all-data_si-extract_4_*.csv"
+    )),
+    Sys.glob(file.path(
+      getwd(),
+      "generated_outputs",
+      "final_combine",
+      "*",
+      "canonical_plus_legacy_*.csv"
+    ))
   ))
-))
+}
 esom_file <- env_or_default("SILICA_ESOM_FILE", file.path(data_root, "ESOM_Sites.csv"))
 reference_file <- env_or_default(
   "SILICA_REFERENCE_FILE",
@@ -339,7 +343,14 @@ required_dynamic_long <- joined %>%
     )
   )
 
-raw_coverage <- tibble(driver = character(), dynamic_region = character(), year = integer())
+raw_coverage <- tibble(
+  driver = character(),
+  dynamic_region = character(),
+  year = integer(),
+  region_file_count = integer(),
+  region_expected_file_count = integer(),
+  raw_missing_or_incomplete = logical()
+)
 if (file.exists(raw_coverage_file)) {
   raw_coverage <- read_loose_csv(raw_coverage_file) %>%
     transmute(
@@ -354,7 +365,14 @@ if (file.exists(raw_coverage_file)) {
 
 read_target_coverage <- function(path, group) {
   if (!file.exists(path)) {
-    return(tibble())
+    return(tibble(
+      target_coverage_group = character(),
+      driver = character(),
+      year = integer(),
+      target_file_count = integer(),
+      target_files_intersecting_bbox = integer(),
+      target_coverage_missing = logical()
+    ))
   }
   read_loose_csv(path) %>%
     transmute(

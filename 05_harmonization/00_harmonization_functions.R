@@ -343,6 +343,125 @@ add_max_daylength_values <- function(df, reference_path, kg_path = "") {
     left_join(lat_lookup[, c("Stream_ID", "max_daylength")], by = "Stream_ID")
 }
 
+# GEE/GLC land cover
+
+clean_gee_glc_class_name <- function(x) {
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("^_+|_+$", "", x)
+  x
+}
+
+first_available_character_col <- function(df, candidates) {
+  found <- intersect(candidates, names(df))
+  if (!length(found)) {
+    return(rep(NA_character_, nrow(df)))
+  }
+  as.character(df[[found[[1]]]])
+}
+
+# Add wide GEE/GLC simple-class land-cover columns by stream name.
+add_gee_glc_land_cover <- function(df, lulc_path) {
+  if (!file.exists(lulc_path)) {
+    stop("Missing GEE/GLC LULC file: ", lulc_path, call. = FALSE)
+  }
+
+  gee <- read.csv(lulc_path, stringsAsFactors = FALSE, check.names = FALSE)
+  required <- c("Stream_Name", "Year", "Simple_Class", "LandClass_sum")
+  missing_required <- setdiff(required, names(gee))
+  if (length(missing_required)) {
+    stop(
+      "GEE/GLC LULC file is missing required columns: ",
+      paste(missing_required, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  old_land_cols <- grep(
+    "^(gee_glc_|gee_lulc_|glc_|gee_glc_match$|gee_glc_match_method$)",
+    names(df),
+    value = TRUE
+  )
+  df_base <- df[, setdiff(names(df), old_land_cols), drop = FALSE]
+
+  gee_long <- gee %>%
+    transmute(
+      gee_stream_raw = as.character(Stream_Name),
+      .gee_stream_key = normalize_stream_key(Stream_Name),
+      Year = suppressWarnings(as.integer(Year)),
+      Simple_Class = clean_gee_glc_class_name(Simple_Class),
+      LandClass_sum = suppressWarnings(as.numeric(LandClass_sum))
+    ) %>%
+    filter(
+      !is.na(.gee_stream_key),
+      nzchar(.gee_stream_key),
+      !is.na(Year),
+      nzchar(Simple_Class)
+    )
+
+  gee_stream_variants <- gee_long %>%
+    distinct(.gee_stream_key, gee_stream_raw)
+
+  duplicate_gee_keys <- gee_stream_variants %>%
+    count(.gee_stream_key, name = "n_stream_name_variants") %>%
+    filter(n_stream_name_variants > 1)
+
+  unique_gee_keys <- setdiff(
+    unique(gee_stream_variants$.gee_stream_key),
+    duplicate_gee_keys$.gee_stream_key
+  )
+
+  # Exact matches preserve stream variants that normalize to the same key.
+  gee_exact <- gee_long %>%
+    mutate(.gee_match_id = paste0("exact:", gee_stream_raw))
+
+  gee_keyed <- gee_long %>%
+    filter(.gee_stream_key %in% unique_gee_keys) %>%
+    mutate(.gee_match_id = paste0("key:", .gee_stream_key))
+
+  gee_wide <- bind_rows(gee_exact, gee_keyed) %>%
+    group_by(.gee_match_id, Year, Simple_Class) %>%
+    summarise(
+      LandClass_sum = if (all(is.na(LandClass_sum))) NA_real_ else mean(LandClass_sum, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(.gee_col = paste("gee_glc", Year, Simple_Class, sep = "_")) %>%
+    select(.gee_match_id, .gee_col, LandClass_sum) %>%
+    pivot_wider(names_from = .gee_col, values_from = LandClass_sum)
+
+  stream_raw <- first_available_character_col(df_base, c("ESOM_Stream_Name", "Stream_Name"))
+  df_keyed <- df_base %>%
+    mutate(
+      .gee_stream_raw = stream_raw,
+      .gee_stream_key = normalize_stream_key(.gee_stream_raw),
+      gee_glc_match_method = case_when(
+        .gee_stream_raw %in% gee_long$gee_stream_raw ~ "exact stream name",
+        .gee_stream_key %in% unique_gee_keys ~ "normalized stream name",
+        TRUE ~ "no GEE/GLC match"
+      ),
+      .gee_match_id = case_when(
+        gee_glc_match_method == "exact stream name" ~ paste0("exact:", .gee_stream_raw),
+        gee_glc_match_method == "normalized stream name" ~ paste0("key:", .gee_stream_key),
+        TRUE ~ NA_character_
+      )
+    )
+
+  out <- left_join(df_keyed, gee_wide, by = ".gee_match_id", na_matches = "never") %>%
+    mutate(gee_glc_match = gee_glc_match_method != "no GEE/GLC match") %>%
+    select(-.gee_stream_raw, -.gee_stream_key, -.gee_match_id)
+
+  gee_value_cols <- grep("^gee_glc_[0-9]{4}_", names(out), value = TRUE)
+  after_candidates <- intersect(c("Shapefile_Name", "Discharge_File_Name", "Stream_Name", "Stream_ID"), names(out))
+  if (length(after_candidates)) {
+    out <- out %>%
+      relocate(
+        all_of(c("gee_glc_match_method", "gee_glc_match", gee_value_cols)),
+        .after = all_of(tail(after_candidates, 1))
+      )
+  }
+
+  out
+}
+
 # Basin slope fill
 
 # Fill missing basin slope values from the US and Krycklan fill tables
@@ -447,7 +566,9 @@ extract_one_annual_driver <- function(df, spec) {
   }
 
   if (spec$type == "date") {
-    date_value <- suppressWarnings(as.Date(out[[spec$value_col]]))
+    date_raw <- trimws(as.character(out[[spec$value_col]]))
+    date_raw[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", date_raw)] <- NA_character_
+    date_value <- suppressWarnings(as.Date(date_raw))
     out[[spec$value_col]] <- as.character(date_value)
     doy_col <- sub("_date$", "_doy", spec$value_col)
     out[[doy_col]] <- as.integer(format(date_value, "%j"))

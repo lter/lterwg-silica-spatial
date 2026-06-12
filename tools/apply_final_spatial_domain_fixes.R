@@ -215,7 +215,7 @@ fix_log <- list()
 has_actionable <- has_any_values(x, actionable_cols)
 
 # Same shapefile, same spatial data. Fill missing spatial fields from another
-# row with the same Shapefile_Name when there is a single clear source row.
+# row with the same Shapefile_Name when the source value is unambiguous.
 if (length(spatial_cols)) {
   shp <- norm_blank(x$Shapefile_Name)
   has_spatial <- has_any_values(x, spatial_cols)
@@ -232,18 +232,26 @@ if (length(spatial_cols)) {
         shp == shp[i] &
         has_spatial
     )
-    if (length(source_rows) != 1) {
+    if (!length(source_rows)) {
       next
     }
-    source_row <- source_rows[[1]]
+    row_copied <- FALSE
     for (col in spatial_cols) {
       old_value <- norm_blank(x[[col]][i])
-      new_value <- norm_blank(x[[col]][source_row])
+      source_values <- unique(norm_blank(x[[col]][source_rows]))
+      source_values <- source_values[!is.na(source_values)]
+      if (length(source_values) != 1) {
+        next
+      }
+      new_value <- source_values[[1]]
       if (is.na(old_value) && !is.na(new_value)) {
-        x[[col]][i] <- x[[col]][source_row]
+        x[[col]][i] <- new_value
+        row_copied <- TRUE
       }
     }
-    copied_rows <- c(copied_rows, i)
+    if (row_copied) {
+      copied_rows <- c(copied_rows, i)
+    }
   }
 
   fix_log[["duplicate_shapefile_copy"]] <- make_fix_log(
@@ -266,11 +274,9 @@ if (length(permafrost_cols)) {
       "Amazon",
       "Cameroon",
       "Congo Basin",
-      "GRO",
       "Guadeloupe",
       "HYBAM",
       "KRR",
-      "LMP",
       "LUQ",
       "Mali"
     )
@@ -330,11 +336,9 @@ if (length(snow_cols)) {
       "Amazon",
       "Cameroon",
       "Congo Basin",
-      "GRO",
       "Guadeloupe",
       "HYBAM",
       "KRR",
-      "LMP",
       "LUQ",
       "Mali"
     )

@@ -152,6 +152,98 @@ partial_dir <- silica_partial_extract_dir(raw_driver_dir, focal_driver, subset_t
 snow_reftable <- read.csv(file = file.path(raw_driver_dir, focal_driver, "snow_integer_codes.csv"))
 dplyr::glimpse(snow_reftable)
 
+snow_metric_cols <- setdiff(names(snow_reftable), "value")
+
+has_usable_snow_metrics <- function(x) {
+  if (!nrow(x) || !length(snow_metric_cols) || !all(snow_metric_cols %in% names(x))) {
+    return(FALSE)
+  }
+  any(rowSums(!is.na(x[, snow_metric_cols, drop = FALSE])) > 0)
+}
+
+target_sheds_for_snow_raster <- function(sheds_sf, raster_file) {
+  raster_file <- basename(raster_file)
+  target_map <- c(
+    "p01" = "GRO_Kolyma",
+    "p02" = "GRO_Lena",
+    "p03" = "GRO_Mackenzie",
+    "p04" = "GRO_Ob",
+    "p05" = "GRO_Yenisey",
+    "p06" = "GRO_Yukon"
+  )
+
+  part <- stringr::str_match(raster_file, "^fg-gro-snow-(p[0-9]+)-")[, 2]
+  if (!is.na(part) && part %in% names(target_map)) {
+    target_shp <- target_map[[part]]
+    out <- sheds_sf[toupper(as.character(sheds_sf$Shapefile_Name)) == toupper(target_shp), , drop = FALSE]
+    return(out)
+  }
+
+  if (startsWith(raster_file, "final-gap-north-america-usa-snow-v061-2025-20260607__")) {
+    return(sheds_sf[
+      toupper(as.character(sheds_sf$LTER)) == "LMP" &
+        toupper(as.character(sheds_sf$Shapefile_Name)) == "LMP",
+      ,
+      drop = FALSE
+    ])
+  }
+
+  sheds_sf
+}
+
+terra_snow_summary_fallback <- function(snow_rast, sheds_sf, snow_reftable, year_value, doy_value, raster_file = "") {
+  snow_bit_table <- data.frame(value = 0:255)
+  for (day_index in 1:8) {
+    snow_bit_table[[paste0("day_", day_index, "_snow_pres")]] <-
+      as.numeric(bitwAnd(snow_bit_table$value, bitwShiftL(1, day_index - 1L)) > 0)
+  }
+  snow_bit_table$snow_days <- rowSums(snow_bit_table[paste0("day_", 1:8, "_snow_pres")])
+  snow_bit_table <- snow_bit_table[, c("value", "snow_days", paste0("day_", 1:8, "_snow_pres"))]
+  metric_cols <- setdiff(names(snow_bit_table), "value")
+
+  sheds_for_extract <- target_sheds_for_snow_raster(sheds_sf, raster_file)
+  if (!nrow(sheds_for_extract)) {
+    return(data.frame())
+  }
+
+  sheds_meta <- sf::st_drop_geometry(sheds_for_extract) %>%
+    dplyr::select(LTER, Shapefile_Name)
+  sheds_vect <- terra::vect(sheds_for_extract)
+  if (!identical(terra::crs(sheds_vect), terra::crs(snow_rast))) {
+    sheds_vect <- terra::project(sheds_vect, terra::crs(snow_rast))
+  }
+
+  metric_layers <- lapply(metric_cols, function(metric_col) {
+    out <- terra::subst(
+      snow_rast,
+      from = snow_bit_table$value,
+      to = snow_bit_table[[metric_col]],
+      others = NA
+    )
+    names(out) <- metric_col
+    out
+  })
+  metric_rast <- terra::rast(metric_layers)
+
+  extracted <- terra::extract(metric_rast, sheds_vect, fun = mean, na.rm = TRUE)
+  if (!nrow(extracted)) {
+    return(data.frame())
+  }
+
+  extracted <- extracted %>%
+    dplyr::mutate(
+      LTER = sheds_meta$LTER[ID],
+      Shapefile_Name = sheds_meta$Shapefile_Name[ID],
+      year = as.numeric(year_value),
+      doy = as.numeric(doy_value),
+      .before = dplyr::all_of(metric_cols[1])
+    ) %>%
+    dplyr::select(-ID)
+
+  extracted %>%
+    dplyr::filter(rowSums(!is.na(dplyr::across(dplyr::all_of(metric_cols)))) > 0)
+}
+
 # Identify files we've already extracted from
 done_files <- data.frame("files" = dir(partial_dir)) %>%
   tidyr::separate(col = files, remove = F,
@@ -170,6 +262,19 @@ resume_partials <- tolower(Sys.getenv("SILICA_RESUME_PARTIALS", "false")) == "tr
 file_set <- if (merge_subset_outputs && !resume_partials) file_all else not_done
 file_set <- filter_target_year_rows(file_set, year_col = "year")
 file_set <- filter_target_region_year_rows(file_set, driver = "snow", region_col = "region", year_col = "year")
+raw_file_include_regex <- Sys.getenv("SILICA_RAW_FILE_INCLUDE_REGEX", unset = "")
+if (nzchar(raw_file_include_regex)) {
+  before_filter <- nrow(file_set)
+  file_set <- file_set %>%
+    dplyr::filter(stringr::str_detect(files, raw_file_include_regex))
+  message(
+    "Dynamic files restricted by SILICA_RAW_FILE_INCLUDE_REGEX: ",
+    nrow(file_set),
+    " of ",
+    before_filter,
+    " file rows"
+  )
+}
 # file_set <- file_all # Uncomment if want to (re-)do all extractions
 
 # Extract all possible information from each
@@ -237,10 +342,25 @@ for(annum in sort(unique(file_set$year))){
             call. = FALSE
           )
         }
-      )
+	      )
+
+      force_terra_fallback <- startsWith(basename(raster_path), "fg-gro-snow-")
+      if ((force_terra_fallback || !has_usable_snow_metrics(ex_data)) &&
+          tolower(Sys.getenv("SILICA_SNOW_TERRA_FALLBACK", "true")) == "true") {
+        message("using terra snow fallback for ", basename(raster_path))
+        ex_data <- terra_snow_summary_fallback(
+          snow_rast = snow_rast,
+          sheds_sf = sheds,
+          snow_reftable = snow_reftable,
+          year_value = simp_df$year[j],
+          doy_value = simp_df$doy[j],
+          raster_file = raster_path
+        )
+        message("terra fallback rows: ", nrow(ex_data))
+      }
       
-      # Add this dataframe to the list we made within the larger for loop
-      doy_list[[j]] <- ex_data
+	      # Add this dataframe to the list we made within the larger for loop
+	      doy_list[[j]] <- ex_data
       
       # End message
       message("Finished extracting raster ", j, " of ", nrow(simp_df)) }

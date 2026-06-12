@@ -17,17 +17,34 @@ first_existing_path <- function(candidates, label) {
 }
 
 latest_combined_file <- function(data_root) {
+  final_full_dataset_candidates <- list.files(
+    file.path(data_root, "final-data", "full-dataset"),
+    pattern = "^final_full_dataset_.*\\.csv$",
+    full.names = TRUE
+  )
+  final_full_dataset_candidates <- final_full_dataset_candidates[
+    file.exists(final_full_dataset_candidates)
+  ]
+  if (length(final_full_dataset_candidates)) {
+    return(final_full_dataset_candidates[which.max(file.info(final_full_dataset_candidates)$mtime)])
+  }
+
+  review_combined_candidates <- list.files(
+    file.path(data_root, "review", "harmonization"),
+    pattern = "^combined-spatial-dataset_.*\\.csv$",
+    full.names = TRUE
+  )
+  review_combined_candidates <- review_combined_candidates[
+    !grepl("_summary\\.csv$", basename(review_combined_candidates))
+  ]
+
   candidates <- c(
     list.files(
       file.path(data_root, "final-data", "full-dataset"),
       pattern = "^all-data_si-extract_.*\\.csv$",
       full.names = TRUE
     ),
-    list.files(
-      file.path(data_root, "review", "harmonization"),
-      pattern = "^combined-spatial-dataset_.*\\.csv$",
-      full.names = TRUE
-    ),
+    review_combined_candidates,
     list.files(
       file.path(data_root, "si-extracted-data", "all_data_extractions"),
       pattern = "^all-data_si-extract_[34]_.*\\.csv$",
@@ -123,10 +140,12 @@ wrtds_reference_file <- first_existing_path(
   "WRTDS reference file"
 )
 
-# Review-only lookup used to track which newly added sites still need land-cover
-# rows maintained in the external harmonization inputs.
+# GEE/GLC land-cover source. Prefer the current NOR27-added master, then fall
+# back to the previous dated and undated masters.
 lulc_file <- first_existing_path(
   c(
+    file.path(harmonization_master_dir, "DSi_LULC_filled_interpolated_Simple_20260524_nor27.csv"),
+    file.path(harmonization_master_dir, "DSi_LULC_filled_interpolated_Simple_20260524.csv"),
     file.path(harmonization_master_dir, "DSi_LULC_filled_interpolated_Simple.csv")
   ),
   "LULC harmonization file"
@@ -140,6 +159,7 @@ add_kg_class <- TRUE
 gap_fill_basin_slope <- TRUE
 gap_fill_elevation <- TRUE
 add_max_daylength <- TRUE
+add_gee_glc_land_cover_columns <- TRUE
 
 # Required base file check
 if (!file.exists(combined_file)) {

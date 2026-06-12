@@ -72,6 +72,9 @@ norm_lter <- function(x) {
     "Cameroon" = "Congo Basin",
     "Cameroon Site" = "Congo Basin",
     "Cameroon Sites" = "Congo Basin",
+    "congo-basin" = "Congo Basin",
+    "Congo-Basin" = "Congo Basin",
+    "Congo" = "Congo Basin",
     .default = x
   )
 }
