@@ -8,7 +8,7 @@ new_file <- if (length(args) >= 2) args[[2]] else ""
 out_dir <- if (length(args) >= 3) args[[3]] else file.path("generated_outputs", "combined_delta")
 
 if (!nzchar(old_file) || !nzchar(new_file)) {
-  stop("Usage: Rscript tools/summarize_combined_delta.R <old_file> <new_file> [out_dir]", call. = FALSE)
+  stop("Usage: Rscript tools/qaqc/summarize_combined_delta.R <old_file> <new_file> [out_dir]", call. = FALSE)
 }
 
 old <- read_combined_table(old_file)

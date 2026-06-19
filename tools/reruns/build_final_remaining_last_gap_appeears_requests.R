@@ -602,7 +602,7 @@ readme <- c(
   "3. `bash check_task_status.sh` until all tasks are `done`.",
   "4. `bash download_product_rasters_only.sh`",
   "5. `bash stage_upload_product_rasters_only.sh`",
-  "6. Back in the repo, rerun `Rscript tools/rebuild_final_remaining_dynamic_patch_locally.R` and the corrected staging audit.",
+  "6. Back in the repo, rerun `Rscript tools/reruns/rebuild_final_remaining_dynamic_patch_locally.R` and the corrected staging audit.",
   "",
   paste0("Default download root: `", download_root, "`."),
   paste0("Default flat raster root: `", flat_root, "`.")

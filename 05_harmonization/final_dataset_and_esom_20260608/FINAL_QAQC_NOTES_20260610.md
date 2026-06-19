@@ -106,7 +106,7 @@ March 2025 consistency checks:
 
 ## Reproducible Entry Points
 
-- `tools/build_final_harmonized_through_2025.R`
-- `tools/build_final_full_harmonized_from_march.R`
-- `tools/audit_fnconc_missingness.R`
-- `tools/audit_snow_permafrost_latitude_plausibility.R`
+- `tools/final_dataset/build_final_harmonized_through_2025.R`
+- `tools/final_dataset/build_final_full_harmonized_from_march.R`
+- `tools/qaqc/audit_fnconc_missingness.R`
+- `tools/qaqc/audit_snow_permafrost_latitude_plausibility.R`

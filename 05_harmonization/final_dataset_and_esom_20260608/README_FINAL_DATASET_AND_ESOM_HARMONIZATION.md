@@ -21,7 +21,7 @@ Core full-dataset harmonization files:
 
 ESOM subset/join builder:
 
-- `tools/build_esom_harmonized_from_full_dataset.R`
+- `tools/final_dataset/build_esom_harmonized_from_full_dataset.R`
 
 The archived `silica-spatial-controls-grl` repo is not the target. That repo belongs to the published GRL article record and should not receive this workflow.
 
@@ -31,7 +31,7 @@ Suggested target layout:
 
 ```text
 <target-repo>/Step1_Harmonization/current_full_and_esom_spatial_harmonization_20260608
-<target-repo>/tools/build_esom_harmonized_from_full_dataset.R
+<target-repo>/tools/final_dataset/build_esom_harmonized_from_full_dataset.R
 ```
 
 The full dataset is the primary product. ESOM is a downstream filtered/joined output built from the full harmonized dataset.

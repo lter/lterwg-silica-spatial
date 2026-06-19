@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) != 3) {
   stop(
-    "Usage: Rscript tools/merge_glc_lulc_update.R <master_lulc_csv> <new_glc_csv> <output_csv>",
+    "Usage: Rscript tools/final_dataset/merge_glc_lulc_update.R <master_lulc_csv> <new_glc_csv> <output_csv>",
     call. = FALSE
   )
 }

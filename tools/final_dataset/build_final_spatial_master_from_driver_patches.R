@@ -42,7 +42,7 @@ run_label <- if (length(args) >= 2 && nzchar(args[[2]])) args[[2]] else "aurora-
 run_date <- if (length(args) >= 3 && nzchar(args[[3]])) args[[3]] else format(Sys.Date(), "%Y%m%d")
 
 if (!nzchar(staging_dir)) {
-  stop("Usage: Rscript tools/build_final_spatial_master_from_driver_patches.R <staging_dir> [run_label] [run_date]", call. = FALSE)
+  stop("Usage: Rscript tools/final_dataset/build_final_spatial_master_from_driver_patches.R <staging_dir> [run_label] [run_date]", call. = FALSE)
 }
 
 staging_dir <- normalizePath(staging_dir, mustWork = TRUE)
