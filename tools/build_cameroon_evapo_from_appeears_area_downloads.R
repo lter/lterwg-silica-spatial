@@ -1,13 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(terra)
-  library(dplyr)
-  library(stringr)
-  library(tidyr)
-  library(purrr)
-  library(readr)
-})
+librarian::shelf(terra, dplyr, stringr, tidyr, purrr, readr)
 
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 

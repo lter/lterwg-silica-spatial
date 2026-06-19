@@ -1,10 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(sf)
-  library(terra)
-})
+librarian::shelf(dplyr, sf, terra)
 
 clean_key <- function(x) {
   x <- trimws(tolower(as.character(x)))

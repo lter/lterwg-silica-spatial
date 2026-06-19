@@ -8,14 +8,7 @@
 #
 # That approval-first list is what should be reviewed before running Aurora.
 # The broader manifest is still written so we keep the full reasoning trail.
-suppressPackageStartupMessages({
-  library(readr)
-  library(dplyr)
-  library(stringr)
-  library(tibble)
-  library(tidyr)
-  library(readxl)
-})
+librarian::shelf(readr, dplyr, stringr, tibble, tidyr, readxl)
 
 args <- commandArgs(trailingOnly = TRUE)
 source(file.path(getwd(), "tools", "workflow_paths.R"))

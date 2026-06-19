@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(readr)
-})
+librarian::shelf(dplyr, readr)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -84,9 +79,3 @@ write.csv(subset_rows, out_file, row.names = FALSE, na = "")
 cat("WROTE:", out_file, "\n", sep = "")
 cat("rows=", nrow(subset_rows), "\n", sep = "")
 cat("regions=", paste(sort(unique(subset_rows$Region)), collapse = ","), "\n", sep = "")
-print(
-  subset_rows %>%
-    count(Region, name = "n_sites") %>%
-    arrange(Region),
-  row.names = FALSE
-)

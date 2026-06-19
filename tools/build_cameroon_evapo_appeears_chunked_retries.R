@@ -1,8 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(jsonlite)
-})
+librarian::shelf(jsonlite)
 
 args <- commandArgs(trailingOnly = TRUE)
 run_date <- if (length(args) >= 1 && nzchar(args[[1]])) args[[1]] else format(Sys.Date(), "%Y%m%d")

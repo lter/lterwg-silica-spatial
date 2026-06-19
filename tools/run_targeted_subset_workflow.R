@@ -1,4 +1,3 @@
-
 args <- commandArgs(trailingOnly = TRUE)
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 
@@ -59,7 +58,7 @@ Sys.setenv(
 set_default_env("SILICA_REBUILD_ARTISANAL", "TRUE")
 set_default_env("SILICA_REBUILD_HYDROSHEDS", "TRUE")
 
-library(googledrive)
+librarian::shelf(googledrive)
 assignInNamespace(
   x = "drive_upload",
   value = function(...) {

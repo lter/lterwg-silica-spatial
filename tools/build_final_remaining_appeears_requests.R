@@ -1,10 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(sf)
-  library(jsonlite)
-})
+librarian::shelf(dplyr, sf, jsonlite)
 
 env_or_default <- function(env_name, default_value) {
   value <- trimws(Sys.getenv(env_name, unset = ""))
@@ -427,7 +421,7 @@ refresh_lines <- c(
   "",
   "unset EDL_PASS",
   "",
-  "cat \"$TOKEN_JSON\" | Rscript -e 'x <- jsonlite::fromJSON(file(\"stdin\")); print(x[names(x) != \"token\"]); cat(\"token_chars=\", nchar(x$token), \"\\n\", sep=\"\")'",
+  "cat \"$TOKEN_JSON\" | Rscript -e 'x <- jsonlite::fromJSON(file(\"stdin\")); cat(\"token_chars=\", nchar(x$token), \"\\n\", sep=\"\")'",
   "export APPEEARS_TOKEN=\"$(cat \"$TOKEN_JSON\" | Rscript -e 'x <- jsonlite::fromJSON(file(\"stdin\")); if (!is.null(x$token)) cat(x$token) else quit(status=1)' | tr -d '\\r\\n')\"",
   "echo \"Token saved to $TOKEN_JSON.\""
 )
@@ -550,5 +544,4 @@ writeLines(readme, file.path(out_dir, "README.md"))
 
 cat("WROTE:", out_dir, "\n", sep = "")
 cat("WROTE:", manifest_path, "\n", sep = "")
-cat("\nRequest groups:\n")
-print(group_summary_df, row.names = FALSE)
+cat("request_groups=", nrow(group_summary_df), "\n", sep = "")

@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 source("tools/subset_and_output_helpers.R")
 
 arg_or_default <- function(args, i, default) {
@@ -480,4 +478,3 @@ write.csv(history_flags, paths["history_flags"], row.names = FALSE, na = "")
 
 cat("WROTE:\n")
 cat(paste0(names(paths), "=", paths, collapse = "\n"), "\n")
-print(summary, row.names = FALSE)

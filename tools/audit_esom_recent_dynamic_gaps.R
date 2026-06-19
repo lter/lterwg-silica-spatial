@@ -1,10 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-  library(stringr)
-})
+librarian::shelf(dplyr, tidyr, stringr)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -236,8 +230,5 @@ cat("WROTE:", out_files[["gap_sites"]], "\n", sep = "")
 cat("WROTE:", out_files[["summary_by_lter_driver"]], "\n", sep = "")
 cat("WROTE:", out_files[["summary_by_driver_year"]], "\n", sep = "")
 
-cat("\n=== Missing recent driver-years by driver/year and match status ===\n")
-print(as.data.frame(summary_by_driver_year), row.names = FALSE)
-
-cat("\n=== Top missing recent driver-years by LTER/driver/year ===\n")
-print(as.data.frame(head(summary_by_lter_driver, 80)), row.names = FALSE)
+cat("missing_recent_driver_year_groups=", nrow(summary_by_driver_year), "\n", sep = "")
+cat("missing_recent_lter_driver_groups=", nrow(summary_by_lter_driver), "\n", sep = "")

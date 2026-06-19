@@ -1,8 +1,6 @@
 # Build one combined table that keeps all old rows, all new rows, and the
 # shared rows merged together on a common site key
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source(file.path("04_combine_qaqc", "00_qaqc_config.R"))
 source(file.path("04_combine_qaqc", "00_qaqc_functions.R"))

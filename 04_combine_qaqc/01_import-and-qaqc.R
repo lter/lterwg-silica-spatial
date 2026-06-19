@@ -12,9 +12,7 @@
 # old = the legacy combined spatial extraction file
 # new = the current combined local spatial extraction file
 
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source(file.path("04_combine_qaqc", "00_qaqc_config.R"))
 source(file.path("04_combine_qaqc", "00_qaqc_functions.R"))

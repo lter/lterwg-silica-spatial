@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(sf)
-})
+librarian::shelf(dplyr, sf)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -125,4 +120,3 @@ cat("WROTE:", lter_summary_file, "\n", sep = "")
 cat("WROTE:", reason_summary_file, "\n", sep = "")
 cat("target_sites=", nrow(targets), "\n", sep = "")
 cat("active_watershed_rows=", sum(x$.has_active_watershed), "\n", sep = "")
-print(as.data.frame(summary_by_reason))

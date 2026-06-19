@@ -1,8 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -126,7 +122,6 @@ write_driver_files <- function(driver_name) {
   cat("WROTE:", region_year_path, "\n", sep = "")
   cat(driver_name, "_sites=", nrow(subset_out), "\n", sep = "")
   cat(driver_name, "_region_years=", nrow(region_year_out), "\n", sep = "")
-  print(as.data.frame(region_year_out %>% count(region, name = "n_years") %>% arrange(region)))
 }
 
 for (driver_name in c("evapo", "greenup", "npp", "snow")) {

@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 audit_date <- Sys.getenv("SILICA_GEE_GLC_AUDIT_DATE", unset = format(Sys.Date(), "%Y%m%d"))
 
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
@@ -164,4 +162,3 @@ write.csv(flags_out, flags_file, row.names = FALSE, na = "")
 cat("WROTE:", summary_file, "\n", sep = "")
 cat("WROTE:", missing_file, "\n", sep = "")
 cat("WROTE:", flags_file, "\n", sep = "")
-print(stats_out, row.names = FALSE)

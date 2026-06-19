@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(readr)
-})
+librarian::shelf(dplyr, readr)
 
 date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
@@ -214,4 +209,3 @@ write_csv(summary, summary_out)
 message("WROTE:", all_out)
 message("WROTE:", flagged_out)
 message("WROTE:", summary_out)
-print(summary)

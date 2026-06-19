@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-})
+librarian::shelf(dplyr, tidyr)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -166,8 +161,5 @@ cat("WROTE:", detail_file, "\n", sep = "")
 cat("WROTE:", action_file, "\n", sep = "")
 cat("WROTE:", site_file, "\n", sep = "")
 cat("WROTE:", ready_file, "\n", sep = "")
-
-cat("\n=== Annual readiness summary ===\n")
-print(ready_summary, row.names = FALSE)
-cat("\n=== Action summary ===\n")
-print(summary_by_action, row.names = FALSE)
+cat("readiness_rows=", nrow(ready_summary), "\n", sep = "")
+cat("action_rows=", nrow(summary_by_action), "\n", sep = "")

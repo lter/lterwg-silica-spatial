@@ -1,9 +1,7 @@
 ## Optional setup checker for new machines.
 ## This is not required for normal reruns once the repo is already working.
 
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 

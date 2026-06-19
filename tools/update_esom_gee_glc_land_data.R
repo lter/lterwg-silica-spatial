@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-})
+librarian::shelf(dplyr, tidyr)
 
 source("tools/subset_and_output_helpers.R")
 

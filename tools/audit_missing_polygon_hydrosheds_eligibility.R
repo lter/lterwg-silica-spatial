@@ -1,8 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -155,6 +151,4 @@ cat("WROTE:", detail_file, "\n", sep = "")
 cat("WROTE:", summary_file, "\n", sep = "")
 cat("WROTE:", subset_file, "\n", sep = "")
 
-cat("\n=== Missing polygon HydroSHEDS eligibility ===\n")
-print(summary, row.names = FALSE)
 cat("\nhydrosheds_candidate_rows=", nrow(hydrosheds_subset), "\n", sep = "")

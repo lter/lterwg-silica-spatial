@@ -1,6 +1,4 @@
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))

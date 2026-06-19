@@ -1,11 +1,7 @@
-#!/usr/bin/env Rscript
-
 source("tools/build_final_harmonized_through_2025.R")
 quit(save = "no", status = 0)
 
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
 excluded_model_columns <- c("NOx", "P")
@@ -547,5 +543,3 @@ cat("WROTE:", esom_missing_file, "\n", sep = "")
 cat("WROTE:", esom_duplicate_file, "\n", sep = "")
 cat("WROTE:", esom_summary_file, "\n", sep = "")
 cat("WROTE:", esom_expanded_snow_summary_file, "\n", sep = "")
-print(audit_summary, row.names = FALSE)
-print(esom_summary, row.names = FALSE)

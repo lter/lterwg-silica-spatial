@@ -1,8 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 env_or_default <- function(env_name, default_value) {
   value <- trimws(Sys.getenv(env_name, unset = ""))
@@ -410,4 +406,3 @@ write.csv(fix_summary, summary_file, row.names = FALSE, na = "")
 cat("WROTE:", out_file, "\n", sep = "")
 cat("WROTE:", fix_log_file, "\n", sep = "")
 cat("WROTE:", summary_file, "\n", sep = "")
-print(fix_summary, row.names = FALSE)

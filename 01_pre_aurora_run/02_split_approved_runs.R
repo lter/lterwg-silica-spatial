@@ -1,6 +1,4 @@
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 args <- commandArgs(trailingOnly = TRUE)
 source(file.path("01_pre_aurora_run", "00_pre_aurora_paths.R"))

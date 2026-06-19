@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(sf)
-  library(jsonlite)
-})
+librarian::shelf(sf, jsonlite)
 
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 
@@ -280,7 +275,7 @@ token_lines <- c(
   "  \"https://appeears.earthdatacloud.nasa.gov/api/login\" \\",
   "  -o \"${TOKEN_JSON}\"",
   "unset EDL_PASS",
-  "Rscript -e 'x <- jsonlite::fromJSON(commandArgs(TRUE)[1]); print(x[names(x) != \"token\"]); cat(\"token_chars=\", nchar(x$token), \"\\n\", sep=\"\")' \"${TOKEN_JSON}\""
+  "Rscript -e 'x <- jsonlite::fromJSON(commandArgs(TRUE)[1]); cat(\"token_chars=\", nchar(x$token), \"\\n\", sep=\"\")' \"${TOKEN_JSON}\""
 )
 writeLines(token_lines, token_script)
 Sys.chmod(token_script, mode = "0755")
@@ -315,7 +310,7 @@ status_lines <- c(
   "  [[ -z \"${task_id}\" ]] && continue",
   "  response=\"$(curl -sS --fail-with-body -H \"Authorization: Bearer ${APPEEARS_TOKEN}\" \"${API_ROOT}/task/${task_id}\")\"",
   "  status=\"$(printf '%s' \"${response}\" | Rscript -e 'x <- jsonlite::fromJSON(file(\"stdin\")); cat(if (!is.null(x$status)) x$status else \"\")')\"",
-  "  escaped_response=\"$(printf '%s' \"${response}\" | python3 -c 'import csv,sys; csv.writer(sys.stdout).writerow([sys.stdin.read()])' | sed 's/,$//')\"",
+  "  escaped_response=\"$(printf '%s' \"${response}\" | Rscript -e 'x <- paste(readLines(\"stdin\", warn = FALSE), collapse = \"\\n\"); cat(capture.output(write.csv(data.frame(x = x), row.names = FALSE, col.names = FALSE)))')\"",
   "  printf '\"%s\",\"%s\",\"%s\",%s\\n' \"${task_name}\" \"${task_id}\" \"${status}\" \"${escaped_response}\" >> \"${OUT_CSV}\"",
   "  printf '%s %s %s\\n' \"${status}\" \"${task_id}\" \"${task_name}\"",
   "done",

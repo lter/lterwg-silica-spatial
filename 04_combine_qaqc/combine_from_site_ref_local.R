@@ -1,12 +1,7 @@
 # This script rebuilds one combined local spatial table from the current
 # driver CSVs plus the site reference table. It also writes a few simple
 # review files under the configured review root so we can see what is still missing.
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(readxl)
-  library(stringr)
-  library(sf)
-})
+librarian::shelf(dplyr, readxl, stringr, sf)
 
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 source(file.path("04_combine_qaqc", "00_qaqc_functions.R"))

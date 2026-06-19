@@ -1,8 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")
@@ -187,5 +183,5 @@ write.csv(unmatched_wrtds, unmatched_file, row.names = FALSE, na = "")
 cat("WROTE:", site_file, "\n", sep = "")
 cat("WROTE:", year_file, "\n", sep = "")
 cat("WROTE:", unmatched_file, "\n", sep = "")
-print(table(site_audit$missing_reason, useNA = "ifany"))
-print(year_audit, row.names = FALSE)
+cat("site_audit_rows=", nrow(site_audit), "\n", sep = "")
+cat("year_audit_rows=", nrow(year_audit), "\n", sep = "")

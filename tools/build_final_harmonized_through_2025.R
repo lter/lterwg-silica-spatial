@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(sf)
-})
+librarian::shelf(dplyr, sf)
 
 date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
 year_min <- as.integer(Sys.getenv("SILICA_FINAL_YEAR_MIN", unset = "2002"))
@@ -780,5 +775,3 @@ cat("WROTE:", full_spatial_file, "\n", sep = "")
 cat("WROTE:", esom_out_file, "\n", sep = "")
 cat("WROTE:", esom_expanded_snow_file, "\n", sep = "")
 cat("WROTE:", esom_spatial_file, "\n", sep = "")
-print(full_summary, row.names = FALSE)
-print(esom_summary, row.names = FALSE)

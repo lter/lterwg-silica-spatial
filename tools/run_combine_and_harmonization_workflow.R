@@ -1,8 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(tools)
-})
+librarian::shelf(tools)
 
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 

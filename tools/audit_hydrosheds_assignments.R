@@ -180,18 +180,3 @@ cat("WROTE:", full_file, "\n", sep = "")
 cat("WROTE:", flag_file, "\n", sep = "")
 cat("hydrosheds_rows=", nrow(audit), "\n", sep = "")
 cat("flagged_rows=", nrow(flagged), "\n", sep = "")
-
-print(
-  audit %>%
-    dplyr::count(likely_problem, sort = TRUE)
-)
-
-print(
-  flagged %>%
-    dplyr::select(
-      LTER, Stream_Name, Shapefile_Name,
-      Latitude, Longitude,
-      centroid_lon, centroid_lat,
-      centroid_distance_km, point_in_polygon, likely_problem
-    )
-)

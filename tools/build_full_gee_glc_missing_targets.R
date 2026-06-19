@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(sf)
-})
+librarian::shelf(dplyr, sf)
 
 sf::sf_use_s2(FALSE)
 
@@ -160,4 +155,3 @@ cat("combined_rows=", nrow(combined), "\n", sep = "")
 cat("missing_gee_glc_stream_rows=", sum(!combined_keyed$has_gee_glc), "\n", sep = "")
 cat("missing_gee_glc_with_active_geometry=", nrow(target_csv), "\n", sep = "")
 cat("duplicate_normalized_gee_stream_keys=", nrow(duplicate_gee_keys), "\n", sep = "")
-print(as.data.frame(summary_by_lter))

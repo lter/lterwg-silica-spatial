@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 date_tag <- Sys.getenv("SILICA_MONTHLY_REAVERAGE_DATE", unset = "20260608")
 
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
@@ -163,6 +161,3 @@ write.csv(audit, audit_file, row.names = FALSE, na = "")
 cat("WROTE:", final_file, "\n", sep = "")
 cat("WROTE:", audit_file, "\n", sep = "")
 cat("corrected_cells=", nrow(audit), "\n", sep = "")
-if (nrow(audit)) {
-  print(as.data.frame(table(audit$driver, audit$LTER)), row.names = FALSE)
-}

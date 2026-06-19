@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 
 root <- resolve_silica_data_root()
@@ -85,8 +83,4 @@ out_file <- file.path(out_dir, "dynamic_raw_recent_years_by_region_20260522.csv"
 write.csv(audit, out_file, row.names = FALSE, na = "")
 
 cat("WROTE:", out_file, "\n", sep = "")
-cat("\nIncomplete recent-year raw groups:\n")
-print(
-  audit[audit$missing_or_incomplete, c("driver", "region", "year", "file_count", "expected_file_count")],
-  row.names = FALSE
-)
+cat("incomplete_recent_raw_groups=", sum(audit$missing_or_incomplete), "\n", sep = "")

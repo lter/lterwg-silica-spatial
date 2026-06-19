@@ -1,11 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-  library(stringr)
-  library(readr)
-})
+librarian::shelf(dplyr, tidyr, stringr, readr)
 
 source(file.path(getwd(), "04_combine_qaqc", "00_qaqc_functions.R"))
 

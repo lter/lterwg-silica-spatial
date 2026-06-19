@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(sf)
-  library(jsonlite)
-})
+librarian::shelf(sf, jsonlite)
 
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 

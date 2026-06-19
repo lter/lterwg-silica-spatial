@@ -1,10 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(sf)
-  library(terra)
-})
+librarian::shelf(dplyr, sf, terra)
 
 sf::sf_use_s2(FALSE)
 
@@ -104,9 +98,6 @@ cat("stream_regex=", stream_regex, "\n", sep = "")
 cat("shape_regex=", shape_regex, "\n", sep = "")
 cat("extract_values=", extract_values, "\n", sep = "")
 cat("target_polygon_rows=", nrow(target), "\n", sep = "")
-print(st_drop_geometry(target[, intersect(c("LTER", "Stream_Name", "Shapefile_Name"), names(target))]))
-cat("\nTarget polygon bbox:\n")
-print(st_bbox(target))
 
 find_driver_files <- function(driver, product_pattern, year) {
   d <- file.path(raw_driver_dir, driver, region)
@@ -215,8 +206,7 @@ summary <- bind_rows(lapply(names(drivers), function(driver_name) {
   }))
 }))
 
-cat("\n== Summary ==\n")
-print(summary)
+cat("summary_rows=", nrow(summary), "\n", sep = "")
 
 if (nzchar(summary_csv)) {
   dir.create(dirname(summary_csv), recursive = TRUE, showWarnings = FALSE)

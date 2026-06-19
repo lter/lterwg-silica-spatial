@@ -1,9 +1,4 @@
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(data.table)
-  library(tidyr)
-  library(stringr)
-})
+librarian::shelf(dplyr, data.table, tidyr, stringr)
 
 # Shared cleanup from combine_qaqc
 source(file.path("04_combine_qaqc", "00_qaqc_functions.R"))

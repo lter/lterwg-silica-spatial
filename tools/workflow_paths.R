@@ -16,9 +16,7 @@ silica_default_box_data_root <- function() {
 load_workflow_packages <- function(packages) {
   use_project_rlibs()
   for (pkg in packages) {
-    suppressPackageStartupMessages(
-      library(pkg, character.only = TRUE)
-    )
+    librarian::shelf(pkg, quiet = TRUE)
   }
 }
 

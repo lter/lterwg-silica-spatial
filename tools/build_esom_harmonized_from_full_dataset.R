@@ -1,8 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source("tools/subset_and_output_helpers.R")
 
@@ -114,4 +110,3 @@ cat("WROTE:", out_file, "\n", sep = "")
 cat("WROTE:", missing_file, "\n", sep = "")
 cat("WROTE:", duplicate_file, "\n", sep = "")
 cat("WROTE:", summary_file, "\n", sep = "")
-print(summary, row.names = FALSE)

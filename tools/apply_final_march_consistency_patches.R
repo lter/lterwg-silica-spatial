@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 source("tools/subset_and_output_helpers.R")
 
 arg_or_default <- function(args, i, default) {
@@ -251,13 +249,3 @@ write.csv(patch_log_df, log_file, row.names = FALSE, na = "")
 cat("WROTE:", out_file, "\n", sep = "")
 cat("WROTE:", log_file, "\n", sep = "")
 cat("patched_cells=", nrow(patch_log_df), "\n", sep = "")
-if (nrow(patch_log_df)) {
-  print(
-    aggregate(
-      column ~ LTER + Stream_Name + reason,
-      data = patch_log_df,
-      FUN = length
-    ),
-    row.names = FALSE
-  )
-}

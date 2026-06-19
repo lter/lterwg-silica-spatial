@@ -1,11 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-  library(readr)
-  library(stringr)
-})
+librarian::shelf(dplyr, tidyr, readr, stringr)
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -141,7 +134,7 @@ unmapped_classes <- source_years %>%
 if (nrow(unmapped_classes) > 0) {
   stop(
     "Unmapped GLC classes remain after applying the full-to-simple crosswalk: ",
-    paste(capture.output(print(unmapped_classes, n = Inf)), collapse = " "),
+    paste(format(as.data.frame(unmapped_classes)), collapse = " "),
     call. = FALSE
   )
 }

@@ -8,9 +8,7 @@
 # Keep this script source-safe. New users should be able to run it from a clean
 # R session or from the end-to-end wrapper without losing already-loaded state.
 
-suppressPackageStartupMessages({
-  library(dplyr)
-})
+librarian::shelf(dplyr)
 
 source(file.path("05_harmonization", "00_harmonization_config.R"))
 source(file.path("05_harmonization", "00_harmonization_functions.R"))

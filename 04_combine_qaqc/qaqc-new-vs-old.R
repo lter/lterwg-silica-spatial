@@ -1,10 +1,6 @@
 # Compare the older combined table to the newer local combined table, then
 # write review files for shared sites and new-only sites
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(ggplot2)
-  library(readxl)
-})
+librarian::shelf(dplyr, ggplot2, readxl)
 
 source(file.path("04_combine_qaqc", "00_qaqc_config.R"))
 source(file.path("04_combine_qaqc", "00_qaqc_functions.R"))

@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 source(file.path(getwd(), "tools", "workflow_paths.R"))
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -104,21 +102,5 @@ out_file <- file.path(out_dir, paste0("dynamic_raw_all_years_by_region_", date_t
 write.csv(audit, out_file, row.names = FALSE, na = "")
 
 cat("WROTE:", out_file, "\n", sep = "")
-
-cat("\nIncomplete raw groups within product windows:\n")
-print(
-  audit[audit$missing_or_incomplete, c(
-    "driver",
-    "region",
-    "year",
-    "file_count",
-    "expected_file_count"
-  )],
-  row.names = FALSE
-)
-
-cat("\nRows outside required workflow windows:\n")
-print(
-  audit[!audit$within_product_window, c("driver", "region", "year", "file_count")],
-  row.names = FALSE
-)
+cat("incomplete_raw_groups=", sum(audit$missing_or_incomplete), "\n", sep = "")
+cat("rows_outside_required_windows=", sum(!audit$within_product_window), "\n", sep = "")

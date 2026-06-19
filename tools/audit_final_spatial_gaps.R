@@ -1,9 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(sf)
-})
+librarian::shelf(dplyr, sf)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -297,8 +292,5 @@ cat("WROTE:", out_files[["esom_audit"]], "\n", sep = "")
 cat("WROTE:", out_files[["esom_summary"]], "\n", sep = "")
 cat("WROTE:", out_files[["esom_open_sites"]], "\n", sep = "")
 
-cat("\n=== ESOM spatial gap summary ===\n")
-print(as.data.frame(esom_summary))
-
-cat("\n=== Final spatial gap summary ===\n")
-print(as.data.frame(final_summary))
+cat("esom_summary_rows=", nrow(esom_summary), "\n", sep = "")
+cat("final_summary_rows=", nrow(final_summary), "\n", sep = "")

@@ -1,10 +1,4 @@
-#!/usr/bin/env Rscript
-
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-  library(stringr)
-})
+librarian::shelf(dplyr, tidyr, stringr)
 
 source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
@@ -599,63 +593,16 @@ cat("WROTE:", out_files[["extract_or_merge_summary"]], "\n", sep = "")
 cat("WROTE:", out_files[["zero_fill_summary"]], "\n", sep = "")
 cat("WROTE:", out_files[["polygon_summary"]], "\n", sep = "")
 
-cat("\n=== Final Run Readiness ===\n")
-print(as.data.frame(readiness_summary), row.names = FALSE)
-
-cat("\n=== Raw/AppEEARS Or Download Needed ===\n")
-if (nrow(raw_action_summary)) {
-  print(
-    as.data.frame(raw_action_summary %>%
-      select(blocker_class, pending_status, dynamic_region, driver, years, n_missing_site_years, n_sites)),
-    row.names = FALSE
-  )
-} else {
-  cat("<none>\n")
-}
-
-if (nrow(unknown_region_summary)) {
-  cat("\n=== Unknown Or Unaudited Dynamic Region ===\n")
-  print(
-    as.data.frame(unknown_region_summary %>%
-      select(blocker_class, dynamic_region, driver, years, n_missing_site_years, n_sites)),
-    row.names = FALSE
-  )
-}
-
-cat("\n=== Extract Or Merge Needed (Raw Exists) ===\n")
-if (nrow(extract_or_merge_summary)) {
-  print(
-    as.data.frame(extract_or_merge_summary %>%
-      select(dynamic_region, driver, years, n_missing_site_years, n_sites) %>%
-      arrange(desc(n_missing_site_years)) %>%
-      head(40)),
-    row.names = FALSE
-  )
-} else {
-  cat("<none>\n")
-}
-
 zero_fill_summary <- gap_actions %>%
   filter(blocker_class == "zero_fill_needed") %>%
   summarise_gap_groups()
 
-cat("\n=== Zero Fill Needed (No AppEEARS Pull) ===\n")
-if (nrow(zero_fill_summary)) {
-  print(
-    as.data.frame(zero_fill_summary %>%
-      select(dynamic_region, driver, years, n_missing_site_years, n_sites)),
-    row.names = FALSE
-  )
-} else {
-  cat("<none>\n")
-}
-
-cat("\n=== Polygon Or Reference Gaps ===\n")
-if (nrow(polygon_summary)) {
-  print(as.data.frame(head(polygon_summary, 40)), row.names = FALSE)
-} else {
-  cat("<none>\n")
-}
+cat("readiness_rows=", nrow(readiness_summary), "\n", sep = "")
+cat("raw_action_rows=", nrow(raw_action_summary), "\n", sep = "")
+cat("unknown_region_rows=", nrow(unknown_region_summary), "\n", sep = "")
+cat("extract_or_merge_rows=", nrow(extract_or_merge_summary), "\n", sep = "")
+cat("zero_fill_rows=", nrow(zero_fill_summary), "\n", sep = "")
+cat("polygon_rows=", nrow(polygon_summary), "\n", sep = "")
 
 if (any(readiness_summary$status == "FAIL")) {
   cat("\nVERDICT: NOT_FINAL_YET\n")

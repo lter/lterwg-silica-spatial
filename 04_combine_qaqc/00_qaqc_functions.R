@@ -1,8 +1,6 @@
 # QA/QC helper functions for combining old and new extraction outputs
 
-suppressPackageStartupMessages({
-  library(stringr)
-})
+librarian::shelf(stringr)
 
 # Shared path helpers used across the broader extraction workflow
 source(file.path(getwd(), "tools", "workflow_paths.R"))

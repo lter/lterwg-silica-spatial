@@ -1,8 +1,4 @@
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(readxl)
-  library(ggplot2)
-})
+librarian::shelf(dplyr, readxl, ggplot2)
 
 source(file.path("04_combine_qaqc", "00_qaqc_config.R"))
 source(file.path("04_combine_qaqc", "00_qaqc_functions.R"))
