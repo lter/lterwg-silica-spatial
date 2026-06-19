@@ -108,5 +108,5 @@ March 2025 consistency checks:
 
 - `tools/final_dataset/build_final_harmonized_through_2025.R`
 - `tools/final_dataset/build_final_full_harmonized_from_march.R`
-- `tools/qaqc/audit_fnconc_missingness.R`
-- `tools/qaqc/audit_snow_permafrost_latitude_plausibility.R`
+- `tools/qaqc/final_checks/audit_fnconc_missingness.R`
+- `tools/qaqc/final_checks/audit_snow_permafrost_latitude_plausibility.R`
