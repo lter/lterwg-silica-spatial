@@ -20,7 +20,7 @@
 librarian::shelf(tidyverse, magrittr, googledrive, sf, supportR, readxl)
 
 # Do not clear the session/environment here. This script may be sourced by the
-# workflow.
+# workflow
 
 source(file = file.path(getwd(), "tools", "workflow_paths.R"))
 source(file = file.path(getwd(), "tools", "subset_and_output_helpers.R"))
@@ -150,7 +150,7 @@ sf::st_write(obj = all_shps, delete_layer = T,
              dsn = silica_sitecoord_output_file(path, "silica-watersheds", "shp"))
 
 # Avoid clearing the caller environment when this script is sourced from
-# tools/run_targeted_subset_workflow.R.
+# 03_spatial_extraction/wrappers/run-targeted-subset-workflow.R
 invisible(gc())
 
 # End ----

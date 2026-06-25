@@ -1,19 +1,31 @@
-# Spatial Extraction Workflow
+# LTER Silica Spatial Workflow
 
-This repo holds the code we use to build watershed polygons, extract spatial
-drivers, and combine/check those outputs before they go into the harmonized
-silica dataset.
+This is the original LTER working-group repository for the silica spatial
+workflow.
 
-## Folder Map
+Future Google Earth Engine workflows should stay separate from this final
+AppEEARS/NASA-based dataset.
 
-- `01_pre_aurora_run/`
-  Figure out what needs to be rerun before sending anything to Aurora.
+## Current Data Folder
+
+The final annual file lives in Box:
+
+```text
+/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/final_annual_dataset_20260608.csv
+```
+
+Older near-duplicate final outputs were retired during cleanup.
+
+## Repo Folders
 
 - `02_watershed_delineation/`
   Build or update watershed polygons.
 
 - `03_spatial_extraction/`
   Run the driver extractions from watershed polygons.
+  Run lists live in `03_spatial_extraction/run-lists/`.
+  R workflow wrappers live in `03_spatial_extraction/wrappers/`.
+  The Aurora launcher is kept in `03_spatial_extraction/aurora/`.
 
 - `04_combine_qaqc/`
   Rebuild the combined spatial table and check it against older outputs.
@@ -22,30 +34,42 @@ silica dataset.
   Format checked spatial data for the final harmonized dataset.
 
 - `tools/`
-  Shared helper scripts and one-off audit/build scripts used by the folders
-  above.
+  Shared helpers, workflow entry points, and the small final QA/QC set.
 
-## Most Common Starting Points
+`generated_outputs/` is disposable local output, not workflow code. Do not use
+old generated shell scripts as documentation for Aurora or AppEEARS runs.
 
-- Planning a new Aurora run:
-  `01_pre_aurora_run/README.md`
+## Usual Commands
 
-- Running extractions:
-  `03_spatial_extraction/README.md`
+Build the run-list review files:
 
-- Rebuilding and checking the combined spatial table:
-  `04_combine_qaqc/README.md`
+```bash
+Rscript 03_spatial_extraction/run-lists/01_build_run_candidates.R
+Rscript 03_spatial_extraction/run-lists/02_split_approved_runs.R
+Rscript 03_spatial_extraction/run-lists/03_print_aurora_handoff.R
+```
 
-- Running harmonization:
-  `05_harmonization/README.md`
+Keep this step because it records why sites were sent as full-record runs versus
+new-year update runs.
 
-## Name Matching
+Rebuild and check the combined spatial table, then run harmonization:
 
-Some site and stream names changed between older and newer files. These files
-record the known fixes:
+```bash
+Rscript tools/run_combine_and_harmonization_workflow.R
+```
 
-- `tools/lter_name_aliases.csv`
-- `tools/stream_name_aliases.csv`
+Rebuild the current final annual dataset:
+
+```bash
+Rscript tools/final_dataset/build_final_harmonized_through_2025.R
+```
+
+## Notes
+
+- Name cleanup tables live in `tools/name_keys.R`.
+- The Aurora shell launcher is `03_spatial_extraction/aurora/run-spatial-extraction-aurora.sh`.
+- Do not put generated CSVs, plots, or run debris in this repo.
+- Do not touch `data-workflow` or `data-documentation` during this cleanup pass.
 
 ## Related Repositories
 

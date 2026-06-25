@@ -102,9 +102,7 @@ silica_extracted_data_dir <- function(root_path) {
     env_var = "SILICA_EXTRACTED_DIR",
     path_candidates = c(
       file.path(root_path, "extracted-data"),
-      file.path(root_path, "si-extracted-data"),
-      file.path(root_path, "silica-shapefiles", "extracted-data"),
-      file.path(root_path, "silica-shapefiles", "si-extracted-data")
+      file.path(root_path, "silica-shapefiles", "extracted-data")
     )
   )
 }

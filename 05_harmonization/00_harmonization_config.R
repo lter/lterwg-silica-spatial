@@ -17,17 +17,19 @@ first_existing_path <- function(candidates, label) {
 }
 
 latest_combined_file <- function(data_root) {
-  final_full_dataset_candidates <- list.files(
-    file.path(data_root, "final-data", "full-dataset"),
-    pattern = "^final_full_dataset_.*\\.csv$",
-    full.names = TRUE
+  extracted_dirs <- c(
+    file.path(data_root, "extracted-data"),
+    file.path(data_root, "extracted-data", "all_data_extractions"),
+    file.path(data_root, "si-extracted-data", "all_data_extractions")
   )
-  final_full_dataset_candidates <- final_full_dataset_candidates[
-    file.exists(final_full_dataset_candidates)
-  ]
-  if (length(final_full_dataset_candidates)) {
-    return(final_full_dataset_candidates[which.max(file.info(final_full_dataset_candidates)$mtime)])
-  }
+  extracted_dirs <- extracted_dirs[dir.exists(extracted_dirs)]
+  extracted_candidates <- unlist(lapply(extracted_dirs, function(dir) {
+    list.files(
+      dir,
+      pattern = "^all-data_si-extract_3_.*\\.csv$",
+      full.names = TRUE
+    )
+  }))
 
   review_combined_candidates <- list.files(
     file.path(data_root, "review", "harmonization"),
@@ -38,29 +40,12 @@ latest_combined_file <- function(data_root) {
     !grepl("_summary\\.csv$", basename(review_combined_candidates))
   ]
 
-  candidates <- c(
-    list.files(
-      file.path(data_root, "final-data", "full-dataset"),
-      pattern = "^all-data_si-extract_.*\\.csv$",
-      full.names = TRUE
-    ),
-    review_combined_candidates,
-    list.files(
-      file.path(data_root, "si-extracted-data", "all_data_extractions"),
-      pattern = "^all-data_si-extract_[34]_.*\\.csv$",
-      full.names = TRUE
-    ),
-    list.files(
-      file.path(data_root, "si-extracted-data"),
-      pattern = "^all-data_si-extract_3_.*\\.csv$",
-      full.names = TRUE
-    )
-  )
+  candidates <- c(extracted_candidates, review_combined_candidates)
   candidates <- candidates[file.exists(candidates)]
 
   if (!length(candidates)) {
     stop(
-      "No combined spatial data files found under final-data/full-dataset, review/harmonization, si-extracted-data/all_data_extractions, or si-extracted-data.",
+      "No combined spatial data files found under extracted-data or review/harmonization.",
       call. = FALSE
     )
   }
@@ -87,10 +72,9 @@ output_dir <- env_or_default(
 )
 date_tag <- env_or_default("SILICA_HARMONIZATION_DATE", format(Sys.Date(), "%Y%m%d"))
 
-# Extra lookup tables and draft harmonization inputs
-harmonization_input_dir <- file.path(data_root, "spatial_data_harmonization")
-harmonization_master_dir <- file.path(harmonization_input_dir, "master_datasets")
-master_dir <- file.path(data_root, "master")
+# Extra lookup tables and harmonization inputs
+master_dir <- file.path(data_root, "master-datasets")
+gee_glc_dir <- file.path(data_root, "gee-glc-lulc-outputs", "merged-master-checkpoints")
 
 # Q and discharge inputs
 daily_discharge_file <- first_existing_path(
@@ -101,7 +85,6 @@ daily_discharge_file <- first_existing_path(
 )
 wrtds_annual_file <- first_existing_path(
   c(
-    file.path(harmonization_master_dir, "Full_Results_WRTDS_kalman_annual.csv"),
     file.path(master_dir, "Full_Results_WRTDS_kalman_annual.csv")
   ),
   "annual WRTDS file"
@@ -110,27 +93,27 @@ wrtds_annual_file <- first_existing_path(
 # Lookup and fill inputs
 kg_file <- first_existing_path(
   c(
-    file.path(harmonization_input_dir, "Koeppen_Geiger_2.csv")
+    file.path(master_dir, "Koeppen_Geiger_2.csv")
   ),
   "Koeppen-Geiger file"
 )
 krycklan_slope_file <- first_existing_path(
   c(
-    file.path(harmonization_input_dir, "Krycklan_basin_slopes.csv")
+    file.path(master_dir, "Krycklan_basin_slopes.csv")
   ),
   "Krycklan basin slope file"
 )
 us_slope_file <- first_existing_path(
   c(
-    file.path(harmonization_input_dir, "DSi_Basin_Slope_missing_sites.csv")
+    file.path(master_dir, "DSi_Basin_Slope_missing_sites.csv")
   ),
   "missing basin slope fill file"
 )
 stream_id_key_file <- first_existing_path(
   c(
-    file.path(harmonization_input_dir, "basin_stream_id_conversions.csv")
+    file.path(master_dir, "basin_stream_id_keys.csv")
   ),
-  "stream ID conversion file"
+  "stream ID key file"
 )
 wrtds_reference_file <- first_existing_path(
   c(
@@ -140,13 +123,10 @@ wrtds_reference_file <- first_existing_path(
   "WRTDS reference file"
 )
 
-# GEE/GLC land-cover source. Prefer the current NOR27-added master, then fall
-# back to the previous dated and undated masters.
+# GEE/GLC land-cover source used for the June 2026 final rebuild
 lulc_file <- first_existing_path(
   c(
-    file.path(harmonization_master_dir, "DSi_LULC_filled_interpolated_Simple_20260524_nor27.csv"),
-    file.path(harmonization_master_dir, "DSi_LULC_filled_interpolated_Simple_20260524.csv"),
-    file.path(harmonization_master_dir, "DSi_LULC_filled_interpolated_Simple.csv")
+    file.path(gee_glc_dir, "DSi_LULC_filled_interpolated_Simple_20260524_nor27.csv")
   ),
   "LULC harmonization file"
 )

@@ -25,7 +25,7 @@ source(file = file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 # Identify path to location of shared data
 (path <- resolve_silica_data_root())
 
-# Shared key normalization helpers (includes Congo-basin legacy aliases)
+# Shared key cleanup helpers, including older Congo Basin labels.
 subset_targets <- load_site_subset()
 site_coord_dir <- silica_site_coordinates_dir(path)
 

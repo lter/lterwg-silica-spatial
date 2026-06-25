@@ -173,7 +173,7 @@ run_subset_pass <- function(subset_csv, run_static, run_dynamic, year_values = i
   status <- system2(
     "Rscript",
     c(
-      file.path("tools", "run_targeted_subset_workflow.R"),
+      file.path("03_spatial_extraction", "wrappers", "run-targeted-subset-workflow.R"),
       "--subset", subset_csv,
       "--combine-full", "false"
     )

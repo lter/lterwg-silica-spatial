@@ -1,6 +1,6 @@
-# Optional wrapper config for the numbered workflow.
+# Optional wrapper config for the numbered workflow
 # You can either run the numbered stage scripts directly, or edit this file
-# and run `Rscript 02_run-workflow.R`.
+# and run `Rscript 02_run-workflow.R`
 
 run_settings <- list(
   # Choose one:
@@ -21,9 +21,9 @@ run_settings <- list(
   #                  use this when you want the workflow to decide which sites
   #                  still need HydroSHEDS work before running Aurora
   #                  script order after running this mode:
-  #                  1. review/01_pre_aurora_run/02_approvals/pre_aurora_approval_mixed_<date>.csv
-  #                  2. Rscript 01_pre_aurora_run/02_split_approved_runs.R
-  #                  3. Rscript 01_pre_aurora_run/03_print_aurora_handoff.R
+  #                  1. review/run-lists/02_approvals/run_list_approval_mixed_<date>.csv
+  #                  2. Rscript 03_spatial_extraction/run-lists/02_split_approved_runs.R
+  #                  3. Rscript 03_spatial_extraction/run-lists/03_print_aurora_handoff.R
   #                  the approval output can contain both:
   #                  - run_type = "full_record" for new / never-successful
   #                    sites that need the whole record
@@ -39,15 +39,13 @@ run_settings <- list(
   #                  set target_years below when you want this year-completeness
   #                  rule to be part of the approval list
   # "combine_review" = combine old + new outputs and write review files
-  #                    alias: "combine_qaqc"
+  #                    also called: "combine_qaqc"
   mode = "combine_review",
 
   # Optional paths / labels
   data_root = "",
   site_followup_file = "",
   # subset_file should point to a CSV file, not a list typed into this script.
-  # Example:
-  # subset_file = "03_spatial_extraction/examples/subset_file_template.csv"
   #
   # How this is used:
   # - in "subset" mode:

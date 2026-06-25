@@ -99,7 +99,15 @@ if (mode == "full") {
 } else if (mode == "combine_review") {
   status <- system2(
     "Rscript",
-    file.path("04_combine_qaqc", "01_import-and-qaqc.R")
+    file.path("04_combine_qaqc", "combine-spatial-data.R")
+  )
+  if (!identical(status, 0L)) {
+    stop("Combine step did not finish cleanly.", call. = FALSE)
+  }
+
+  status <- system2(
+    "Rscript",
+    file.path("04_combine_qaqc", "qaqc-spatial-data.R")
   )
   if (!identical(status, 0L)) {
     stop("Combine / QAQC step did not finish cleanly.", call. = FALSE)

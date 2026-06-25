@@ -1,7 +1,63 @@
 librarian::shelf(dplyr, data.table, tidyr, stringr)
 
-# Shared cleanup from combine_qaqc
-source(file.path("04_combine_qaqc", "00_qaqc_functions.R"))
+source(file.path(getwd(), "tools", "subset_and_output_helpers.R"))
+
+norm_chr <- function(x) {
+  x <- trimws(as.character(x))
+  x[x == ""] <- NA_character_
+  x
+}
+
+norm_lter <- function(x) {
+  x <- clean_lter_label(norm_chr(x))
+  dplyr::recode(
+    x,
+    "Swedish Goverment" = "Sweden",
+    "Swedish Government" = "Sweden",
+    "Carey" = "PIE",
+    "Cameroon" = "Congo Basin",
+    "Cameroon Site" = "Congo Basin",
+    "Cameroon Sites" = "Congo Basin",
+    "congo-basin" = "Congo Basin",
+    "Congo-Basin" = "Congo Basin",
+    "Congo" = "Congo Basin",
+    .default = x
+  )
+}
+
+build_stream_id <- function(df) {
+  paste(
+    norm_lter(df$LTER),
+    normalize_stream_key(df$Stream_Name),
+    sep = "__"
+  )
+}
+
+build_harmonization_key <- function(df) {
+  paste(
+    tolower(norm_lter(df$LTER)),
+    normalize_stream_key(df$Stream_Name),
+    tolower(norm_chr(df$Discharge_File_Name)),
+    tolower(norm_chr(df$Shapefile_Name)),
+    sep = "||"
+  )
+}
+
+prepare_combined_table <- function(df) {
+  for (key in c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name")) {
+    if (!key %in% names(df)) {
+      df[[key]] <- NA_character_
+    }
+  }
+
+  df$LTER <- norm_lter(df$LTER)
+  df$Stream_Name <- norm_chr(df$Stream_Name)
+  df$Discharge_File_Name <- norm_chr(df$Discharge_File_Name)
+  df$Shapefile_Name <- norm_chr(df$Shapefile_Name)
+  df$Stream_ID <- build_stream_id(df)
+  df$key <- build_harmonization_key(df)
+  df %>% dplyr::distinct(key, .keep_all = TRUE)
+}
 
 # Stream name cleanup used across all harmonization joins
 harmonize_stream_name <- function(x) {
@@ -16,7 +72,7 @@ harmonize_stream_name <- function(x) {
 # Read the vetted combined table and attach Stream_ID
 read_harmonized_base_table <- function(path) {
   df <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
-  df <- prepare_combined_table(df, sanitize_new = FALSE)
+  df <- prepare_combined_table(df)
   df
 }
 
@@ -138,9 +194,9 @@ read_daily_discharge_input <- function(path) {
     filter(!is.na(Stream_ID), Stream_ID != "", !is.na(Date), !is.na(Q))
 }
 
-# Compute discharge metrics over a grouping window.
-# RBI uses absolute day-to-day change divided by total discharge.
-# RCS is the log-log recession slope from recession days only.
+# Compute discharge metrics over a grouping window
+# RBI uses absolute day-to-day change divided by total discharge
+# RCS is the log-log recession slope from recession days only
 compute_discharge_metrics_by_group <- function(daily_q, group_cols, min_recession_days = 50L) {
   q_diff <- daily_q %>%
     arrange(across(all_of(c(group_cols, "Date")))) %>%
@@ -354,7 +410,7 @@ first_available_character_col <- function(df, candidates) {
   as.character(df[[found[[1]]]])
 }
 
-# Add wide GEE/GLC simple-class land-cover columns by stream name.
+# Add wide GEE/GLC simple-class land-cover columns by stream name
 add_gee_glc_land_cover <- function(df, lulc_path) {
   if (!file.exists(lulc_path)) {
     stop("Missing GEE/GLC LULC file: ", lulc_path, call. = FALSE)

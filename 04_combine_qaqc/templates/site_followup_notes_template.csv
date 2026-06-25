@@ -1,2 +1,0 @@
-LTER,Stream_Name,Discharge_File_Name,Shapefile_Name,followup_status,why_missing,next_step,is_concern,exclude_from_followup,notes
-Example LTER,Example Stream,example_q,example_shape,known_unrecoverable,Corrupt shapefile never works even after CRS fixes.,Leave out of future rerun lists.,FALSE,TRUE,Use this file to mark known dead ends or explain what to try next.

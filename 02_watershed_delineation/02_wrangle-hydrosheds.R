@@ -41,7 +41,7 @@ resolve_shared_sitecoord_file <- function(root_path, stem, ext = "shp") {
   stop("Could not locate shared site-coordinate file for stem: ", stem, call. = FALSE)
 }
 
-# Shared key normalization helpers (includes Congo-basin legacy aliases)
+# Shared key cleanup helpers, including older Congo Basin labels.
 subset_targets <- load_site_subset()
 site_coord_dir <- silica_site_coordinates_dir(path)
 

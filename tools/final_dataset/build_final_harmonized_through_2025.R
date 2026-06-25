@@ -3,12 +3,35 @@ librarian::shelf(dplyr, sf)
 date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
 year_min <- as.integer(Sys.getenv("SILICA_FINAL_YEAR_MIN", unset = "2002"))
 year_max <- as.integer(Sys.getenv("SILICA_FINAL_YEAR_MAX", unset = "2025"))
+write_audit_outputs <- toupper(Sys.getenv("SILICA_WRITE_FINAL_AUDITS", unset = "FALSE")) == "TRUE"
+write_data_check_export <- toupper(Sys.getenv("SILICA_WRITE_DATA_CHECK_EXPORT", unset = "FALSE")) == "TRUE"
 excluded_model_columns <- c("NOx", "P")
 dsi_output_columns <- c("FNConc", "FNYield", "GenConc", "GenYield")
 silicon_molar_mass_kg_per_kmol <- 28.0855
 
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")
+harmonization_dir <- file.path(data_root, "review", "harmonization")
+
+latest_required_file <- function(pattern, label) {
+  hits <- Sys.glob(pattern)
+  hits <- hits[file.exists(hits)]
+  if (!length(hits)) {
+    stop(
+      "Missing ", label, ". Run 05_harmonization/01_build-harmonized-drivers.R first or set the matching input path explicitly.",
+      call. = FALSE
+    )
+  }
+  hits[which.max(file.info(hits)$mtime)]
+}
+
+env_or_latest <- function(env_name, pattern, label) {
+  env_value <- trimws(Sys.getenv(env_name, unset = ""))
+  if (nzchar(env_value)) {
+    return(env_value)
+  }
+  latest_required_file(pattern, label)
+}
 
 march_harmonized_file <- file.path(
   box_root,
@@ -19,29 +42,43 @@ march_harmonized_file <- file.path(
   "AllDrivers_Harmonized_Yearly_filtered_5_years.csv"
 )
 current_site_file <- file.path(
-  data_root,
-  "review",
-  "harmonization",
-  "harmonized-spatial-drivers_20260607.csv"
+  if (write_data_check_export) {
+    ""
+  } else {
+    env_or_latest(
+      "SILICA_FINAL_CURRENT_SITE_FILE",
+      file.path(harmonization_dir, "harmonized-spatial-drivers_*.csv"),
+      "harmonized site driver file"
+    )
+  }
 )
-current_annual_file <- file.path(
-  data_root,
-  "review",
-  "harmonization",
-  "harmonized-spatial-drivers-annual_20260607.csv"
-)
-wrtds_annual_file <- file.path(data_root, "master", "Full_Results_WRTDS_kalman_annual.csv")
-raw_chem_file <- file.path(data_root, "master", "20260105_masterdata_chem.csv")
-site_ref_file <- file.path(data_root, "master", "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv")
-esom_sites_file <- file.path(box_root, "ESOM", "spatial-data", "ESOM_Sites.csv")
+current_annual_file <- if (write_data_check_export) {
+  ""
+} else {
+  env_or_latest(
+    "SILICA_FINAL_CURRENT_ANNUAL_FILE",
+    file.path(harmonization_dir, "harmonized-spatial-drivers-annual_*.csv"),
+    "harmonized annual driver file"
+  )
+}
+wrtds_annual_file <- file.path(data_root, "master-datasets", "Full_Results_WRTDS_kalman_annual.csv")
+raw_chem_file <- file.path(data_root, "master-datasets", "20260105_masterdata_chem.csv")
+site_ref_file <- file.path(data_root, "master-datasets", "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv")
+esom_sites_file <- file.path(box_root, "esom", "spatial-data", "ESOM_Sites.csv")
 silica_shapefile_root <- file.path(data_root, "silica-shapefiles")
+lulc_patch_file <- file.path(
+  data_root,
+  "gee-glc-lulc-outputs",
+  "merged-master-checkpoints",
+  "DSi_LULC_filled_interpolated_Simple_06252026_V2.csv"
+)
 
-full_out_dir <- file.path(data_root, "final-data", "full-dataset")
-esom_out_dir <- file.path(data_root, "final-data", "esom")
-audit_dir <- file.path(data_root, "final-data", "audit-summaries")
-dir.create(full_out_dir, recursive = TRUE, showWarnings = FALSE)
+esom_out_dir <- file.path(box_root, "esom", "spatial-data")
+audit_dir <- file.path(data_root, "audit-summaries")
 dir.create(esom_out_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
+if (write_audit_outputs) {
+  dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
+}
 
 read_csv_clean <- function(path) {
   x <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
@@ -51,83 +88,7 @@ read_csv_clean <- function(path) {
   x
 }
 
-norm_key <- function(x) {
-  x <- tolower(trimws(as.character(x)))
-  x <- gsub("[^a-z0-9]+", "_", x)
-  x <- gsub("^_+|_+$", "", x)
-  gsub("_+", "_", x)
-}
-
-read_lter_aliases <- function() {
-  path <- "tools/lter_name_aliases.csv"
-  if (!file.exists(path)) {
-    return(data.frame(source = character(), target = character()))
-  }
-  x <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
-  x <- x[x$field == "LTER", , drop = FALSE]
-  data.frame(
-    source = norm_key(x$source_value),
-    target = norm_key(x$target_value),
-    stringsAsFactors = FALSE
-  )
-}
-
-read_stream_aliases <- function() {
-  path <- "tools/stream_name_aliases.csv"
-  if (!file.exists(path)) {
-    return(data.frame(lter = character(), source = character(), target = character()))
-  }
-  x <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
-  data.frame(
-    lter = norm_key(x$LTER),
-    source = norm_key(x$alias_stream_name),
-    target = norm_key(x$canonical_stream_name),
-    stringsAsFactors = FALSE
-  )
-}
-
-lter_aliases <- read_lter_aliases()
-stream_aliases <- read_stream_aliases()
-
-canonical_lter_key <- function(lter) {
-  out <- norm_key(lter)
-  hit <- match(out, lter_aliases$source)
-  out[!is.na(hit)] <- lter_aliases$target[hit[!is.na(hit)]]
-  out
-}
-
-canonical_stream_key <- function(lter_key, stream_name) {
-  out <- norm_key(stream_name)
-  if (!nrow(stream_aliases)) {
-    return(out)
-  }
-
-  for (i in seq_len(nrow(stream_aliases))) {
-    hit <- lter_key == stream_aliases$lter[[i]] &
-      (out == stream_aliases$source[[i]] | out == stream_aliases$target[[i]])
-    out[hit] <- stream_aliases$target[[i]]
-  }
-  out
-}
-
-split_stream_id <- function(stream_id) {
-  stream_id <- as.character(stream_id)
-  has_sep <- grepl("__", stream_id, fixed = TRUE)
-  lter <- ifelse(has_sep, sub("__.*$", "", stream_id), NA_character_)
-  stream <- ifelse(has_sep, sub("^[^_]*__", "", stream_id), stream_id)
-  data.frame(LTER = lter, Stream_Name = stream, stringsAsFactors = FALSE)
-}
-
-site_key_from_parts <- function(lter, stream_name) {
-  lter_key <- canonical_lter_key(lter)
-  stream_key <- canonical_stream_key(lter_key, stream_name)
-  paste(lter_key, stream_key, sep = "||")
-}
-
-site_key_from_stream_id <- function(stream_id) {
-  parts <- split_stream_id(stream_id)
-  site_key_from_parts(parts$LTER, parts$Stream_Name)
-}
+source(file.path("tools", "name_keys.R"))
 
 coerce_num <- function(x) {
   suppressWarnings(as.numeric(x))
@@ -199,6 +160,8 @@ read_combined_watershed_area <- function(path, priority) {
   real_ar <- if ("real_ar" %in% names(x)) x$real_ar else rep(NA_real_, nrow(x))
   exp_area <- if ("exp_area" %in% names(x)) x$exp_area else rep(NA_real_, nrow(x))
   exp_are <- if ("exp_are" %in% names(x)) x$exp_are else rep(NA_real_, nrow(x))
+  hydrosheds_id <- if ("hydrshd" %in% names(x)) as.character(x$hydrshd) else rep(NA_character_, nrow(x))
+  hydrosheds_id[!is_present(hydrosheds_id)] <- NA_character_
 
   data.frame(
     shp_key = norm_key(shp),
@@ -216,6 +179,8 @@ read_combined_watershed_area <- function(path, priority) {
     drainage_area_shape_source = basename(path),
     drainage_area_shape_source_type = "combined_watershed_polygon",
     drainage_area_shape_priority = priority,
+    hydrosheds_id = hydrosheds_id,
+    hydrosheds_used = is_present(hydrosheds_id) | grepl("hydroshed", shp, ignore.case = TRUE),
     stringsAsFactors = FALSE
   ) %>%
     filter(!is.na(shp_key), shp_key != "", !is.na(drainage_area_shape))
@@ -225,7 +190,6 @@ build_watershed_area_lookup <- function(site_rows) {
   combined_paths <- c(
     file.path(silica_shapefile_root, "site-coordinates", "silica-watersheds_hydrosheds_DR_2.shp"),
     file.path(silica_shapefile_root, "site-coordinates", "silica-watersheds.shp"),
-    file.path(silica_shapefile_root, "site-coordinates", "silica-watersheds_20260512.shp"),
     file.path(silica_shapefile_root, "site-coordinates", "silica-watersheds_hydrosheds.shp")
   )
 
@@ -239,6 +203,8 @@ build_watershed_area_lookup <- function(site_rows) {
       drainage_area_shape_source = character(),
       drainage_area_shape_source_type = character(),
       drainage_area_shape_priority = integer(),
+      hydrosheds_id = character(),
+      hydrosheds_used = logical(),
       stringsAsFactors = FALSE
     )
   }
@@ -259,6 +225,7 @@ build_watershed_area_lookup <- function(site_rows) {
     distinct(shp_key, .keep_all = TRUE)
 
   individual_targets <- needed %>%
+    filter(!shp_key %in% unique(combined$shp_key)) %>%
     left_join(individual_index, by = "shp_key") %>%
     filter(!is.na(individual_path))
 
@@ -275,7 +242,9 @@ build_watershed_area_lookup <- function(site_rows) {
         drainage_area_expected = NA_real_,
         drainage_area_shape_source = individual_path,
         drainage_area_shape_source_type = "individual_shapefile_polygon",
-        drainage_area_shape_priority = 100L
+        drainage_area_shape_priority = 100L,
+        hydrosheds_id = NA_character_,
+        hydrosheds_used = grepl("hydroshed", shapefile_name, ignore.case = TRUE)
       ) %>%
       filter(!is.na(drainage_area_shape))
   }
@@ -289,21 +258,45 @@ build_watershed_area_lookup <- function(site_rows) {
       drainage_area_expected = first_present_numeric(drainage_area_expected),
       drainage_area_shape_source = first_present(drainage_area_shape_source),
       drainage_area_shape_source_type = first_present(drainage_area_shape_source_type),
+      hydrosheds_id = first_present(hydrosheds_id),
+      hydrosheds_used = any(hydrosheds_used, na.rm = TRUE),
       .groups = "drop"
     )
 
   site_rows %>%
     transmute(.site_key, shp_key = norm_key(Shapefile_Name), Shapefile_Name) %>%
     left_join(lookup, by = "shp_key") %>%
-    select(
-      .site_key,
-      Shapefile_Name,
-      drainage_area_shape,
-      drainage_area_expected,
-      drainage_area_shape_source,
-      drainage_area_shape_source_type
+    mutate(
+      hydrosheds_id = ifelse(is_present(hydrosheds_id), hydrosheds_id, NA_character_),
+      hydrosheds_used = ifelse(is.na(hydrosheds_used), FALSE, hydrosheds_used) |
+        grepl("hydroshed", Shapefile_Name, ignore.case = TRUE)
     ) %>%
-    distinct(.site_key, .keep_all = TRUE)
+    group_by(.site_key) %>%
+    summarise(
+      Shapefile_Name = {
+        hydrosheds_name <- first_present(Shapefile_Name[hydrosheds_used])
+        if (is_present(hydrosheds_name)) hydrosheds_name else first_present(Shapefile_Name)
+      },
+      drainage_area_shape = {
+        hydrosheds_area <- first_present_numeric(drainage_area_shape[hydrosheds_used])
+        if (!is.na(hydrosheds_area)) hydrosheds_area else first_present_numeric(drainage_area_shape)
+      },
+      drainage_area_expected = {
+        hydrosheds_expected <- first_present_numeric(drainage_area_expected[hydrosheds_used])
+        if (!is.na(hydrosheds_expected)) hydrosheds_expected else first_present_numeric(drainage_area_expected)
+      },
+      drainage_area_shape_source = {
+        hydrosheds_source <- first_present(drainage_area_shape_source[hydrosheds_used])
+        if (is_present(hydrosheds_source)) hydrosheds_source else first_present(drainage_area_shape_source)
+      },
+      drainage_area_shape_source_type = {
+        hydrosheds_source_type <- first_present(drainage_area_shape_source_type[hydrosheds_used])
+        if (is_present(hydrosheds_source_type)) hydrosheds_source_type else first_present(drainage_area_shape_source_type)
+      },
+      hydrosheds_used = any(hydrosheds_used, na.rm = TRUE),
+      hydrosheds_id = first_present(hydrosheds_id),
+      .groups = "drop"
+    )
 }
 
 land_classes <- c(
@@ -319,11 +312,101 @@ land_classes <- c(
   "Wetland_Marsh"
 )
 
+lulc_stream_key <- function(x) {
+  gsub("[^a-z0-9]+", "", tolower(x))
+}
+
+apply_lulc_patch <- function(df, patch_path) {
+  patch <- read_csv_clean(patch_path) %>%
+    transmute(
+      .lulc_key = lulc_stream_key(Stream_Name),
+      Year = suppressWarnings(as.integer(Year)),
+      Simple_Class = gsub("^_+|_+$", "", gsub("[^A-Za-z0-9]+", "_", Simple_Class)),
+      LandClass_sum = coerce_num(LandClass_sum)
+    ) %>%
+    filter(
+      !is.na(.lulc_key),
+      .lulc_key != "",
+      !is.na(Year),
+      Simple_Class %in% land_classes
+    )
+
+  patch_years <- sort(unique(patch$Year))
+  source_year <- vapply(df$Year, function(year) {
+    available <- patch_years[patch_years <= year]
+    if (length(available)) max(available) else NA_integer_
+  }, integer(1))
+  df_lookup <- paste(lulc_stream_key(sub("^[^_]+__", "", df$Stream_ID)), source_year)
+
+  for (class_name in land_classes) {
+    target_col <- paste0("land_", class_name)
+    patch_values <- patch %>%
+      filter(Simple_Class == class_name) %>%
+      group_by(.lulc_key, Year) %>%
+      summarise(LandClass_sum = mean(LandClass_sum, na.rm = TRUE), .groups = "drop")
+
+    lookup_values <- patch_values$LandClass_sum
+    names(lookup_values) <- paste(patch_values$.lulc_key, patch_values$Year)
+    match_id <- match(df_lookup, names(lookup_values))
+    use_patch <- !is.na(match_id)
+    df[[target_col]][use_patch] <- lookup_values[match_id[use_patch]] * 100
+  }
+
+  land_cols <- paste0("land_", land_classes)
+  land_matrix <- as.data.frame(lapply(df[land_cols], coerce_num))
+  df$major_land <- apply(land_matrix, 1, function(x) {
+    if (all(is.na(x))) {
+      return(NA_character_)
+    }
+    sub("^land_", "", names(x)[which.max(replace(x, is.na(x), -Inf))])
+  })
+
+  df
+}
+
 snow_months <- c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 monthly_snow_cols <- as.vector(rbind(
   paste0("snow_", snow_months, "_avg_prop_area"),
   paste0("snow_", snow_months, "_num_days")
 ))
+
+if (write_data_check_export) {
+  final_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
+  data_check_file <- file.path(
+    data_root,
+    paste0("all_data_extractions_data_check_GEE_GLC_V2_", format(Sys.Date(), "%Y%m%d"), ".csv")
+  )
+
+  data_check <- read_csv_clean(final_file)
+  data_check <- apply_lulc_patch(data_check, lulc_patch_file)
+  data_check <- data_check[, setdiff(names(data_check), dsi_output_columns), drop = FALSE]
+
+  spatial_review_cols <- c(
+    "precip", "temp", "npp", "evapotrans", "greenup_day", "elevation", "basin_slope",
+    grep("^rocks_|^land_", names(data_check), value = TRUE)
+  )
+  has_spatial_data <- rowSums(as.data.frame(lapply(data_check[spatial_review_cols], function(x) {
+    if (is.character(x)) {
+      return(!is.na(x) & trimws(x) != "")
+    }
+    !is.na(x) & x != 0
+  }))) > 0
+  data_check <- data_check[has_spatial_data, , drop = FALSE]
+
+  land_cols <- paste0("land_", land_classes)
+  land_matrix <- as.data.frame(lapply(data_check[land_cols], coerce_num))
+  land_sum <- rowSums(land_matrix, na.rm = TRUE)
+  canada_md <- grepl("^Canada__|^MD__", data_check$Stream_ID)
+  land_sum_flag <- abs(land_sum - 100) > 1
+
+  write.csv(data_check, data_check_file, row.names = FALSE, na = "")
+  cat("WROTE:", data_check_file, "\n", sep = "")
+  cat("rows=", nrow(data_check), "\n", sep = "")
+  cat("cols=", ncol(data_check), "\n", sep = "")
+  cat("sites=", length(unique(data_check$Stream_ID)), "\n", sep = "")
+  cat("canada_md_land_sum_flags=", sum(land_sum_flag & canada_md, na.rm = TRUE), "\n", sep = "")
+  quit(save = "no", status = 0)
+}
 
 required <- c(
   current_site_file,
@@ -332,7 +415,8 @@ required <- c(
   raw_chem_file,
   site_ref_file,
   esom_sites_file,
-  march_harmonized_file
+  march_harmonized_file,
+  lulc_patch_file
 )
 missing <- required[!file.exists(required)]
 if (length(missing)) {
@@ -351,12 +435,14 @@ current_annual$.site_key <- site_key_from_stream_id(current_annual$Stream_ID)
 site_ref$.site_key <- site_key_from_parts(site_ref$LTER, site_ref$Stream_Name)
 march$.site_key <- site_key_from_stream_id(march$Stream_ID)
 
-current_site_one <- current_site %>%
+current_site_keyed <- current_site %>%
   filter(!is.na(.site_key), .site_key != "||") %>%
-  arrange(.site_key) %>%
+  arrange(.site_key)
+
+current_site_one <- current_site_keyed %>%
   distinct(.site_key, .keep_all = TRUE)
 
-watershed_area_one <- build_watershed_area_lookup(current_site_one)
+watershed_area_one <- build_watershed_area_lookup(current_site_keyed)
 
 site_ref_one <- site_ref %>%
   filter(!is.na(.site_key), .site_key != "||") %>%
@@ -497,8 +583,10 @@ out$major_land <- apply(land_matrix, 1, function(x) {
   sub("^land_", "", names(x)[which.max(replace(x, is.na(x), -Inf))])
 })
 
+out <- apply_lulc_patch(out, lulc_patch_file)
+
 base_cols <- c(
-  "FNConc", "Stream_ID", "Year", "drainage_area", "precip", "Q", "temp",
+  "FNConc", "Stream_ID", "Year", "drainage_area", "hydrosheds_used", "precip", "Q", "temp",
   "snow_cover", "snow_num_days", "npp", "evapotrans", "greenup_day",
   "permafrost", "elevation", "RBI", "RCS", "basin_slope",
   "FNYield", "GenConc", "GenYield", "major_rock", "major_land",
@@ -545,6 +633,33 @@ full_spatial_only <- add_monthly_snow(out_base_with_source) %>%
   select(-.site_key) %>%
   select(-any_of(dsi_output_columns))
 
+final_annual <- full_spatial_only %>%
+  left_join(
+    full_base %>% select(Stream_ID, Year, all_of(dsi_output_columns)),
+    by = c("Stream_ID", "Year")
+  ) %>%
+  select(
+    Stream_ID,
+    Year,
+    drainage_area,
+    hydrosheds_used,
+    precip,
+    Q,
+    all_of(dsi_output_columns),
+    temp,
+    snow_cover,
+    snow_num_days,
+    npp,
+    evapotrans,
+    greenup_day,
+    permafrost,
+    elevation,
+    RBI,
+    RCS,
+    basin_slope,
+    everything()
+  )
+
 esom_sites <- read_csv_clean(esom_sites_file)
 esom_sites$.site_key <- site_key_from_parts(esom_sites$LTER, esom_sites$Stream_Name)
 esom_unique <- esom_sites %>%
@@ -568,20 +683,14 @@ esom_spatial_only <- add_monthly_snow(out_base_with_source) %>%
   select(-.site_key) %>%
   select(-any_of(dsi_output_columns))
 
-full_out_file <- file.path(full_out_dir, paste0("final_full_harmonized_annual_", date_tag, ".csv"))
-full_expanded_snow_file <- file.path(full_out_dir, paste0("final_full_harmonized_annual_expanded_snow_", date_tag, ".csv"))
-full_raw_dsi_file <- file.path(full_out_dir, paste0("final_full_harmonized_annual_raw_DSi_", date_tag, ".csv"))
-full_spatial_file <- file.path(full_out_dir, paste0("final_full_spatial_drivers_annual_", date_tag, ".csv"))
+final_out_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
 esom_out_file <- file.path(esom_out_dir, paste0("ESOM_final_harmonized_annual_", date_tag, ".csv"))
 esom_expanded_snow_file <- file.path(esom_out_dir, paste0("ESOM_final_harmonized_annual_expanded_snow_", date_tag, ".csv"))
 esom_spatial_file <- file.path(esom_out_dir, paste0("ESOM_spatial_drivers_annual_", date_tag, ".csv"))
 esom_missing_file <- file.path(esom_out_dir, paste0("ESOM_missing_from_final_harmonized_annual_", date_tag, ".csv"))
 esom_duplicate_file <- file.path(esom_out_dir, paste0("ESOM_duplicate_site_keys_final_harmonized_annual_", date_tag, ".csv"))
 
-write.csv(full_base, full_out_file, row.names = FALSE, na = "")
-write.csv(full_expanded_snow, full_expanded_snow_file, row.names = FALSE, na = "")
-write.csv(full_raw_dsi, full_raw_dsi_file, row.names = FALSE, na = "")
-write.csv(full_spatial_only, full_spatial_file, row.names = FALSE, na = "")
+write.csv(final_annual, final_out_file, row.names = FALSE, na = "")
 write.csv(esom_base, esom_out_file, row.names = FALSE, na = "")
 write.csv(esom_expanded_snow, esom_expanded_snow_file, row.names = FALSE, na = "")
 write.csv(esom_spatial_only, esom_spatial_file, row.names = FALSE, na = "")
@@ -603,16 +712,16 @@ variable_coverage <- function(x) {
 }
 
 full_summary <- data.frame(
-  rows = nrow(full_base),
-  cols = ncol(full_base),
-  sites = length(unique(full_base$Stream_ID)),
-  first_year = min(full_base$Year),
-  last_year = max(full_base$Year),
-  wrtds_rows = sum(!is.na(full_base$FNConc)),
-  wrtds_last_year = max(full_base$Year[!is.na(full_base$FNConc)], na.rm = TRUE),
+  rows = nrow(final_annual),
+  cols = ncol(final_annual),
+  sites = length(unique(final_annual$Stream_ID)),
+  first_year = min(final_annual$Year),
+  last_year = max(final_annual$Year),
+  wrtds_rows = sum(!is.na(final_annual$FNConc)),
+  wrtds_last_year = max(final_annual$Year[!is.na(final_annual$FNConc)], na.rm = TRUE),
   raw_DSi_rows = sum(!is.na(full_raw_dsi$raw_DSi_n)),
   raw_DSi_last_year = max(full_raw_dsi$Year[!is.na(full_raw_dsi$raw_DSi_n)], na.rm = TRUE),
-  forbidden_columns = forbidden_column_summary(full_base),
+  forbidden_columns = forbidden_column_summary(final_annual),
   stringsAsFactors = FALSE
 )
 esom_summary <- data.frame(
@@ -652,7 +761,9 @@ drainage_area_site_audit <- out %>%
     drainage_area_shape,
     drainage_area_expected,
     drainage_area_shape_source,
-    drainage_area_shape_source_type
+    drainage_area_shape_source_type,
+    hydrosheds_used,
+    hydrosheds_id
   ) %>%
   mutate(
     drainage_area_source = ifelse(is.na(drainage_area_source), "missing", drainage_area_source)
@@ -666,76 +777,53 @@ drainage_area_source_summary <- drainage_area_site_audit %>%
   ) %>%
   arrange(drainage_area_source)
 
-write.csv(
-  full_summary,
-  file.path(audit_dir, paste0("final_full_harmonized_annual_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  variable_coverage(full_base),
-  file.path(audit_dir, paste0("final_full_harmonized_annual_variable_coverage_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  variable_coverage(full_raw_dsi),
-  file.path(audit_dir, paste0("final_full_harmonized_annual_raw_DSi_variable_coverage_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  data.frame(
-    rows = nrow(full_raw_dsi),
-    cols = ncol(full_raw_dsi),
-    raw_DSi_rows = sum(!is.na(full_raw_dsi$raw_DSi_n)),
-    raw_DSi_missing_rows = sum(is.na(full_raw_dsi$raw_DSi_n)),
-    raw_DSi_last_year = max(full_raw_dsi$Year[!is.na(full_raw_dsi$raw_DSi_n)], na.rm = TRUE),
-    source_file = raw_chem_file,
-    forbidden_columns = forbidden_column_summary(full_raw_dsi),
-    stringsAsFactors = FALSE
-  ),
-  file.path(audit_dir, paste0("final_full_harmonized_annual_raw_DSi_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  expanded_snow_summary[expanded_snow_summary$dataset == "full", setdiff(names(expanded_snow_summary), "dataset"), drop = FALSE],
-  file.path(audit_dir, paste0("final_full_harmonized_annual_expanded_snow_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  drainage_area_site_audit,
-  file.path(audit_dir, paste0("final_full_spatial_drivers_drainage_area_by_site_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  drainage_area_source_summary,
-  file.path(audit_dir, paste0("final_full_spatial_drivers_drainage_area_source_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  data.frame(
-    rows = nrow(full_spatial_only),
-    cols = ncol(full_spatial_only),
-    sites = length(unique(full_spatial_only$Stream_ID)),
-    first_year = min(full_spatial_only$Year),
-    last_year = max(full_spatial_only$Year),
-    snow_columns = sum(grepl("^snow", names(full_spatial_only))),
-    monthly_snow_columns = sum(names(full_spatial_only) %in% monthly_snow_cols),
-    drainage_area_nonmissing_sites = length(unique(full_spatial_only$Stream_ID[!is.na(full_spatial_only$drainage_area)])),
-    drainage_area_missing_sites = length(unique(full_spatial_only$Stream_ID[is.na(full_spatial_only$drainage_area)])),
-    dropped_DSi_columns = paste(intersect(dsi_output_columns, names(full_base)), collapse = ";"),
-    forbidden_columns = forbidden_column_summary(full_spatial_only),
-    stringsAsFactors = FALSE
-  ),
-  file.path(audit_dir, paste0("final_full_spatial_drivers_annual_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
+if (write_audit_outputs) {
+  write.csv(
+    full_summary,
+    file.path(audit_dir, paste0("final_annual_dataset_summary_", date_tag, ".csv")),
+    row.names = FALSE,
+    na = ""
+  )
+  write.csv(
+    variable_coverage(final_annual),
+    file.path(audit_dir, paste0("final_annual_dataset_variable_coverage_", date_tag, ".csv")),
+    row.names = FALSE,
+    na = ""
+  )
+  write.csv(
+    variable_coverage(full_raw_dsi),
+    file.path(audit_dir, paste0("final_annual_dataset_raw_DSi_variable_coverage_", date_tag, ".csv")),
+    row.names = FALSE,
+    na = ""
+  )
+  write.csv(
+    data.frame(
+      rows = nrow(full_raw_dsi),
+      cols = ncol(full_raw_dsi),
+      raw_DSi_rows = sum(!is.na(full_raw_dsi$raw_DSi_n)),
+      raw_DSi_missing_rows = sum(is.na(full_raw_dsi$raw_DSi_n)),
+      raw_DSi_last_year = max(full_raw_dsi$Year[!is.na(full_raw_dsi$raw_DSi_n)], na.rm = TRUE),
+      source_file = raw_chem_file,
+      forbidden_columns = forbidden_column_summary(full_raw_dsi),
+      stringsAsFactors = FALSE
+    ),
+    file.path(audit_dir, paste0("final_annual_dataset_raw_DSi_summary_", date_tag, ".csv")),
+    row.names = FALSE,
+    na = ""
+  )
+  write.csv(
+    drainage_area_site_audit,
+    file.path(audit_dir, paste0("final_annual_dataset_drainage_area_by_site_", date_tag, ".csv")),
+    row.names = FALSE,
+    na = ""
+  )
+  write.csv(
+    drainage_area_source_summary,
+    file.path(audit_dir, paste0("final_annual_dataset_drainage_area_source_summary_", date_tag, ".csv")),
+    row.names = FALSE,
+    na = ""
+  )
+}
 write.csv(
   esom_summary,
   file.path(esom_out_dir, paste0("ESOM_final_harmonized_annual_summary_", date_tag, ".csv")),
@@ -768,10 +856,7 @@ write.csv(
   na = ""
 )
 
-cat("WROTE:", full_out_file, "\n", sep = "")
-cat("WROTE:", full_expanded_snow_file, "\n", sep = "")
-cat("WROTE:", full_raw_dsi_file, "\n", sep = "")
-cat("WROTE:", full_spatial_file, "\n", sep = "")
+cat("WROTE:", final_out_file, "\n", sep = "")
 cat("WROTE:", esom_out_file, "\n", sep = "")
 cat("WROTE:", esom_expanded_snow_file, "\n", sep = "")
 cat("WROTE:", esom_spatial_file, "\n", sep = "")

@@ -30,8 +30,8 @@ clean_lter_column <- function(df, drop_duplicates = TRUE) {
   df
 }
 
-# Canonicalize LTER labels used by subset files and helper maps.
-# This is also where we keep known reference-table aliases across releases,
+# Clean LTER labels used by subset files and helper maps.
+# This is also where we keep known reference-table name changes across releases,
 # for example V2 -> V3 label changes such as:
 # - Swedish Goverment -> Sweden
 # - Carey -> PIE
@@ -53,9 +53,9 @@ normalize_region_key <- function(x) {
   x
 }
 
-# Canonicalize stream-name aliases that appear across discharge, reference, and
-# spatial outputs. This helper is for matching keys, so everything stays in a
-# normalized lowercase form.
+# Clean stream-name variants that appear across discharge, reference, and spatial
+# outputs. This helper is for matching keys, so everything stays in a normalized
+# lowercase form.
 normalize_stream_key <- function(x) {
   x <- normalize_site_key(x)
   x[x %in% c("mg_weir", "mgweir")] <- "mgweir"
@@ -339,29 +339,29 @@ filter_target_year_rows <- function(df, year_col = "year") {
 }
 
 filter_target_region_year_rows <- function(df, driver, region_col = "region", year_col = "year") {
-  manifest_file <- trimws(Sys.getenv("SILICA_TARGET_REGION_YEAR_FILE", unset = ""))
-  if (!nzchar(manifest_file)) {
+  target_file <- trimws(Sys.getenv("SILICA_TARGET_REGION_YEAR_FILE", unset = ""))
+  if (!nzchar(target_file)) {
     return(df)
   }
-  if (!file.exists(manifest_file)) {
-    stop("SILICA_TARGET_REGION_YEAR_FILE does not exist: ", manifest_file, call. = FALSE)
+  if (!file.exists(target_file)) {
+    stop("SILICA_TARGET_REGION_YEAR_FILE does not exist: ", target_file, call. = FALSE)
   }
   if (!all(c(region_col, year_col) %in% names(df))) {
     return(df)
   }
 
-  manifest <- read.csv(manifest_file, stringsAsFactors = FALSE, check.names = FALSE)
+  target_list <- read.csv(target_file, stringsAsFactors = FALSE, check.names = FALSE)
   required <- c("driver", "region", "year")
-  missing_cols <- setdiff(required, names(manifest))
+  missing_cols <- setdiff(required, names(target_list))
   if (length(missing_cols)) {
     stop(
-      "Target region-year manifest is missing columns: ",
+      "Target region-year file is missing columns: ",
       paste(missing_cols, collapse = ", "),
       call. = FALSE
     )
   }
 
-  manifest <- manifest %>%
+  target_list <- target_list %>%
     dplyr::transmute(
       driver = normalize_site_key(driver),
       region = normalize_region_key(region),
@@ -375,7 +375,7 @@ filter_target_region_year_rows <- function(df, driver, region_col = "region", ye
     ) %>%
     dplyr::distinct()
 
-  if (nrow(manifest) == 0) {
+  if (nrow(target_list) == 0) {
     warning("No target region-year rows for driver ", driver, ". Keeping zero rows.", call. = FALSE)
     return(df[0, , drop = FALSE])
   }
@@ -386,13 +386,13 @@ filter_target_region_year_rows <- function(df, driver, region_col = "region", ye
       .target_year = suppressWarnings(as.integer(as.character(.data[[year_col]])))
     ) %>%
     dplyr::inner_join(
-      manifest,
+      target_list,
       by = c(".target_region" = "region", ".target_year" = "year")
     ) %>%
     dplyr::select(-dplyr::any_of(c(".target_region", ".target_year", "driver")))
 
   message(
-    "Dynamic files restricted by region-year manifest for ",
+    "Dynamic files restricted by region-year target file for ",
     driver,
     ": ",
     nrow(df_keyed),
@@ -495,9 +495,7 @@ silica_driver_output_file <- function(root_path, stem, ext = "csv") {
     env_var = "SILICA_EXTRACTED_DIR",
     path_candidates = c(
       file.path(root_path, "extracted-data"),
-      file.path(root_path, "si-extracted-data"),
-      file.path(root_path, "silica-shapefiles", "extracted-data"),
-      file.path(root_path, "silica-shapefiles", "si-extracted-data")
+      file.path(root_path, "silica-shapefiles", "extracted-data")
     )
   )
   silica_tagged_output_file(extracted_dir, stem, ext)
@@ -872,7 +870,7 @@ filter_to_target_sites <- function(sites, sheds, subset_targets = NULL) {
   list(sites = sites_keep, sheds = sheds_keep)
 }
 
-# Lookup coordinates for subset targets from the canonical site table when
+# Lookup coordinates for subset targets from the cleaned site table when
 # callers did not include Latitude/Longitude directly in the subset CSV.
 silica_lookup_subset_coords <- function(subset_targets) {
   if (is.null(subset_targets) || nrow(subset_targets) == 0) {

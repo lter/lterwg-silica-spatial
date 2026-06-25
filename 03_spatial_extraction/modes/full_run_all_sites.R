@@ -252,7 +252,7 @@ gc()
 # Combine all extracted drivers
 combine_full <- tolower(Sys.getenv("SILICA_COMBINE_FULL", "false")) == "true"
 if (combine_full) {
-  source(file = file.path("tools", "combine_from_site_ref_local.R"), echo = T)
+  source(file = file.path("04_combine_qaqc", "combine-spatial-data.R"), echo = T)
 } else {
   message("Skipping combine step because SILICA_COMBINE_FULL=FALSE.")
 }

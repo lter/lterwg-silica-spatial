@@ -9,7 +9,7 @@ message("Run targeted site workflow")
 status <- system2(
   "Rscript",
   c(
-    file.path("tools", "run_targeted_subset_workflow.R"),
+    file.path("03_spatial_extraction", "wrappers", "run-targeted-subset-workflow.R"),
     "--subset", subset_path,
     "--combine-full", combine_full
   )
