@@ -1,6 +1,6 @@
 librarian::shelf(dplyr, sf)
 
-date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
+date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260629")
 year_min <- as.integer(Sys.getenv("SILICA_FINAL_YEAR_MIN", unset = "2002"))
 year_max <- as.integer(Sys.getenv("SILICA_FINAL_YEAR_MAX", unset = "2025"))
 write_audit_outputs <- toupper(Sys.getenv("SILICA_WRITE_FINAL_AUDITS", unset = "FALSE")) == "TRUE"
@@ -409,7 +409,10 @@ if (write_data_check_export) {
 }
 
 if (write_patched_final_export) {
-  existing_final_file <- file.path(data_root, "final_annual_dataset_20260608.csv")
+  existing_final_file <- Sys.getenv(
+    "SILICA_EXISTING_FINAL_FILE",
+    unset = file.path(data_root, "final_annual_dataset_20260629.csv")
+  )
   patched_final_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
 
   patched_final <- read_csv_clean(existing_final_file)

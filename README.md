@@ -11,7 +11,7 @@ AppEEARS/NASA-based dataset.
 The final annual file lives in Box:
 
 ```text
-/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/final_annual_dataset_20260608.csv
+/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/final_annual_dataset_20260629.csv
 ```
 
 Older near-duplicate final outputs were retired during cleanup.
@@ -58,9 +58,19 @@ Rebuild and check the combined spatial table, then run harmonization:
 Rscript tools/run_combine_and_harmonization_workflow.R
 ```
 
-Rebuild the current final annual dataset:
+Write the current final annual dataset with the fixed GEE/GLC land data:
 
 ```bash
+SILICA_WRITE_PATCHED_FINAL_EXPORT=TRUE \
+SILICA_EXISTING_FINAL_FILE=/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/final_annual_dataset_20260629.csv \
+SILICA_FINAL_HARMONIZED_DATE=20260629 \
+Rscript tools/final_dataset/build_final_harmonized_through_2025.R
+```
+
+Full rebuild after new extractions:
+
+```bash
+Rscript tools/run_combine_and_harmonization_workflow.R
 Rscript tools/final_dataset/build_final_harmonized_through_2025.R
 ```
 

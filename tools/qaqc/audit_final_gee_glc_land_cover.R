@@ -1,5 +1,5 @@
 audit_date <- Sys.getenv("SILICA_GEE_GLC_AUDIT_DATE", unset = format(Sys.Date(), "%Y%m%d"))
-date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
+date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260629")
 
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")

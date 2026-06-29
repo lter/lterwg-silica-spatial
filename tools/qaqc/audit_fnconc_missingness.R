@@ -2,7 +2,7 @@ librarian::shelf(dplyr)
 
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")
-date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
+date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260629")
 
 final_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
 wrtds_file <- file.path(data_root, "master-datasets", "Full_Results_WRTDS_kalman_annual.csv")
