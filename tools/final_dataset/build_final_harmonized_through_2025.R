@@ -5,6 +5,8 @@ year_min <- as.integer(Sys.getenv("SILICA_FINAL_YEAR_MIN", unset = "2002"))
 year_max <- as.integer(Sys.getenv("SILICA_FINAL_YEAR_MAX", unset = "2025"))
 write_audit_outputs <- toupper(Sys.getenv("SILICA_WRITE_FINAL_AUDITS", unset = "FALSE")) == "TRUE"
 write_data_check_export <- toupper(Sys.getenv("SILICA_WRITE_DATA_CHECK_EXPORT", unset = "FALSE")) == "TRUE"
+write_patched_final_export <- toupper(Sys.getenv("SILICA_WRITE_PATCHED_FINAL_EXPORT", unset = "FALSE")) == "TRUE"
+write_from_existing_final <- write_data_check_export || write_patched_final_export
 excluded_model_columns <- c("NOx", "P")
 dsi_output_columns <- c("FNConc", "FNYield", "GenConc", "GenYield")
 silicon_molar_mass_kg_per_kmol <- 28.0855
@@ -42,7 +44,7 @@ march_harmonized_file <- file.path(
   "AllDrivers_Harmonized_Yearly_filtered_5_years.csv"
 )
 current_site_file <- file.path(
-  if (write_data_check_export) {
+  if (write_from_existing_final) {
     ""
   } else {
     env_or_latest(
@@ -52,7 +54,7 @@ current_site_file <- file.path(
     )
   }
 )
-current_annual_file <- if (write_data_check_export) {
+current_annual_file <- if (write_from_existing_final) {
   ""
 } else {
   env_or_latest(
@@ -64,7 +66,6 @@ current_annual_file <- if (write_data_check_export) {
 wrtds_annual_file <- file.path(data_root, "master-datasets", "Full_Results_WRTDS_kalman_annual.csv")
 raw_chem_file <- file.path(data_root, "master-datasets", "20260105_masterdata_chem.csv")
 site_ref_file <- file.path(data_root, "master-datasets", "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv")
-esom_sites_file <- file.path(box_root, "esom", "spatial-data", "ESOM_Sites.csv")
 silica_shapefile_root <- file.path(data_root, "silica-shapefiles")
 lulc_patch_file <- file.path(
   data_root,
@@ -73,9 +74,7 @@ lulc_patch_file <- file.path(
   "DSi_LULC_filled_interpolated_Simple_06252026_V2.csv"
 )
 
-esom_out_dir <- file.path(box_root, "esom", "spatial-data")
 audit_dir <- file.path(data_root, "audit-summaries")
-dir.create(esom_out_dir, recursive = TRUE, showWarnings = FALSE)
 if (write_audit_outputs) {
   dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
 }
@@ -396,8 +395,9 @@ if (write_data_check_export) {
   land_cols <- paste0("land_", land_classes)
   land_matrix <- as.data.frame(lapply(data_check[land_cols], coerce_num))
   land_sum <- rowSums(land_matrix, na.rm = TRUE)
+  land_missing <- rowSums(!is.na(land_matrix)) == 0
   canada_md <- grepl("^Canada__|^MD__", data_check$Stream_ID)
-  land_sum_flag <- abs(land_sum - 100) > 1
+  land_sum_flag <- !land_missing & abs(land_sum - 100) > 1
 
   write.csv(data_check, data_check_file, row.names = FALSE, na = "")
   cat("WROTE:", data_check_file, "\n", sep = "")
@@ -408,13 +408,36 @@ if (write_data_check_export) {
   quit(save = "no", status = 0)
 }
 
+if (write_patched_final_export) {
+  existing_final_file <- file.path(data_root, "final_annual_dataset_20260608.csv")
+  patched_final_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
+
+  patched_final <- read_csv_clean(existing_final_file)
+  patched_final <- apply_lulc_patch(patched_final, lulc_patch_file)
+
+  land_cols <- paste0("land_", land_classes)
+  land_matrix <- as.data.frame(lapply(patched_final[land_cols], coerce_num))
+  land_sum <- rowSums(land_matrix, na.rm = TRUE)
+  land_missing <- rowSums(!is.na(land_matrix)) == 0
+  canada_md <- grepl("^Canada__|^MD__", patched_final$Stream_ID)
+  land_sum_flag <- !land_missing & abs(land_sum - 100) > 1
+
+  write.csv(patched_final, patched_final_file, row.names = FALSE, na = "")
+  cat("WROTE:", patched_final_file, "\n", sep = "")
+  cat("rows=", nrow(patched_final), "\n", sep = "")
+  cat("cols=", ncol(patched_final), "\n", sep = "")
+  cat("sites=", length(unique(patched_final$Stream_ID)), "\n", sep = "")
+  cat("canada_md_missing_lulc_rows=", sum(land_missing & canada_md, na.rm = TRUE), "\n", sep = "")
+  cat("canada_md_land_sum_flags=", sum(land_sum_flag & canada_md, na.rm = TRUE), "\n", sep = "")
+  quit(save = "no", status = 0)
+}
+
 required <- c(
   current_site_file,
   current_annual_file,
   wrtds_annual_file,
   raw_chem_file,
   site_ref_file,
-  esom_sites_file,
   march_harmonized_file,
   lulc_patch_file
 )
@@ -660,42 +683,9 @@ final_annual <- full_spatial_only %>%
     everything()
   )
 
-esom_sites <- read_csv_clean(esom_sites_file)
-esom_sites$.site_key <- site_key_from_parts(esom_sites$LTER, esom_sites$Stream_Name)
-esom_unique <- esom_sites %>%
-  filter(!is.na(.site_key), .site_key != "||") %>%
-  distinct(.site_key, .keep_all = TRUE)
-esom_duplicates <- esom_sites %>%
-  filter(duplicated(.site_key) | duplicated(.site_key, fromLast = TRUE)) %>%
-  arrange(.site_key)
-matched_esom_keys <- intersect(unique(out_base$.site_key), esom_unique$.site_key)
-esom_missing <- esom_unique %>%
-  filter(!.site_key %in% matched_esom_keys) %>%
-  select(-.site_key)
-esom_base <- out_base %>%
-  filter(.site_key %in% esom_unique$.site_key) %>%
-  select(-.site_key)
-esom_expanded_snow <- add_monthly_snow(out_base) %>%
-  filter(.site_key %in% esom_unique$.site_key) %>%
-  select(-.site_key)
-esom_spatial_only <- add_monthly_snow(out_base_with_source) %>%
-  filter(.site_key %in% esom_unique$.site_key) %>%
-  select(-.site_key) %>%
-  select(-any_of(dsi_output_columns))
-
 final_out_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
-esom_out_file <- file.path(esom_out_dir, paste0("ESOM_final_harmonized_annual_", date_tag, ".csv"))
-esom_expanded_snow_file <- file.path(esom_out_dir, paste0("ESOM_final_harmonized_annual_expanded_snow_", date_tag, ".csv"))
-esom_spatial_file <- file.path(esom_out_dir, paste0("ESOM_spatial_drivers_annual_", date_tag, ".csv"))
-esom_missing_file <- file.path(esom_out_dir, paste0("ESOM_missing_from_final_harmonized_annual_", date_tag, ".csv"))
-esom_duplicate_file <- file.path(esom_out_dir, paste0("ESOM_duplicate_site_keys_final_harmonized_annual_", date_tag, ".csv"))
 
 write.csv(final_annual, final_out_file, row.names = FALSE, na = "")
-write.csv(esom_base, esom_out_file, row.names = FALSE, na = "")
-write.csv(esom_expanded_snow, esom_expanded_snow_file, row.names = FALSE, na = "")
-write.csv(esom_spatial_only, esom_spatial_file, row.names = FALSE, na = "")
-write.csv(esom_missing, esom_missing_file, row.names = FALSE, na = "")
-write.csv(esom_duplicates, esom_duplicate_file, row.names = FALSE, na = "")
 
 variable_coverage <- function(x) {
   vars <- setdiff(names(x), c("Stream_ID", "Year"))
@@ -724,33 +714,6 @@ full_summary <- data.frame(
   forbidden_columns = forbidden_column_summary(final_annual),
   stringsAsFactors = FALSE
 )
-esom_summary <- data.frame(
-  esom_site_rows = nrow(esom_sites),
-  esom_unique_site_keys = nrow(esom_unique),
-  esom_matched_site_keys = length(matched_esom_keys),
-  esom_missing_site_keys = nrow(esom_missing),
-  esom_output_rows = nrow(esom_base),
-  esom_output_cols = ncol(esom_base),
-  duplicate_esom_rows = nrow(esom_duplicates),
-  first_year = min(esom_base$Year),
-  last_year = max(esom_base$Year),
-  forbidden_columns = forbidden_column_summary(esom_base),
-  stringsAsFactors = FALSE
-)
-expanded_snow_summary <- data.frame(
-  dataset = c("full", "ESOM"),
-  rows = c(nrow(full_expanded_snow), nrow(esom_expanded_snow)),
-  cols = c(ncol(full_expanded_snow), ncol(esom_expanded_snow)),
-  snow_columns = c(sum(grepl("^snow", names(full_expanded_snow))), sum(grepl("^snow", names(esom_expanded_snow)))),
-  monthly_snow_columns = c(
-    sum(names(full_expanded_snow) %in% monthly_snow_cols),
-    sum(names(esom_expanded_snow) %in% monthly_snow_cols)
-  ),
-  snow_num_days_missing = c(sum(is.na(full_expanded_snow$snow_num_days)), sum(is.na(esom_expanded_snow$snow_num_days))),
-  forbidden_columns = c(forbidden_column_summary(full_expanded_snow), forbidden_column_summary(esom_expanded_snow)),
-  stringsAsFactors = FALSE
-)
-
 drainage_area_site_audit <- out %>%
   distinct(
     .site_key,
@@ -824,39 +787,5 @@ if (write_audit_outputs) {
     na = ""
   )
 }
-write.csv(
-  esom_summary,
-  file.path(esom_out_dir, paste0("ESOM_final_harmonized_annual_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  expanded_snow_summary[expanded_snow_summary$dataset == "ESOM", setdiff(names(expanded_snow_summary), "dataset"), drop = FALSE],
-  file.path(esom_out_dir, paste0("ESOM_final_harmonized_annual_expanded_snow_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
-write.csv(
-  data.frame(
-    rows = nrow(esom_spatial_only),
-    cols = ncol(esom_spatial_only),
-    sites = length(unique(esom_spatial_only$Stream_ID)),
-    first_year = min(esom_spatial_only$Year),
-    last_year = max(esom_spatial_only$Year),
-    snow_columns = sum(grepl("^snow", names(esom_spatial_only))),
-    monthly_snow_columns = sum(names(esom_spatial_only) %in% monthly_snow_cols),
-    drainage_area_nonmissing_sites = length(unique(esom_spatial_only$Stream_ID[!is.na(esom_spatial_only$drainage_area)])),
-    drainage_area_missing_sites = length(unique(esom_spatial_only$Stream_ID[is.na(esom_spatial_only$drainage_area)])),
-    dropped_DSi_columns = paste(intersect(dsi_output_columns, names(esom_base)), collapse = ";"),
-    forbidden_columns = forbidden_column_summary(esom_spatial_only),
-    stringsAsFactors = FALSE
-  ),
-  file.path(esom_out_dir, paste0("ESOM_spatial_drivers_annual_summary_", date_tag, ".csv")),
-  row.names = FALSE,
-  na = ""
-)
 
 cat("WROTE:", final_out_file, "\n", sep = "")
-cat("WROTE:", esom_out_file, "\n", sep = "")
-cat("WROTE:", esom_expanded_snow_file, "\n", sep = "")
-cat("WROTE:", esom_spatial_file, "\n", sep = "")

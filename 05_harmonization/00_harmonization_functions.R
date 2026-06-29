@@ -479,7 +479,7 @@ add_gee_glc_land_cover <- function(df, lulc_path) {
     select(.gee_match_id, .gee_col, LandClass_sum) %>%
     pivot_wider(names_from = .gee_col, values_from = LandClass_sum)
 
-  stream_raw <- first_available_character_col(df_base, c("ESOM_Stream_Name", "Stream_Name"))
+  stream_raw <- first_available_character_col(df_base, c("Stream_Name"))
   df_keyed <- df_base %>%
     mutate(
       .gee_stream_raw = stream_raw,

@@ -14,8 +14,7 @@ source_file <- file.path(
 )
 
 paths <- c(
-  full = file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv")),
-  esom = file.path(box_root, "esom", "spatial-data", paste0("ESOM_spatial_drivers_annual_", date_tag, ".csv"))
+  full = file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
 )
 
 value_or_missing <- function(x) {

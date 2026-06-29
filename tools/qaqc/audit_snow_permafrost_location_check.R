@@ -4,16 +4,11 @@ date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260608")
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")
 audit_dir <- file.path(data_root, "audit-summaries")
+dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
 
 full_spatial_file <- file.path(
   data_root,
   paste0("final_annual_dataset_", date_tag, ".csv")
-)
-esom_spatial_file <- file.path(
-  box_root,
-  "esom",
-  "spatial-data",
-  paste0("ESOM_spatial_drivers_annual_", date_tag, ".csv")
 )
 site_ref_file <- file.path(
   data_root,
@@ -102,8 +97,7 @@ audit_one <- function(dataset, path, coords) {
 coords <- read_site_reference_coords()
 
 audits <- bind_rows(
-  audit_one("full", full_spatial_file, coords),
-  audit_one("esom", esom_spatial_file, coords)
+  audit_one("full", full_spatial_file, coords)
 )
 
 flagged <- audits %>%
@@ -119,9 +113,9 @@ summary <- audits %>%
     .groups = "drop"
   )
 
-all_out <- file.path(audit_dir, paste0("snow_permafrost_latitude_plausibility_by_site_", date_tag, ".csv"))
-flagged_out <- file.path(audit_dir, paste0("snow_permafrost_latitude_plausibility_flags_", date_tag, ".csv"))
-summary_out <- file.path(audit_dir, paste0("snow_permafrost_latitude_plausibility_summary_", date_tag, ".csv"))
+all_out <- file.path(audit_dir, paste0("snow_permafrost_location_check_by_site_", date_tag, ".csv"))
+flagged_out <- file.path(audit_dir, paste0("snow_permafrost_location_check_flags_", date_tag, ".csv"))
+summary_out <- file.path(audit_dir, paste0("snow_permafrost_location_check_summary_", date_tag, ".csv"))
 
 write_csv(audits, all_out)
 write_csv(flagged, flagged_out)
