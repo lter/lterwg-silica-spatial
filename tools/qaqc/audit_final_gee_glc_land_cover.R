@@ -56,12 +56,39 @@ for (dataset in names(paths)) {
   )
 
   missing_rows <- which(!has_land)
-  missing[[dataset]] <- data.frame(
+  missing_detail <- data.frame(
     dataset = dataset,
     Stream_ID = if ("Stream_ID" %in% names(df)) as.character(df$Stream_ID[missing_rows]) else NA_character_,
     Year = if ("Year" %in% names(df)) suppressWarnings(as.integer(df$Year[missing_rows])) else NA_integer_,
     stringsAsFactors = FALSE
   )
+  if (nrow(missing_detail)) {
+    split_key <- interaction(
+      missing_detail$dataset,
+      missing_detail$Stream_ID,
+      drop = TRUE,
+      sep = "\r"
+    )
+    missing[[dataset]] <- do.call(rbind, lapply(split(missing_detail, split_key), function(x) {
+      data.frame(
+        dataset = value_or_missing(x$dataset[[1]]),
+        Stream_ID = value_or_missing(x$Stream_ID[[1]]),
+        missing_years = nrow(x),
+        first_year = min(x$Year, na.rm = TRUE),
+        last_year = max(x$Year, na.rm = TRUE),
+        stringsAsFactors = FALSE
+      )
+    }))
+  } else {
+    missing[[dataset]] <- data.frame(
+      dataset = character(),
+      Stream_ID = character(),
+      missing_years = integer(),
+      first_year = integer(),
+      last_year = integer(),
+      stringsAsFactors = FALSE
+    )
+  }
 
   bad_rows <- which(has_land & (land_sum < 99.9 | land_sum > 100.1))
   if (length(bad_rows)) {
