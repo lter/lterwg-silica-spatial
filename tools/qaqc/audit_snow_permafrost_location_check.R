@@ -3,11 +3,17 @@ librarian::shelf(dplyr, readr)
 date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260629")
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")
-audit_dir <- file.path(data_root, "audit-summaries")
+audit_dir <- file.path(data_root, "qaqc")
+annual_with_wrtds_dir <- file.path(
+  data_root,
+  "spatial-data-files",
+  "appeears-nasa",
+  "annual-with-wrtds"
+)
 dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
 
 full_spatial_file <- file.path(
-  data_root,
+  annual_with_wrtds_dir,
   paste0("final_annual_dataset_", date_tag, ".csv")
 )
 site_ref_file <- file.path(

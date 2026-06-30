@@ -4,10 +4,16 @@ box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")
 date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260629")
 
-final_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
+annual_with_wrtds_dir <- file.path(
+  data_root,
+  "spatial-data-files",
+  "appeears-nasa",
+  "annual-with-wrtds"
+)
+final_file <- file.path(annual_with_wrtds_dir, paste0("final_annual_dataset_", date_tag, ".csv"))
 wrtds_file <- file.path(data_root, "master-datasets", "Full_Results_WRTDS_kalman_annual.csv")
 site_ref_file <- file.path(data_root, "master-datasets", "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv")
-audit_dir <- file.path(data_root, "audit-summaries")
+audit_dir <- file.path(data_root, "qaqc")
 dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
 
 read_csv_clean <- function(path) {

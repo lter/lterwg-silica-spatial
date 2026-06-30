@@ -6,15 +6,15 @@ workflow.
 Future Google Earth Engine workflows should stay separate from this final
 AppEEARS/NASA-based dataset.
 
-## Current Data Folder
+## Current Data File
 
-The final annual file lives in Box:
+The current shared AppEEARS/NASA-era spatial file lives in Box:
 
 ```text
-/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/final_annual_dataset_20260629.csv
+/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/spatial-data-files/appeears-nasa/all-data_si-extract_3_20260629.csv
 ```
 
-Older near-duplicate final outputs were retired during cleanup.
+The long annual file with WRTDS/DSi fields used by QAQC scripts lives in `spatial-data-files/appeears-nasa/annual-with-wrtds/`.
 
 ## Repo Folders
 
@@ -62,7 +62,7 @@ Write the current final annual dataset with the fixed GEE/GLC land data:
 
 ```bash
 SILICA_WRITE_PATCHED_FINAL_EXPORT=TRUE \
-SILICA_EXISTING_FINAL_FILE=/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/final_annual_dataset_20260629.csv \
+SILICA_EXISTING_FINAL_FILE=/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/spatial-data-files/appeears-nasa/annual-with-wrtds/final_annual_dataset_20260629.csv \
 SILICA_FINAL_HARMONIZED_DATE=20260629 \
 Rscript tools/final_dataset/build_final_harmonized_through_2025.R
 ```

@@ -3,18 +3,26 @@ date_tag <- Sys.getenv("SILICA_FINAL_HARMONIZED_DATE", unset = "20260629")
 
 box_root <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn"
 data_root <- file.path(box_root, "spatial-data-extractions")
-audit_dir <- file.path(data_root, "audit-summaries")
+audit_dir <- file.path(data_root, "qaqc")
+annual_with_wrtds_dir <- file.path(
+  data_root,
+  "spatial-data-files",
+  "appeears-nasa",
+  "annual-with-wrtds"
+)
 dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
 
 source_file <- file.path(
   data_root,
-  "gee-glc-lulc-outputs",
+  "spatial-data-files",
+  "appeears-nasa",
+  "glc-lulc-from-gee",
   "merged-master-checkpoints",
   "DSi_LULC_filled_interpolated_Simple_06252026_V2.csv"
 )
 
 paths <- c(
-  full = file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
+  full = file.path(annual_with_wrtds_dir, paste0("final_annual_dataset_", date_tag, ".csv"))
 )
 
 value_or_missing <- function(x) {

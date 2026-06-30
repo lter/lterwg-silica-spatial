@@ -7,6 +7,7 @@ write_audit_outputs <- toupper(Sys.getenv("SILICA_WRITE_FINAL_AUDITS", unset = "
 write_data_check_export <- toupper(Sys.getenv("SILICA_WRITE_DATA_CHECK_EXPORT", unset = "FALSE")) == "TRUE"
 write_patched_final_export <- toupper(Sys.getenv("SILICA_WRITE_PATCHED_FINAL_EXPORT", unset = "FALSE")) == "TRUE"
 write_from_existing_final <- write_data_check_export || write_patched_final_export
+google_drive_export_dir <- Sys.getenv("SILICA_GOOGLE_DRIVE_EXPORT_DIR", unset = "")
 excluded_model_columns <- c("NOx", "P")
 dsi_output_columns <- c("FNConc", "FNYield", "GenConc", "GenYield")
 silicon_molar_mass_kg_per_kmol <- 28.0855
@@ -69,15 +70,20 @@ site_ref_file <- file.path(data_root, "master-datasets", "Site_Reference_Table -
 silica_shapefile_root <- file.path(data_root, "silica-shapefiles")
 lulc_patch_file <- file.path(
   data_root,
-  "gee-glc-lulc-outputs",
+  "spatial-data-files",
+  "appeears-nasa",
+  "glc-lulc-from-gee",
   "merged-master-checkpoints",
   "DSi_LULC_filled_interpolated_Simple_06252026_V2.csv"
 )
 
-audit_dir <- file.path(data_root, "audit-summaries")
+audit_dir <- file.path(data_root, "qaqc")
+appeears_nasa_dir <- file.path(data_root, "spatial-data-files", "appeears-nasa")
+annual_with_wrtds_dir <- file.path(appeears_nasa_dir, "annual-with-wrtds")
 if (write_audit_outputs) {
   dir.create(audit_dir, recursive = TRUE, showWarnings = FALSE)
 }
+dir.create(annual_with_wrtds_dir, recursive = TRUE, showWarnings = FALSE)
 
 read_csv_clean <- function(path) {
   x <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
@@ -85,6 +91,17 @@ read_csv_clean <- function(path) {
   names(x)[blank_names] <- paste0("source_col_", seq_len(sum(blank_names)))
   names(x) <- make.unique(names(x))
   x
+}
+
+copy_to_google_drive <- function(path) {
+  if (!nzchar(google_drive_export_dir)) {
+    return(invisible(FALSE))
+  }
+  dir.create(google_drive_export_dir, recursive = TRUE, showWarnings = FALSE)
+  drive_path <- file.path(google_drive_export_dir, basename(path))
+  file.copy(path, drive_path, overwrite = TRUE)
+  cat("COPIED_TO_GOOGLE_DRIVE:", drive_path, "\n", sep = "")
+  invisible(TRUE)
 }
 
 source(file.path("tools", "name_keys.R"))
@@ -370,7 +387,7 @@ monthly_snow_cols <- as.vector(rbind(
 ))
 
 if (write_data_check_export) {
-  final_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
+  final_file <- file.path(annual_with_wrtds_dir, paste0("final_annual_dataset_", date_tag, ".csv"))
   data_check_file <- file.path(
     data_root,
     paste0("all_data_extractions_data_check_GEE_GLC_V2_", format(Sys.Date(), "%Y%m%d"), ".csv")
@@ -400,6 +417,7 @@ if (write_data_check_export) {
   land_sum_flag <- !land_missing & abs(land_sum - 100) > 1
 
   write.csv(data_check, data_check_file, row.names = FALSE, na = "")
+  copy_to_google_drive(data_check_file)
   cat("WROTE:", data_check_file, "\n", sep = "")
   cat("rows=", nrow(data_check), "\n", sep = "")
   cat("cols=", ncol(data_check), "\n", sep = "")
@@ -411,9 +429,9 @@ if (write_data_check_export) {
 if (write_patched_final_export) {
   existing_final_file <- Sys.getenv(
     "SILICA_EXISTING_FINAL_FILE",
-    unset = file.path(data_root, "final_annual_dataset_20260629.csv")
+    unset = file.path(annual_with_wrtds_dir, "final_annual_dataset_20260629.csv")
   )
-  patched_final_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
+  patched_final_file <- file.path(annual_with_wrtds_dir, paste0("final_annual_dataset_", date_tag, ".csv"))
 
   patched_final <- read_csv_clean(existing_final_file)
   patched_final <- apply_lulc_patch(patched_final, lulc_patch_file)
@@ -426,6 +444,7 @@ if (write_patched_final_export) {
   land_sum_flag <- !land_missing & abs(land_sum - 100) > 1
 
   write.csv(patched_final, patched_final_file, row.names = FALSE, na = "")
+  copy_to_google_drive(patched_final_file)
   cat("WROTE:", patched_final_file, "\n", sep = "")
   cat("rows=", nrow(patched_final), "\n", sep = "")
   cat("cols=", ncol(patched_final), "\n", sep = "")
@@ -686,9 +705,10 @@ final_annual <- full_spatial_only %>%
     everything()
   )
 
-final_out_file <- file.path(data_root, paste0("final_annual_dataset_", date_tag, ".csv"))
+final_out_file <- file.path(annual_with_wrtds_dir, paste0("final_annual_dataset_", date_tag, ".csv"))
 
 write.csv(final_annual, final_out_file, row.names = FALSE, na = "")
+copy_to_google_drive(final_out_file)
 
 variable_coverage <- function(x) {
   vars <- setdiff(names(x), c("Stream_ID", "Year"))

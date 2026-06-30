@@ -74,7 +74,13 @@ date_tag <- env_or_default("SILICA_HARMONIZATION_DATE", format(Sys.Date(), "%Y%m
 
 # Extra lookup tables and harmonization inputs
 master_dir <- file.path(data_root, "master-datasets")
-gee_glc_dir <- file.path(data_root, "gee-glc-lulc-outputs", "merged-master-checkpoints")
+gee_glc_dir <- file.path(
+  data_root,
+  "spatial-data-files",
+  "appeears-nasa",
+  "glc-lulc-from-gee",
+  "merged-master-checkpoints"
+)
 
 # Q and discharge inputs
 daily_discharge_file <- first_existing_path(
