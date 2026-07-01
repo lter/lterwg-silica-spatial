@@ -6,9 +6,54 @@ source(file.path(getwd(), "tools", "workflow_paths.R"))
 
 keys <- c("LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name")
 join_keys <- c(".LTER_KEY", ".STREAM_KEY", ".DISCHARGE_KEY", ".SHP_KEY")
+upload_to_google_drive <- toupper(Sys.getenv("SILICA_UPLOAD_TO_GOOGLE_DRIVE", unset = "FALSE")) == "TRUE"
+google_drive_folder_id <- Sys.getenv(
+  "SILICA_GOOGLE_DRIVE_FOLDER_ID",
+  unset = "1zF_Itljwn0bUWSTHEkwkMDyNOiKPXRF1"
+)
+google_drive_account <- Sys.getenv("SILICA_GOOGLE_DRIVE_ACCOUNT", unset = "")
+google_drive_overwrite <- toupper(Sys.getenv("SILICA_GOOGLE_DRIVE_OVERWRITE", unset = "TRUE")) == "TRUE"
 
 log_table_summary <- function(df, label) {
   cat(label, ": rows=", nrow(df), " cols=", ncol(df), "\n", sep = "")
+}
+
+upload_file_to_google_drive <- function(path) {
+  if (!upload_to_google_drive) {
+    return(invisible(FALSE))
+  }
+
+  if (!requireNamespace("googledrive", quietly = TRUE)) {
+    stop(
+      "Install the googledrive package or set SILICA_UPLOAD_TO_GOOGLE_DRIVE=FALSE.",
+      call. = FALSE
+    )
+  }
+
+  tryCatch(
+    {
+      if (nzchar(google_drive_account)) {
+        googledrive::drive_auth(email = google_drive_account)
+      } else {
+        googledrive::drive_auth()
+      }
+    },
+    error = function(e) {
+      stop(
+        "Google Drive auth failed. Run googledrive::drive_auth() once from R or RStudio, then rerun this script.",
+        call. = FALSE
+      )
+    }
+  )
+
+  uploaded <- googledrive::drive_upload(
+    media = path,
+    path = googledrive::as_id(google_drive_folder_id),
+    name = basename(path),
+    overwrite = google_drive_overwrite
+  )
+  cat("UPLOADED_TO_GOOGLE_DRIVE:", uploaded$name, "\n", sep = "")
+  invisible(TRUE)
 }
 
 # Keep the key fields consistent before joining any driver tables
@@ -526,6 +571,7 @@ out_file <- Sys.getenv(
   file.path(ex, default_out_name)
 )
 write.csv(out_final, out_file, row.names = FALSE, na = "")
+upload_file_to_google_drive(out_file)
 cat("WROTE:", out_file, "\n", sep = "")
 cat("out_rows=", nrow(out_final), "\n", sep = "")
 cat("duplicate_site_groups_collapsed=", if (is.null(duplicate_site_groups)) 0 else nrow(duplicate_site_groups), "\n", sep = "")

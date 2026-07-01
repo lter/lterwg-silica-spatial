@@ -1,10 +1,8 @@
 # LTER Silica Spatial Workflow
 
-This is the original LTER working-group repository for the silica spatial
-workflow.
+This is the original LTER working-group repository for the silica spatial workflow.
 
-Future Google Earth Engine workflows should stay separate from this final
-AppEEARS/NASA-based dataset.
+Future Google Earth Engine workflows should stay separate from this AppEEARS/NASA-based dataset.
 
 ## Current Data File
 
@@ -13,8 +11,6 @@ The current shared AppEEARS/NASA-era spatial file lives in Box:
 ```text
 /Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/spatial-data-files/appeears-nasa/all-data_si-extract_3_20260629.csv
 ```
-
-The long annual file with WRTDS/DSi fields used by QAQC scripts lives in `spatial-data-files/appeears-nasa/annual-with-wrtds/`.
 
 ## Repo Folders
 
@@ -58,20 +54,28 @@ Rebuild and check the combined spatial table, then run harmonization:
 Rscript tools/run_combine_and_harmonization_workflow.R
 ```
 
-Write the current final annual dataset with the fixed GEE/GLC land data:
+Upload the shared wide spatial CSV to the data release Google Drive folder:
+
+First authenticate once from R or RStudio:
+
+```r
+googledrive::drive_auth(email = "bushsi@oregonstate.edu")
+```
+
+Then run the combine script with Drive upload enabled:
 
 ```bash
-SILICA_WRITE_PATCHED_FINAL_EXPORT=TRUE \
-SILICA_EXISTING_FINAL_FILE=/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/spatial-data-files/appeears-nasa/annual-with-wrtds/final_annual_dataset_20260629.csv \
-SILICA_FINAL_HARMONIZED_DATE=20260629 \
-Rscript tools/final_dataset/build_final_harmonized_through_2025.R
+SILICA_OUTPUT_FILE=/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/spatial-data-files/appeears-nasa/all-data_si-extract_3_20260629.csv \
+SILICA_UPLOAD_TO_GOOGLE_DRIVE=TRUE \
+SILICA_GOOGLE_DRIVE_FOLDER_ID=1zF_Itljwn0bUWSTHEkwkMDyNOiKPXRF1 \
+SILICA_GOOGLE_DRIVE_ACCOUNT=bushsi@oregonstate.edu \
+Rscript 04_combine_qaqc/combine-spatial-data.R
 ```
 
 Full rebuild after new extractions:
 
 ```bash
 Rscript tools/run_combine_and_harmonization_workflow.R
-Rscript tools/final_dataset/build_final_harmonized_through_2025.R
 ```
 
 ## Notes
@@ -79,7 +83,6 @@ Rscript tools/final_dataset/build_final_harmonized_through_2025.R
 - Name cleanup tables live in `tools/name_keys.R`.
 - The Aurora shell launcher is `03_spatial_extraction/aurora/run-spatial-extraction-aurora.sh`.
 - Do not put generated CSVs, plots, or run debris in this repo.
-- Do not touch `data-workflow` or `data-documentation` during this cleanup pass.
 
 ## Related Repositories
 
