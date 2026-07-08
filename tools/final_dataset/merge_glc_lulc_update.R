@@ -2,6 +2,7 @@ librarian::shelf(dplyr, tidyr, readr, stringr)
 
 args <- commandArgs(trailingOnly = TRUE)
 
+# This script needs exactly three file paths: old master, new GLC input, and output.
 if (length(args) != 3) {
   stop(
     "Usage: Rscript tools/final_dataset/merge_glc_lulc_update.R <master_lulc_csv> <new_glc_csv> <output_csv>",
@@ -23,7 +24,7 @@ simple_classes <- c(
   "Impervious",
   "Salt_Water",
   "Tidal_Wetland",
-  "Water",
+  "Open_water",
   "Wetland_Marsh"
 )
 
@@ -64,7 +65,7 @@ glc_class_crosswalk <- tribble(
   "200", "Bare_areas", "Bare",
   "201", "Consolidated_bare_areas", "Bare",
   "202", "Unconsolidated_bare_areas", "Bare",
-  "210", "Water_body", "Water",
+  "210", "Water_body", "Open_water",
   "220", "Permanent_ice_and_snow", "Ice_Snow"
 )
 
@@ -72,15 +73,19 @@ landclass_to_simple <- setNames(glc_class_crosswalk$Simple_Class, glc_class_cros
 lc_id_to_landclass <- setNames(glc_class_crosswalk$LandClass, glc_class_crosswalk$LC_ID)
 lc_id_to_simple <- setNames(glc_class_crosswalk$Simple_Class, glc_class_crosswalk$LC_ID)
 
+# Fill yearly land-cover values between the GLC anchor years.
 interp_series <- function(years, values) {
   stopifnot(length(years) == length(values))
   years <- as.integer(years)
 
+  # The early GLC years are five-year anchors; all three are needed to interpolate.
   if (!all(c(1985, 1990, 1995) %in% years)) {
     stop("Expected five-year anchors 1985, 1990, and 1995 in new GLC input.")
   }
 
   annual_years <- sort(unique(years[years >= 2000]))
+
+  # From 2000 onward, the GLC product should already have every year.
   if (!identical(annual_years, 2000:2022)) {
     stop("Expected annual GLC years 2000:2022 in new GLC input.")
   }
@@ -101,6 +106,8 @@ new_glc <- read_csv(new_glc_path, show_col_types = FALSE)
 
 required_cols <- c("Stream_Name", "Year", "LandClass", "Area_m2")
 missing_cols <- setdiff(required_cols, names(new_glc))
+
+# Stop early if the new GLC file is missing any columns used below.
 if (length(missing_cols) > 0) {
   stop("Missing required columns in new GLC file: ", paste(missing_cols, collapse = ", "))
 }
@@ -114,6 +121,7 @@ message("Updating ", length(updated_sites), " Stream_Name values.")
 
 source_years <- new_glc %>%
   mutate(
+    # Some files carry LC_ID instead of a filled LandClass name, so use LC_ID when needed.
     LC_ID = if ("LC_ID" %in% names(.)) as.character(LC_ID) else NA_character_,
     LandClass = if_else(
       (is.na(LandClass) | LandClass == "") & !is.na(LC_ID),
@@ -131,6 +139,7 @@ unmapped_classes <- source_years %>%
   distinct(LC_ID, LandClass) %>%
   arrange(LC_ID, LandClass)
 
+# Every class must map to a simple class before areas can be combined.
 if (nrow(unmapped_classes) > 0) {
   stop(
     "Unmapped GLC classes remain after applying the full-to-simple crosswalk: ",
@@ -146,6 +155,8 @@ source_years <- source_years %>%
   group_by(Stream_Name, Year) %>%
   mutate(
     total_area_m2 = sum(Area_m2, na.rm = TRUE),
+
+    # Convert class areas to proportions; zero-area rows stay at zero.
     LandClass_sum = if_else(total_area_m2 > 0, Area_m2 / total_area_m2, 0)
   ) %>%
   ungroup() %>%
@@ -160,6 +171,8 @@ source_years <- source_years %>%
 interpolated_1985_2022 <- source_years %>%
   arrange(Stream_Name, Simple_Class, Year) %>%
   group_by(Stream_Name, Simple_Class) %>%
+
+  # Interpolate each site/class pair separately so proportions stay grouped correctly.
   group_modify(~ tibble(
     Year = 1985:2022,
     LandClass_sum = interp_series(.x$Year, .x$LandClass_sum)
