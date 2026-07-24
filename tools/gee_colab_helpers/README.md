@@ -1,45 +1,30 @@
-# AND ERA5-Land Small-Watershed Rerun
+# Google Earth Engine
 
-This folder keeps the Colab notebook for the corrected AND/HJA ERA5-Land test.
+These tools prepare watershed payloads, submit Earth Engine jobs, and check the
+exports. Generated files belong in `generated_outputs/` or shared storage.
 
-Colab link:
-https://colab.research.google.com/drive/1qF3e_9Q_xoX0jfYdU7HxmUXzwCgCrr6A
+## Safe submission
 
-## Small-Watershed Decision
+Launchers are read-only unless `--submit` is supplied. Production submissions
+also require a fresh receipt from `gee_quota_preflight.py`.
 
-For small watersheds, do not fill missing values from the watershed centroid.
+Start with one task:
 
-The corrected extraction does this instead:
-
-1. Extract ERA5-Land values from the watershed polygon.
-2. If the polygon result is blank, retry the same polygon at a finer scale.
-3. Mark retry rows with `used_fine_scale_fallback`.
-
-This keeps the value tied to the watershed area instead of replacing it with a
-single centroid pixel.
-
-## Expected Outputs
-
-The Colab notebook writes one CSV per year for 2001-2023, named like:
-
-`era5_land_2001_AND_fine_scale_watershed_extract.csv`
-
-The notebook moves those CSV files into the shared Google Drive folder from the
-project link. It does not upload code to the output folder.
-
-## After The Colab Finishes
-
-Download the corrected `AND_fine_scale` CSV files, then rerun:
-
-```bash
-Rscript tools/plot_and_era5_modis_comparison.R
+```text
+--submit --max-new-tasks 1 --preflight-receipt PATH
 ```
 
-That script makes the ERA5-Land versus driver plots and uploads only the plots
-and CSV summaries to:
+Check the smoke test and its EECU cost before increasing the task count. Do not
+bypass the quota gate or watchdog.
 
-`small watersheds test case / Andrews sites only testing / plots`
+## Main entry points
 
-and:
+| Data | Entry point |
+|---|---|
+| Annual ERA5-Land | `full_annual_all_sites/run_all_sites_annual_era5_land_2000_2025.ipynb` |
 
-`small watersheds test case / Andrews sites only testing / csv files`
+Build payloads with `build_gee_vector_payloads.R`. Use `coarse-1km` for
+kilometre-scale products and `fine-30m` for 30 m land cover. Each launcher and
+consolidator provides its own command-line options.
+
+After downloading exports, run the scripts in `post_run_qa/`.
