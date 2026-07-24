@@ -1,13 +1,13 @@
 # Spatial Extraction
 
-The workflow uses the accepted site-reference snapshot and the matching
-watershed from the canonical release library.
+The workflow reads the reviewed site-reference table and uses the watershed
+version listed for each site.
 
 The three version fields have separate meanings:
 
-- `GlASS_First_Release`: first publication containing the site
-- `CQ_Data_Version`: accepted chemistry and discharge data
-- `Spatial_Data_Version`: accepted watershed and spatial extraction
+- `GlASS_First_Release`: first planned release containing the site
+- `CQ_Data_Version`: chemistry and discharge data currently in use
+- `Spatial_Data_Version`: watershed and spatial results currently in use
 
 Validate the reference table and watershed library before running:
 
@@ -20,5 +20,5 @@ Rscript 02_run-workflow.R
 Set the run mode and reference release in `01_run_config.R`. Set
 `SILICA_DATA_ROOT` when needed.
 
-Regional routing and reviewed exceptions belong in
-`03_spatial_extraction/config/`, not in site-specific code.
+Shared rules and documented exceptions belong in
+`03_spatial_extraction/config/`, not in code written for individual sites.

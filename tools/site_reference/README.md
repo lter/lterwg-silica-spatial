@@ -1,10 +1,10 @@
 # Site-Reference Tools
 
-This folder contains the reusable tools for the GlASS site-reference table.
+This folder contains reusable tools for the AppEEARS site-reference table.
 
 | Script | Purpose |
 |---|---|
-| `validate_site_reference.R` | Check coordinates, versions, sources, and spatial metadata |
+| `validate_site_reference.R` | Check coordinates, versions, sources, and watershed fields |
 | `assign_major_drainage_basins.R` | Assign and review major drainage basins |
 
 Typical use:
