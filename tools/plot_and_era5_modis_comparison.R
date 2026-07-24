@@ -1,41 +1,109 @@
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(tidyr)
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(ggplot2)
+  library(readr)
+  library(tidyr)
+})
 
-# Compare the new AND ERA5-Land exports with the reference spatial-driver columns.
-# The script looks in a few likely folders so it can be rerun from either
-# downloaded Drive files or the repo output folder.
-downloads_folder <- "/Users/sidneybush/Downloads"
+# Compare ERA5-Land exports with the reference spatial-driver columns.
+# Set `SILICA_ERA5_INPUT_DIR` to one export directory. Additional directories
+# may be supplied in `SILICA_ERA5_SEARCH_DIRS`, separated by `.Platform$path.sep`.
 today_label <- format(Sys.Date(), "%Y%m%d")
+generated_outputs_folder <- "generated_outputs"
 
-# Only search Downloads when that folder is available on this computer.
-download_folders <- if (dir.exists(downloads_folder)) {
-  list.dirs(downloads_folder, recursive = FALSE, full.names = TRUE)
+regex_escape <- function(x) {
+  gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x)
+}
+
+slugify <- function(x) {
+  x <- tolower(trimws(as.character(x)))
+  x <- gsub("[^a-z0-9]+", "_", x)
+  x <- gsub("^_+|_+$", "", x)
+  gsub("_+", "_", x)
+}
+
+era5_run_label <- Sys.getenv(
+  "SILICA_ERA5_RUN_LABEL",
+  unset = "comparison_sites_fine_scale"
+)
+lter_filter <- Sys.getenv("SILICA_ERA5_LTER_FILTER", unset = "ALL")
+plot_subject <- Sys.getenv(
+  "SILICA_ERA5_PLOT_SUBJECT",
+  unset = if (nzchar(lter_filter) && toupper(lter_filter) != "ALL") {
+    paste0(lter_filter, " sites")
+  } else {
+    "Selected sites"
+  }
+)
+output_slug <- Sys.getenv(
+  "SILICA_ERA5_COMPARISON_SLUG",
+  unset = slugify(era5_run_label)
+)
+input_dir_override <- Sys.getenv("SILICA_ERA5_INPUT_DIR", unset = "")
+write_site_plots <- toupper(Sys.getenv("SILICA_WRITE_ERA5_SITE_PLOTS", unset = "TRUE")) == "TRUE"
+max_site_panels_for_plots <- as.integer(Sys.getenv("SILICA_ERA5_MAX_PLOT_SITES", unset = "80"))
+if (is.na(max_site_panels_for_plots) || max_site_panels_for_plots < 1) {
+  max_site_panels_for_plots <- 80
+}
+
+era5_pattern <- paste0(
+  "^era5_land_[0-9]{4}_",
+  regex_escape(era5_run_label),
+  "_watershed_extract\\.csv$"
+)
+
+today_era5_folder <- file.path(
+  generated_outputs_folder,
+  paste0(output_slug, "_era5_spatial_driver_comparison_", today_label),
+  paste0("era5_land_", era5_run_label)
+)
+
+generated_era5_folders <- if (dir.exists(generated_outputs_folder)) {
+  generated_folders <- list.dirs(
+    generated_outputs_folder,
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  generated_folders[
+    vapply(
+      generated_folders,
+      function(folder) {
+        length(list.files(folder, pattern = era5_pattern, full.names = TRUE)) > 0
+      },
+      logical(1)
+    )
+  ]
 } else {
   character(0)
 }
 
+search_dirs_value <- Sys.getenv("SILICA_ERA5_SEARCH_DIRS", unset = "")
+search_dirs <- if (nzchar(search_dirs_value)) {
+  strsplit(search_dirs_value, .Platform$path.sep, fixed = TRUE)[[1]]
+} else {
+  character()
+}
+
 places_to_check_for_era5 <- c(
-  file.path(
-    "generated_outputs",
-    paste0("and_era5_spatial_driver_comparison_", today_label),
-    "era5_land_AND_fine_scale_2001_2023"
-  ),
-  download_folders,
-  downloads_folder,
-  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/spatial-data-files/gee/earth-engine-outputs"
+  input_dir_override,
+  search_dirs,
+  today_era5_folder,
+  generated_era5_folders
 ) %>%
+  .[nzchar(.)] %>%
   unique()
 
-reference_driver_path <- "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions/spatial-data-files/appeears-nasa/all-data_si-extract_3_20260629.csv"
+reference_driver_path <- Sys.getenv(
+  "SILICA_REFERENCE_DRIVER_PATH",
+  unset = ""
+)
 drive_folder_id <- Sys.getenv(
   "SILICA_ERA5_COMPARISON_DRIVE_FOLDER_ID",
-  unset = "1hYedMgoR1907nwtOjjjqYFzjG28gk3-T"
+  unset = ""
 )
 drive_main_folder_name <- Sys.getenv(
   "SILICA_ERA5_COMPARISON_DRIVE_SUBFOLDER",
-  unset = "Andrews sites only testing"
+  unset = "ERA5-Land comparison"
 )
 drive_plot_folder_name <- Sys.getenv(
   "SILICA_ERA5_COMPARISON_PLOT_FOLDER",
@@ -48,7 +116,7 @@ drive_csv_folder_name <- Sys.getenv(
 drive_account <- Sys.getenv("SILICA_GOOGLE_DRIVE_ACCOUNT", unset = "")
 upload_to_drive <- toupper(Sys.getenv(
   "SILICA_UPLOAD_ERA5_COMPARISON_TO_DRIVE",
-  unset = "TRUE"
+  unset = "FALSE"
 )) == "TRUE"
 drive_overwrite <- toupper(Sys.getenv(
   "SILICA_GOOGLE_DRIVE_OVERWRITE",
@@ -57,12 +125,23 @@ drive_overwrite <- toupper(Sys.getenv(
 
 output_folder <- file.path(
   "generated_outputs",
-  paste0("and_era5_spatial_driver_comparison_", today_label)
+  paste0(output_slug, "_era5_spatial_driver_comparison_", today_label)
 )
 
 dir.create(output_folder, recursive = TRUE, showWarnings = FALSE)
 
-era5_pattern <- "^era5_land_[0-9]{4}_AND_fine_scale_watershed_extract\\.csv$"
+if (!nzchar(reference_driver_path) || !file.exists(reference_driver_path)) {
+  stop(
+    "Set SILICA_REFERENCE_DRIVER_PATH to the accepted spatial-driver CSV.",
+    call. = FALSE
+  )
+}
+if (upload_to_drive && !nzchar(drive_folder_id)) {
+  stop(
+    "Set SILICA_ERA5_COMPARISON_DRIVE_FOLDER_ID before enabling Drive upload.",
+    call. = FALSE
+  )
+}
 
 # Check each likely folder and keep the ERA5-Land CSVs found there.
 era5_files_by_folder <- lapply(places_to_check_for_era5, function(folder) {
@@ -104,7 +183,10 @@ era5_folder <- era5_folder_summary$folder[1]
 # Stop early with a clear next step if none of the expected files are present.
 if (is.na(era5_folder)) {
   stop(
-    "Could not find the corrected AND_fine_scale ERA5-Land files. Run the Colab notebook and download the Drive exports first."
+    "Could not find ERA5-Land files matching run label `",
+    era5_run_label,
+    "`. Run the Colab notebook and download the Drive exports first, ",
+    "or set SILICA_ERA5_INPUT_DIR to the folder containing the CSVs."
   )
 }
 
@@ -112,6 +194,9 @@ era5_files <- sort(era5_files_by_folder[[match(
   era5_folder,
   places_to_check_for_era5
 )]])
+
+message("Using ERA5-Land export folder: ", normalizePath(era5_folder))
+message("Found ERA5-Land export files: ", length(era5_files))
 
 # Some source files store percentages as 0-100 and others as 0-1.
 # This keeps everything on the same 0-1 fraction scale.
@@ -234,7 +319,6 @@ find_sites_with_same_era5_values <- function(data) {
   data %>%
     filter(!is.na(era5_value)) %>%
     mutate(
-      site_panel = paste0(stream_name, "\n", shapefile_name),
       era5_value_for_match = format(round(era5_value, 6), nsmall = 6, trim = TRUE),
       era5_year_value = paste(year, era5_value_for_match, sep = ":")
     ) %>%
@@ -273,6 +357,54 @@ find_sites_with_same_era5_values <- function(data) {
       n_sites_sharing_era5,
       shared_era5_sites,
       shared_era5_group
+    )
+}
+
+# Find watersheds that have identical old/reference values across all years.
+# This separates new ERA5-Land shared-grid behavior from shared source behavior
+# already present in the previous spatial-driver products.
+find_sites_with_same_reference_values <- function(data) {
+  data %>%
+    filter(!is.na(reference_value)) %>%
+    mutate(
+      reference_value_for_match = format(round(reference_value, 6), nsmall = 6, trim = TRUE),
+      reference_year_value = paste(year, reference_value_for_match, sep = ":")
+    ) %>%
+    arrange(comparison, site_panel, year) %>%
+    group_by(comparison, site_panel) %>%
+    summarise(
+      reference_value_history = paste(reference_year_value, collapse = "|"),
+      .groups = "drop"
+    ) %>%
+    add_count(comparison, reference_value_history, name = "n_sites_sharing_reference") %>%
+    group_by(comparison, reference_value_history) %>%
+    mutate(
+      shared_reference_sites = paste(site_panel, collapse = "; "),
+      shared_reference_group = paste(sub("\\n.*", "", site_panel), collapse = ", ")
+    ) %>%
+    ungroup() %>%
+    mutate(
+      shared_reference_values = n_sites_sharing_reference > 1,
+
+      # Keep the shared-site notes only for repeated reference histories.
+      shared_reference_sites = if_else(
+        shared_reference_values,
+        shared_reference_sites,
+        NA_character_
+      ),
+      shared_reference_group = if_else(
+        shared_reference_values,
+        shared_reference_group,
+        NA_character_
+      )
+    ) %>%
+    select(
+      comparison,
+      site_panel,
+      shared_reference_values,
+      n_sites_sharing_reference,
+      shared_reference_sites,
+      shared_reference_group
     )
 }
 
@@ -484,10 +616,20 @@ if (!"used_fine_scale_fallback" %in% names(era5_raw)) {
   )
 }
 
-# Keep the AND rows and label how each ERA5-Land value was extracted.
-era5 <- era5_raw %>%
-  filter(tolower(lter) == "and" | grepl("^and__", site_id)) %>%
+# Keep the requested rows and label how each ERA5-Land value was extracted.
+era5 <- era5_raw
+if (nzchar(lter_filter) && toupper(lter_filter) != "ALL") {
+  lter_filter_lower <- tolower(lter_filter)
+  era5 <- era5 %>%
+    filter(
+      tolower(lter) == lter_filter_lower |
+        grepl(paste0("^", lter_filter_lower, "__"), tolower(site_id))
+    )
+}
+
+era5 <- era5 %>%
   mutate(
+    lter_key = toupper(lter),
     shapefile_key = toupper(shapefile_name),
     stream_name = toupper(stream_name),
     used_centroid_fallback = if_else(
@@ -509,9 +651,15 @@ era5 <- era5_raw %>%
     )
   )
 
-reference_drivers <- read_csv(reference_driver_path, show_col_types = FALSE) %>%
-  filter(LTER == "AND") %>%
+reference_drivers <- read_csv(reference_driver_path, show_col_types = FALSE)
+if (nzchar(lter_filter) && toupper(lter_filter) != "ALL") {
+  reference_drivers <- reference_drivers %>%
+    filter(toupper(LTER) == toupper(lter_filter))
+}
+
+reference_drivers <- reference_drivers %>%
   mutate(
+    lter_key = toupper(LTER),
     shapefile_key = toupper(Shapefile_Name),
     Stream_Name = toupper(Stream_Name)
   )
@@ -524,6 +672,7 @@ gpcp_precip_cols <- grep("^precip_[0-9]{4}_mm_per_day$", names(reference_drivers
 modis_et <- reference_drivers %>%
   select(
     LTER,
+    lter_key,
     Shapefile_Name,
     Stream_Name,
     shapefile_key,
@@ -539,6 +688,7 @@ modis_et <- reference_drivers %>%
 modis_snow <- reference_drivers %>%
   select(
     LTER,
+    lter_key,
     Shapefile_Name,
     Stream_Name,
     shapefile_key,
@@ -554,6 +704,7 @@ modis_snow <- reference_drivers %>%
 noaa_temp <- reference_drivers %>%
   select(
     LTER,
+    lter_key,
     Shapefile_Name,
     Stream_Name,
     shapefile_key,
@@ -569,6 +720,7 @@ noaa_temp <- reference_drivers %>%
 gpcp_precip <- reference_drivers %>%
   select(
     LTER,
+    lter_key,
     Shapefile_Name,
     Stream_Name,
     shapefile_key,
@@ -587,13 +739,14 @@ gpcp_precip <- reference_drivers %>%
 et_points <- era5 %>%
   inner_join(
     modis_et,
-    by = c("shapefile_key", "year"),
+    by = c("lter_key", "shapefile_key", "year"),
     suffix = c("_era5", "_modis")
   ) %>%
   transmute(
     comparison = "Evapotranspiration",
     reference_product = "MODIS ET driver",
     reference_variable,
+    lter,
     site_id,
     shapefile_name,
     stream_name,
@@ -611,13 +764,14 @@ et_points <- era5 %>%
 snow_points <- era5 %>%
   inner_join(
     modis_snow,
-    by = c("shapefile_key", "year"),
+    by = c("lter_key", "shapefile_key", "year"),
     suffix = c("_era5", "_modis")
   ) %>%
   transmute(
     comparison = "Snow cover",
     reference_product = "MODIS snow-cover driver",
     reference_variable,
+    lter,
     site_id,
     shapefile_name,
     stream_name,
@@ -635,13 +789,14 @@ snow_points <- era5 %>%
 temp_points <- era5 %>%
   inner_join(
     noaa_temp,
-    by = c("shapefile_key", "year"),
+    by = c("lter_key", "shapefile_key", "year"),
     suffix = c("_era5", "_noaa")
   ) %>%
   transmute(
     comparison = "Air temperature",
     reference_product = "NOAA temperature driver",
     reference_variable,
+    lter,
     site_id,
     shapefile_name,
     stream_name,
@@ -659,13 +814,14 @@ temp_points <- era5 %>%
 precip_points <- era5 %>%
   inner_join(
     gpcp_precip,
-    by = c("shapefile_key", "year"),
+    by = c("lter_key", "shapefile_key", "year"),
     suffix = c("_era5", "_gpcp")
   ) %>%
   transmute(
     comparison = "Precipitation",
     reference_product = "GPCP precipitation driver",
     reference_variable,
+    lter,
     site_id,
     shapefile_name,
     stream_name,
@@ -682,17 +838,30 @@ precip_points <- era5 %>%
 
 comparison_points <- bind_rows(et_points, snow_points, temp_points, precip_points)
 
-# Stop here if the two data sources do not share any AND site-year rows.
+# Stop here if the two data sources do not share any site-year rows.
 if (nrow(comparison_points) == 0) {
-  stop("No matching AND rows were found between the ERA5-Land and reference driver file.")
+  stop("No matching rows were found between the ERA5-Land and reference driver file.")
 }
 
+comparison_points <- comparison_points %>%
+  mutate(
+    site_panel = if (nzchar(lter_filter) && toupper(lter_filter) != "ALL") {
+      paste0(stream_name, "\n", shapefile_name)
+    } else {
+      paste0(lter, ": ", stream_name, "\n", shapefile_name)
+    }
+  )
+
 same_era5_notes <- find_sites_with_same_era5_values(comparison_points)
+same_reference_notes <- find_sites_with_same_reference_values(comparison_points)
 
 comparison_points <- comparison_points %>%
-  mutate(site_panel = paste0(stream_name, "\n", shapefile_name)) %>%
   left_join(
     same_era5_notes,
+    by = c("comparison", "site_panel")
+  ) %>%
+  left_join(
+    same_reference_notes,
     by = c("comparison", "site_panel")
   )
 
@@ -702,6 +871,10 @@ site_stats <- summarize_fit(
 ) %>%
   left_join(
     same_era5_notes,
+    by = c("comparison", "site_panel")
+  ) %>%
+  left_join(
+    same_reference_notes,
     by = c("comparison", "site_panel")
   )
 
@@ -717,95 +890,120 @@ temp_points <- comparison_points %>%
 precip_points <- comparison_points %>%
   filter(comparison == "Precipitation")
 
-et_site_plot <- make_site_plot(
-  et_points,
-  "AND sites: ERA5-Land versus MODIS ET driver",
-  "MODIS ET driver (kg m-2 yr-1)",
-  "ERA5-Land ET (mm yr-1)"
-)
-
-snow_site_plot <- make_site_plot(
-  snow_points,
-  "AND sites: ERA5-Land versus MODIS snow-cover driver",
-  "MODIS snow-cover driver (fraction)",
-  "ERA5-Land annual snow cover (fraction)"
-)
-
-temp_site_plot <- make_site_plot(
-  temp_points,
-  "AND sites: ERA5-Land versus NOAA temperature driver",
-  "NOAA temperature driver (deg C)",
-  "ERA5-Land air temperature (deg C)"
-)
-
-precip_site_plot <- make_site_plot(
-  precip_points,
-  "AND sites: ERA5-Land versus GPCP precipitation driver",
-  "GPCP precipitation driver (mm yr-1)",
-  "ERA5-Land precipitation (mm yr-1)"
-)
+output_file_prefix <- paste0(output_slug, "_era5land")
 
 comparison_points_file <- file.path(
   output_folder,
-  "and_era5land_spatial_driver_comparison_points.csv"
+  paste0(output_file_prefix, "_spatial_driver_comparison_points.csv")
 )
 site_stats_file <- file.path(
   output_folder,
-  "and_era5land_spatial_driver_site_regression_stats.csv"
+  paste0(output_file_prefix, "_spatial_driver_site_regression_stats.csv")
 )
 et_plot_file <- file.path(
   output_folder,
-  "and_era5land_evapotranspiration_by_site.png"
+  paste0(output_file_prefix, "_evapotranspiration_by_site.png")
 )
 snow_plot_file <- file.path(
   output_folder,
-  "and_era5land_snow_cover_by_site.png"
+  paste0(output_file_prefix, "_snow_cover_by_site.png")
 )
 temp_plot_file <- file.path(
   output_folder,
-  "and_era5land_temperature_by_site.png"
+  paste0(output_file_prefix, "_temperature_by_site.png")
 )
 precip_plot_file <- file.path(
   output_folder,
-  "and_era5land_precipitation_by_site.png"
+  paste0(output_file_prefix, "_precipitation_by_site.png")
 )
 
 write_csv(comparison_points, comparison_points_file)
 write_csv(site_stats, site_stats_file)
 
-ggsave(
-  et_plot_file,
-  et_site_plot,
-  width = 12,
-  height = 8,
-  dpi = 300
-)
+n_site_panels <- n_distinct(comparison_points$site_panel)
+plot_files <- character(0)
 
-ggsave(
-  snow_plot_file,
-  snow_site_plot,
-  width = 12,
-  height = 8,
-  dpi = 300
-)
+if (write_site_plots && n_site_panels <= max_site_panels_for_plots) {
+  plot_height <- if (n_site_panels <= 12) {
+    8
+  } else {
+    ceiling(n_site_panels / 4) * 2.4 + 1.5
+  }
 
-ggsave(
-  temp_plot_file,
-  temp_site_plot,
-  width = 12,
-  height = 8,
-  dpi = 300
-)
+  et_site_plot <- make_site_plot(
+    et_points,
+    paste0(plot_subject, ": ERA5-Land versus MODIS ET driver"),
+    "MODIS ET driver (kg m-2 yr-1)",
+    "ERA5-Land ET (mm yr-1)"
+  )
 
-ggsave(
-  precip_plot_file,
-  precip_site_plot,
-  width = 12,
-  height = 8,
-  dpi = 300
-)
+  snow_site_plot <- make_site_plot(
+    snow_points,
+    paste0(plot_subject, ": ERA5-Land versus MODIS snow-cover driver"),
+    "MODIS snow-cover driver (fraction)",
+    "ERA5-Land annual snow cover (fraction)"
+  )
+
+  temp_site_plot <- make_site_plot(
+    temp_points,
+    paste0(plot_subject, ": ERA5-Land versus NOAA temperature driver"),
+    "NOAA temperature driver (deg C)",
+    "ERA5-Land air temperature (deg C)"
+  )
+
+  precip_site_plot <- make_site_plot(
+    precip_points,
+    paste0(plot_subject, ": ERA5-Land versus GPCP precipitation driver"),
+    "GPCP precipitation driver (mm yr-1)",
+    "ERA5-Land precipitation (mm yr-1)"
+  )
+
+  ggsave(
+    et_plot_file,
+    et_site_plot,
+    width = 12,
+    height = plot_height,
+    dpi = 300
+  )
+
+  ggsave(
+    snow_plot_file,
+    snow_site_plot,
+    width = 12,
+    height = plot_height,
+    dpi = 300
+  )
+
+  ggsave(
+    temp_plot_file,
+    temp_site_plot,
+    width = 12,
+    height = plot_height,
+    dpi = 300
+  )
+
+  ggsave(
+    precip_plot_file,
+    precip_site_plot,
+    width = 12,
+    height = plot_height,
+    dpi = 300
+  )
+
+  plot_files <- c(et_plot_file, snow_plot_file, temp_plot_file, precip_plot_file)
+} else if (!write_site_plots) {
+  message("Skipped site plots because SILICA_WRITE_ERA5_SITE_PLOTS is FALSE.")
+} else {
+  message(
+    "Skipped site plots because there are ",
+    n_site_panels,
+    " site panels. Increase SILICA_ERA5_MAX_PLOT_SITES if needed."
+  )
+}
 
 message("Wrote comparison outputs to: ", normalizePath(output_folder))
+message("ERA5-Land run label: ", era5_run_label)
+message("LTER filter: ", ifelse(nzchar(lter_filter), lter_filter, "none"))
 message("ERA5-Land years used: ", paste(sort(unique(era5$year)), collapse = ", "))
 
 # Send the finished comparison products to tidy folders in Google Drive.
@@ -824,11 +1022,14 @@ if (upload_to_drive) {
     googledrive::as_id(drive_main_folder)
   )
 
-  invisible(lapply(
-    c(et_plot_file, snow_plot_file, temp_plot_file, precip_plot_file),
-    upload_output_to_drive,
-    drive_folder = drive_plot_folder
-  ))
+  if (length(plot_files)) {
+    invisible(lapply(
+      plot_files,
+      upload_output_to_drive,
+      drive_folder = drive_plot_folder
+    ))
+  }
+
   invisible(lapply(
     c(comparison_points_file, site_stats_file),
     upload_output_to_drive,
