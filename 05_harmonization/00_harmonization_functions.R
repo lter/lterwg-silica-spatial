@@ -9,20 +9,7 @@ norm_chr <- function(x) {
 }
 
 norm_lter <- function(x) {
-  x <- clean_lter_label(norm_chr(x))
-  dplyr::recode(
-    x,
-    "Swedish Goverment" = "Sweden",
-    "Swedish Government" = "Sweden",
-    "Carey" = "PIE",
-    "Cameroon" = "Congo Basin",
-    "Cameroon Site" = "Congo Basin",
-    "Cameroon Sites" = "Congo Basin",
-    "congo-basin" = "Congo Basin",
-    "Congo-Basin" = "Congo Basin",
-    "Congo" = "Congo Basin",
-    .default = x
-  )
+  canonical_lter_label(norm_chr(x))
 }
 
 build_stream_id <- function(df) {
@@ -62,9 +49,7 @@ prepare_combined_table <- function(df) {
 # Stream name cleanup used across all harmonization joins
 harmonize_stream_name <- function(x) {
   x <- norm_chr(x)
-  x <- normalize_stream_key(x)
-  x <- ifelse(x == "amazon river at obidos", "obidos", x)
-  x
+  normalize_stream_key(x)
 }
 
 # Base table
@@ -417,6 +402,10 @@ add_gee_glc_land_cover <- function(df, lulc_path) {
   }
 
   gee <- read.csv(lulc_path, stringsAsFactors = FALSE, check.names = FALSE)
+  unnamed_index_cols <- is.na(names(gee)) | !nzchar(trimws(names(gee)))
+  if (any(unnamed_index_cols)) {
+    gee <- gee[, !unnamed_index_cols, drop = FALSE]
+  }
   required <- c("Stream_Name", "Year", "Simple_Class", "LandClass_sum")
   missing_required <- setdiff(required, names(gee))
   if (length(missing_required)) {
@@ -515,52 +504,173 @@ add_gee_glc_land_cover <- function(df, lulc_path) {
 
 # Basin slope fill
 
-# Fill missing basin slope values from the US and Krycklan fill tables
-gap_fill_basin_slope_values <- function(df, us_slope_path, krycklan_slope_path, stream_id_key_path) {
+# Read one configured slope-fill source and return Stream_ID/value pairs.
+read_basin_slope_fill_source <- function(
+    rule,
+    master_dir,
+    stream_key,
+    priority) {
+  configured_path <- trimws(Sys.getenv(rule$File_Env, unset = ""))
+  source_path <- if (nzchar(configured_path)) {
+    configured_path
+  } else {
+    file.path(master_dir, rule$Default_File)
+  }
+  if (!file.exists(source_path)) {
+    stop(
+      "Missing basin-slope fill source ",
+      rule$Source_ID,
+      ": ",
+      source_path,
+      ". Set ",
+      rule$File_Env,
+      " to override it.",
+      call. = FALSE
+    )
+  }
+
+  source <- if (rule$Layout == "wide_stream_columns") {
+    wide <- read.csv(
+      source_path,
+      header = FALSE,
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+    names(wide) <- as.character(unlist(wide[1, ], use.names = FALSE))
+    wide <- wide[-1, , drop = FALSE]
+    tidyr::pivot_longer(
+      wide,
+      cols = dplyr::everything(),
+      names_to = "Stream_Name",
+      values_to = "source_value"
+    )
+  } else if (rule$Layout == "long") {
+    required <- c(rule$Input_Key, rule$Input_Value)
+    long <- read.csv(
+      source_path,
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+    missing <- setdiff(required, names(long))
+    if (length(missing)) {
+      stop(
+        "Basin-slope source ",
+        rule$Source_ID,
+        " is missing columns: ",
+        paste(missing, collapse = ", "),
+        call. = FALSE
+      )
+    }
+    data.frame(
+      Stream_Name = long[[rule$Input_Key]],
+      source_value = long[[rule$Input_Value]],
+      stringsAsFactors = FALSE
+    )
+  } else {
+    stop(
+      "Unsupported basin-slope layout for ",
+      rule$Source_ID,
+      ": ",
+      rule$Layout,
+      call. = FALSE
+    )
+  }
+
+  value <- suppressWarnings(as.numeric(source$source_value))
+  if (rule$Value_Transform == "percent_gradient_to_degrees") {
+    value <- atan(value / 100) * (180 / pi)
+  } else if (rule$Value_Transform != "identity") {
+    stop(
+      "Unsupported basin-slope transform for ",
+      rule$Source_ID,
+      ": ",
+      rule$Value_Transform,
+      call. = FALSE
+    )
+  }
+
+  source %>%
+    transmute(
+      Stream_Name = as.character(Stream_Name),
+      basin_slope_mean_degree = value
+    ) %>%
+    left_join(stream_key, by = "Stream_Name") %>%
+    filter(!is.na(Stream_ID), !is.na(basin_slope_mean_degree)) %>%
+    transmute(
+      Stream_ID,
+      basin_slope_mean_degree,
+      .source_priority = priority
+    )
+}
+
+# Fill missing basin slopes using the ordered, editable source manifest.
+gap_fill_basin_slope_values <- function(
+    df,
+    manifest_path,
+    master_dir,
+    stream_id_key_path) {
   if (!"basin_slope_mean_degree" %in% names(df)) {
     df$basin_slope_mean_degree <- NA_real_
   }
 
-  if (!all(file.exists(c(us_slope_path, krycklan_slope_path, stream_id_key_path)))) {
-    return(df)
+  manifest <- read.delim(
+    manifest_path,
+    sep = "\t",
+    quote = "",
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  required_manifest_columns <- c(
+    "Source_ID", "File_Env", "Default_File", "Layout", "Input_Key",
+    "Input_Value", "Value_Transform"
+  )
+  missing_manifest_columns <- setdiff(
+    required_manifest_columns,
+    names(manifest)
+  )
+  if (length(missing_manifest_columns)) {
+    stop(
+      "Basin-slope manifest is missing columns: ",
+      paste(missing_manifest_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (!nrow(manifest) || anyDuplicated(manifest$Source_ID)) {
+    stop(
+      "Basin-slope manifest must contain unique source rows.",
+      call. = FALSE
+    )
   }
 
-  stream_key <- read.csv(stream_id_key_path, stringsAsFactors = FALSE, check.names = FALSE)
+  stream_key <- read.csv(
+    stream_id_key_path,
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  required_key_columns <- c("Stream_Name", "Stream_ID")
+  missing_key_columns <- setdiff(required_key_columns, names(stream_key))
+  if (length(missing_key_columns)) {
+    stop(
+      "Stream ID key is missing columns: ",
+      paste(missing_key_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
 
-  krycklan_slopes <- read.csv(krycklan_slope_path, stringsAsFactors = FALSE, check.names = FALSE) %>%
-    transform(basin_slope_mean_degree = atan(gradient_pct / 100) * (180 / pi)) %>%
-    left_join(stream_key, by = "Stream_Name") %>%
-    filter(!is.na(Stream_ID), !is.na(basin_slope_mean_degree)) %>%
-    select(Stream_ID, basin_slope_mean_degree)
-
-  us_slopes <- read.csv(us_slope_path, header = FALSE, stringsAsFactors = FALSE, check.names = FALSE)
-  colnames(us_slopes) <- us_slopes[1, ]
-  us_slopes <- us_slopes[-1, ] %>%
-    tidyr::pivot_longer(
-      cols = everything(),
-      names_to = "Stream_Name",
-      values_to = "basin_slope_mean_degree"
-    ) %>%
-    mutate(basin_slope_mean_degree = as.numeric(basin_slope_mean_degree)) %>%
-    left_join(stream_key, by = "Stream_Name") %>%
-    filter(!is.na(Stream_ID), !is.na(basin_slope_mean_degree)) %>%
-    select(Stream_ID, basin_slope_mean_degree)
-
-  fill_df <- df %>%
-    filter(is.na(basin_slope_mean_degree)) %>%
-    distinct(Stream_ID) %>%
-    left_join(us_slopes, by = "Stream_ID") %>%
-    left_join(krycklan_slopes, by = "Stream_ID", suffix = c("_US", "_KR")) %>%
-    mutate(
-      basin_slope_mean_degree = dplyr::coalesce(
-        basin_slope_mean_degree_US,
-        basin_slope_mean_degree_KR
-      )
-    ) %>%
+  fill_lookup <- dplyr::bind_rows(lapply(seq_len(nrow(manifest)), function(i) {
+    read_basin_slope_fill_source(
+      manifest[i, , drop = FALSE],
+      master_dir = master_dir,
+      stream_key = stream_key,
+      priority = i
+    )
+  })) %>%
+    arrange(.source_priority) %>%
+    distinct(Stream_ID, .keep_all = TRUE) %>%
     select(Stream_ID, basin_slope_mean_degree)
 
   df %>%
-    left_join(fill_df, by = "Stream_ID", suffix = c("", "_fill")) %>%
+    left_join(fill_lookup, by = "Stream_ID", suffix = c("", "_fill")) %>%
     mutate(
       basin_slope_mean_degree = dplyr::coalesce(
         basin_slope_mean_degree,

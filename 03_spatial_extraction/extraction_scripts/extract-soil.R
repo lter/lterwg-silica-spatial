@@ -222,7 +222,7 @@ dplyr::glimpse(soil_export)
 # Create folder to export to
 soil_out_file <- silica_driver_output_file(path, "si-extract_soil")
 
-# Export the summarized lithology data
+# Export the summarized soil data
 write_subset_csv(
   df = soil_export,
   output_path = soil_out_file,
@@ -231,10 +231,7 @@ write_subset_csv(
   na = ""
 )
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = soil_out_file,
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(soil_out_file)
 
 # End ----
 

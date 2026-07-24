@@ -46,14 +46,13 @@ if (add_kg_class && nzchar(kg_file) && file.exists(kg_file)) {
 # Fill missing basin slope values
 if (
   gap_fill_basin_slope &&
-  nzchar(us_slope_file) &&
-  nzchar(krycklan_slope_file) &&
-  nzchar(stream_id_key_file)
+    nzchar(basin_slope_fill_manifest) &&
+    nzchar(stream_id_key_file)
 ) {
   harmonized <- gap_fill_basin_slope_values(
     harmonized,
-    us_slope_path = us_slope_file,
-    krycklan_slope_path = krycklan_slope_file,
+    manifest_path = basin_slope_fill_manifest,
+    master_dir = master_dir,
     stream_id_key_path = stream_id_key_file
   )
 }

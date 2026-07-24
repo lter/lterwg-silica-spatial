@@ -84,15 +84,7 @@ merge_subset_outputs <- !is.null(subset_targets) &&
 # Make an empty list
 file_list <- list()
 
-# NEW SITES for Data Release 2 ##
-default_regions <- c("north-america-usa", "north-america-arctic",
-                     "cropped-russia-west", "cropped-russia-west-2",
-                     "cropped-russia-center", "cropped-russia-east",
-                     "puerto-rico", "scandinavia",
-                     "amazon", "australia",
-                     "canada", "congo",
-                     "germany", "mali",
-                     "united-kingdom")
+default_regions <- load_dynamic_driver_regions("greenup")
 
 region_set <- resolve_target_regions(
   subset_targets = subset_targets,
@@ -100,9 +92,6 @@ region_set <- resolve_target_regions(
 )
 
 for(region in region_set){
-  
-# NEW SITES for Data Release 2 ##
-# for(region in c("congo", "germany")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
@@ -328,9 +317,6 @@ write_subset_csv(
   na = ""
 )
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = greenup_out_file,
-                         overwrite = T,
-                         path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(greenup_out_file)
 
 # End ----

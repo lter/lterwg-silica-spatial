@@ -1,4 +1,9 @@
 # Harmonization inputs
+#
+# Set `SILICA_DATA_ROOT` once for the shared data library. Individual input
+# files can be overridden with the environment variables documented below.
+
+source(file.path("tools", "workflow_paths.R"))
 
 env_or_default <- function(env_name, default_value) {
   env_value <- trimws(Sys.getenv(env_name, unset = ""))
@@ -9,6 +14,7 @@ env_or_default <- function(env_name, default_value) {
 }
 
 first_existing_path <- function(candidates, label) {
+  candidates <- unique(candidates[nzchar(candidates)])
   existing <- candidates[file.exists(candidates)]
   if (!length(existing)) {
     stop("Missing ", label, ". Checked:\n- ", paste(candidates, collapse = "\n- "), call. = FALSE)
@@ -16,8 +22,24 @@ first_existing_path <- function(candidates, label) {
   existing[[1]]
 }
 
+latest_matching_file <- function(directory, pattern) {
+  if (!dir.exists(directory)) {
+    return("")
+  }
+  candidates <- list.files(
+    directory,
+    pattern = pattern,
+    full.names = TRUE
+  )
+  if (!length(candidates)) {
+    return("")
+  }
+  candidates[[which.max(file.info(candidates)$mtime)]]
+}
+
 latest_combined_file <- function(data_root) {
   extracted_dirs <- c(
+    file.path(data_root, "spatial-data-files", "appeears-nasa"),
     file.path(data_root, "extracted-data"),
     file.path(data_root, "extracted-data", "all_data_extractions"),
     file.path(data_root, "si-extracted-data", "all_data_extractions")
@@ -55,7 +77,7 @@ latest_combined_file <- function(data_root) {
 
 data_root <- env_or_default(
   "SILICA_QAQC_DATA_ROOT",
-  "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/spatial-data-extractions"
+  resolve_silica_data_root()
 )
 
 # Latest vetted combined table from 04_combine_qaqc
@@ -77,20 +99,25 @@ master_dir <- file.path(data_root, "master-datasets")
 gee_glc_dir <- file.path(
   data_root,
   "spatial-data-files",
-  "appeears-nasa",
-  "glc-lulc-from-gee",
+  "harmonization-variables",
+  "land-cover",
   "merged-master-checkpoints"
 )
 
 # Q and discharge inputs
 daily_discharge_file <- first_existing_path(
   c(
-    file.path(master_dir, "20260106_masterdata_discharge.csv")
+    env_or_default("SILICA_DAILY_DISCHARGE_FILE", ""),
+    latest_matching_file(
+      master_dir,
+      "^[0-9]{8}_masterdata_discharge\\.csv$"
+    )
   ),
   "daily discharge file"
 )
 wrtds_annual_file <- first_existing_path(
   c(
+    env_or_default("SILICA_WRTDS_ANNUAL_FILE", ""),
     file.path(master_dir, "Full_Results_WRTDS_kalman_annual.csv")
   ),
   "annual WRTDS file"
@@ -99,40 +126,48 @@ wrtds_annual_file <- first_existing_path(
 # Lookup and fill inputs
 kg_file <- first_existing_path(
   c(
+    env_or_default("SILICA_KG_FILE", ""),
     file.path(master_dir, "Koeppen_Geiger_2.csv")
   ),
   "Koeppen-Geiger file"
 )
-krycklan_slope_file <- first_existing_path(
+basin_slope_fill_manifest <- first_existing_path(
   c(
-    file.path(master_dir, "Krycklan_basin_slopes.csv")
+    env_or_default("SILICA_BASIN_SLOPE_FILL_MANIFEST", ""),
+    file.path(
+      "05_harmonization",
+      "config",
+      "basin_slope_fill_sources.tsv"
+    )
   ),
-  "Krycklan basin slope file"
-)
-us_slope_file <- first_existing_path(
-  c(
-    file.path(master_dir, "DSi_Basin_Slope_missing_sites.csv")
-  ),
-  "missing basin slope fill file"
+  "basin slope fill manifest"
 )
 stream_id_key_file <- first_existing_path(
   c(
+    env_or_default("SILICA_STREAM_ID_KEY_FILE", ""),
     file.path(master_dir, "basin_stream_id_keys.csv")
   ),
   "stream ID key file"
 )
 wrtds_reference_file <- first_existing_path(
   c(
-    file.path(master_dir, "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv"),
-    file.path(master_dir, "Site_Reference_Table - WRTDS_Reference_Table_LTER_V2.csv")
+    env_or_default("SILICA_WRTDS_REFERENCE_FILE", ""),
+    latest_matching_file(
+      master_dir,
+      "^Site_Reference_Table - WRTDS_Reference_Table_LTER_V[0-9]+\\.csv$"
+    )
   ),
   "WRTDS reference file"
 )
 
-# GEE/GLC land-cover source used for the June 2026 final rebuild
+# Latest accepted GEE/GLC land-cover source
 lulc_file <- first_existing_path(
   c(
-    file.path(gee_glc_dir, "DSi_LULC_filled_interpolated_Simple_20260524_nor27.csv")
+    env_or_default("SILICA_LULC_FILE", ""),
+    latest_matching_file(
+      gee_glc_dir,
+      "^DSi_LULC_filled_interpolated_Simple_.*\\.csv$"
+    )
   ),
   "LULC harmonization file"
 )

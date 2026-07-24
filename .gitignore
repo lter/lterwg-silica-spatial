@@ -56,3 +56,5 @@ logs/
 Rplots.pdf
 qa/
 generated_outputs/
+outputs/
+.codex_tmp/

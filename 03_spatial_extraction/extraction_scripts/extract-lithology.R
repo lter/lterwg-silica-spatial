@@ -247,9 +247,6 @@ write_subset_csv(
   na = ""
 )
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = lith_out_file,
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(lith_out_file)
 
 # End ----

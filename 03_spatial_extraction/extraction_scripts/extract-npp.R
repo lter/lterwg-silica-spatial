@@ -85,15 +85,7 @@ merge_subset_outputs <- !is.null(subset_targets) &&
 # Make an empty list
 file_list <- list()
 
-## NEW SITES added for Data Release 2 ##
-default_regions <- c("north-america-usa", "north-america-arctic",
-                     "cropped-russia-west", "cropped-russia-west-2",
-                     "cropped-russia-center", "cropped-russia-east",
-                     "puerto-rico", "scandinavia",
-                     "amazon", "australia",
-                     "canada", "congo",
-                     "germany", "mali",
-                     "united-kingdom")
+default_regions <- load_dynamic_driver_regions("npp")
 
 region_set <- resolve_target_regions(
   subset_targets = subset_targets,
@@ -101,8 +93,6 @@ region_set <- resolve_target_regions(
 )
 
 for(region in region_set){
-
-# for(region in c("congo")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
@@ -182,7 +172,7 @@ for (a_year in unique(file_set$year)){
         # Drop coverage fraction column
         dplyr::select(-coverage_fraction) %>%
         # Drop NA values that were "extracted"
-        ## I.e., those that are outside of the current raster bounding nox
+        # These points fall outside the current raster's bounding box.
         dplyr::filter(!is.na(value)) %>%
         # Drop invalid values (per product documentation page)
         dplyr::filter(value >= -3 & value <= 3.27) %>%
@@ -284,9 +274,6 @@ write_subset_csv(
   na = ""
 )
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = npp_out_file,
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(npp_out_file)
 
 # End ----

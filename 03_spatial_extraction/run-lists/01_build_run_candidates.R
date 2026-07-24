@@ -14,38 +14,6 @@ get_arg <- function(flag, default = NULL) {
   args[hit[1] + 1]
 }
 
-latest_matching_paths <- function(pattern) {
-  hits <- Sys.glob(pattern)
-  if (!length(hits)) {
-    return(character(0))
-  }
-  hits[order(file.info(hits)$mtime, decreasing = TRUE)]
-}
-
-resolve_input_path <- function(cli_value, env_var, candidates, label) {
-  if (!is.null(cli_value)) {
-    if (!file.exists(cli_value)) {
-      stop(label, " file does not exist: ", cli_value, call. = FALSE)
-    }
-    return(cli_value)
-  }
-
-  env_value <- Sys.getenv(env_var, unset = NA_character_)
-  if (!is.na(env_value) && nzchar(env_value)) {
-    if (!file.exists(env_value)) {
-      stop(label, " file from ", env_var, " does not exist: ", env_value, call. = FALSE)
-    }
-    return(env_value)
-  }
-
-  existing <- candidates[file.exists(candidates)]
-  if (length(existing)) {
-    return(existing[[1]])
-  }
-
-  stop("Could not locate ", label, " file.", call. = FALSE)
-}
-
 norm_chr <- function(x) {
   x <- trimws(as.character(x))
   x[x == ""] <- NA_character_
@@ -101,6 +69,38 @@ review_root <- get_arg("--outdir", silica_review_root(resolve_silica_data_root()
 target_years <- silica_target_years()
 default_review_root <- silica_review_root(resolve_silica_data_root())
 default_root <- silica_default_box_data_root()
+override_path <- get_arg(
+  "--overrides",
+  file.path(
+    "03_spatial_extraction",
+    "config",
+    "run_candidate_overrides.tsv"
+  )
+)
+if (!file.exists(override_path)) {
+  stop("Run-candidate override table does not exist: ", override_path, call. = FALSE)
+}
+override_rules <- read.delim(
+  override_path,
+  sep = "\t",
+  quote = "",
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+required_override_columns <- c(
+  "LTER", "Stream_Name", "Action", "Rule_Status", "Reason"
+)
+missing_override_columns <- setdiff(
+  required_override_columns,
+  names(override_rules)
+)
+if (length(missing_override_columns)) {
+  stop(
+    "Override table is missing columns: ",
+    paste(missing_override_columns, collapse = ", "),
+    call. = FALSE
+  )
+}
 
 ensure_run_list_dirs(review_root)
 
@@ -123,46 +123,51 @@ if (is.na(strict_candidates_path) || !file.exists(strict_candidates_path)) {
   stop("Could not find the strict HydroSHEDS candidate file after building the rerun list.", call. = FALSE)
 }
 
-ref_path <- resolve_input_path(
-  cli_value = get_arg("--ref"),
+ref_path <- resolve_workflow_input(
+  cli_path = get_arg("--ref"),
   env_var = "SILICA_TARGETED_REF_PATH",
   candidates = c(
     file.path(default_root, "master-datasets", "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv"),
     file.path(default_root, "master-datasets", "Site_Reference_Table - WRTDS_Reference_Table_LTER_V2.csv")
   ),
-  label = "reference"
+  label = "reference table",
+  cli_flag = "--ref"
 )
 
 current_combined_candidates <- c(
-  latest_matching_paths(file.path(default_root, "all-data_si-extract_3_*.csv"))
+  latest_existing_paths(file.path(default_root, "all-data_si-extract_3_*.csv"))
 )
 current_combined_candidates <- current_combined_candidates[
   !grepl("rerun|combinedlocal|hydrosheds-full-record-recoverable", basename(current_combined_candidates), ignore.case = TRUE)
 ]
 
-current_path <- resolve_input_path(
-  cli_value = get_arg("--combined"),
+current_path <- resolve_workflow_input(
+  cli_path = get_arg("--combined"),
   env_var = "SILICA_TARGETED_COMBINED_PATH",
   candidates = current_combined_candidates,
-  label = "combined"
+  label = "current combined table",
+  cli_flag = "--combined"
 )
-legacy_path <- resolve_input_path(
-  cli_value = get_arg("--legacy"),
+legacy_path <- resolve_workflow_input(
+  cli_path = get_arg("--legacy"),
   env_var = "SILICA_TARGETED_LEGACY_PATH",
-  candidates = c(
-    file.path(default_root, "all-data_si-extract_2_20250325.csv"),
-    "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/Spatial_controls_GRL/harmonization_files/inputs/all-data_si-extract_2_20250325.csv"
-  ),
-  label = "legacy combined"
+  label = "legacy comparison table",
+  cli_flag = "--legacy"
 )
 
 ref <- read_reference_table(ref_path)
 legacy <- read.csv(legacy_path, check.names = FALSE, stringsAsFactors = FALSE)
 current <- read.csv(current_path, check.names = FALSE, stringsAsFactors = FALSE)
+ref$Spatial_Data_Version <- if (!"Spatial_Data_Version" %in% names(ref)) {
+  NA_character_
+} else {
+  ref[["Spatial_Data_Version"]]
+}
 
 ref_cols <- c(
   "LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name",
-  "drainSqKm", "Use_WRTDS", "Data_Release", "Shapefile_Source", "Notes__dup1"
+  "drainSqKm", "Use_WRTDS", "Spatial_Data_Version", "Shapefile_Source",
+  "Notes__dup1"
 )
 
 ref_key <- build_site_key(ref) %>%
@@ -200,6 +205,9 @@ if (!length(missingness_candidates)) {
 }
 missingness_path <- missingness_candidates[which.max(file.info(missingness_candidates)$mtime)]
 missingness <- read.csv(missingness_path, check.names = FALSE, stringsAsFactors = FALSE)
+update_networks <- override_rules %>%
+  filter(Action == "include_update_years", Stream_Name == "*") %>%
+  pull(LTER)
 
 update_sites <- merge(
   missingness,
@@ -208,7 +216,7 @@ update_sites <- merge(
   all.x = TRUE
 ) %>%
   filter(
-    LTER %in% c("Canada", "MD"),
+    LTER %in% update_networks,
     !is.na(drainSqKm),
     drainSqKm > 100
   ) %>%
@@ -226,7 +234,8 @@ update_sites <- merge(
   select(
     LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
     candidate_group, hydrosheds_applicability, Watershed_Source, Force_HydroSHEDS,
-    run_type, target_years, drainSqKm, Use_WRTDS, Data_Release, Shapefile_Source,
+    run_type, target_years, drainSqKm, Use_WRTDS, Spatial_Data_Version,
+    Shapefile_Source,
     recommend_run_now, recommendation_basis, approval_reason
   ) %>%
   mutate(
@@ -234,7 +243,8 @@ update_sites <- merge(
       c(
         LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
         candidate_group, hydrosheds_applicability, Watershed_Source, Force_HydroSHEDS,
-        run_type, target_years, Use_WRTDS, Data_Release, Shapefile_Source,
+        run_type, target_years, Use_WRTDS, Spatial_Data_Version,
+        Shapefile_Source,
         recommend_run_now, recommendation_basis, approval_reason
       ),
       as.character
@@ -264,7 +274,8 @@ full_sites <- merge(
   select(
     LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
     candidate_group, hydrosheds_applicability, Watershed_Source, Force_HydroSHEDS,
-    run_type, target_years, drainSqKm, Use_WRTDS, Data_Release, Shapefile_Source,
+    run_type, target_years, drainSqKm, Use_WRTDS, Spatial_Data_Version,
+    Shapefile_Source,
     recommend_run_now, recommendation_basis, approval_reason
   ) %>%
   mutate(
@@ -272,7 +283,8 @@ full_sites <- merge(
       c(
         LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
         candidate_group, hydrosheds_applicability, Watershed_Source, Force_HydroSHEDS,
-        run_type, target_years, Use_WRTDS, Data_Release, Shapefile_Source,
+        run_type, target_years, Use_WRTDS, Spatial_Data_Version,
+        Shapefile_Source,
         recommend_run_now, recommendation_basis, approval_reason
       ),
       as.character
@@ -295,20 +307,18 @@ hydrosheds_mixed <- bind_rows(full_sites, update_sites) %>%
     run_type = as.character(run_type),
     target_years = as.character(target_years),
     Use_WRTDS = as.character(Use_WRTDS),
-    Data_Release = as.character(Data_Release),
+    Spatial_Data_Version = as.character(Spatial_Data_Version),
     Shapefile_Source = as.character(Shapefile_Source)
   ) %>%
   distinct()
 
-# Some named-shapefile sites should still be forced through HydroSHEDS when the
-# existing shapefile is known or strongly suspected to be unusable. Cameroon is
-# the current explicit exception requested for this workflow
-cameroon_force_hydrosheds_streams <- c("Mbalmayo", "Messam", "Olama", "Pont_So'o")
-
-cameroon_hydrosheds_full_record <- ref %>%
-  filter(
-    LTER == "Cameroon",
-    Stream_Name %in% cameroon_force_hydrosheds_streams
+# Documented exceptions belong in the editable override table, not this code.
+force_rules <- override_rules %>%
+  filter(Action == "force_hydrosheds", Stream_Name != "*")
+forced_hydrosheds_full_record <- ref %>%
+  inner_join(
+    force_rules[, c("LTER", "Stream_Name", "Rule_Status", "Reason")],
+    by = c("LTER", "Stream_Name")
   ) %>%
   mutate(
     candidate_group = "hydrosheds_full_record_corrupt_named_shapefile",
@@ -318,16 +328,14 @@ cameroon_hydrosheds_full_record <- ref %>%
     run_type = "full_record",
     target_years = silica_full_record_label(),
     recommend_run_now = "yes",
-    recommendation_basis = paste(
-      "Named shapefile exists, but no dynamic spatial data were found in either baseline.",
-      "For Cameroon, treat this as a likely corrupt shapefile case and rerun through HydroSHEDS."
-    ),
-    approval_reason = "Likely corrupt named shapefile; run HydroSHEDS full-record replacement."
+    recommendation_basis = Reason,
+    approval_reason = Reason
   ) %>%
   select(
     LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
     candidate_group, hydrosheds_applicability, Watershed_Source, Force_HydroSHEDS,
-    run_type, target_years, drainSqKm, Use_WRTDS, Data_Release, Shapefile_Source,
+    run_type, target_years, drainSqKm, Use_WRTDS, Spatial_Data_Version,
+    Shapefile_Source,
     recommend_run_now, recommendation_basis, approval_reason
   ) %>%
   mutate(
@@ -335,14 +343,18 @@ cameroon_hydrosheds_full_record <- ref %>%
       c(
         LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
         candidate_group, hydrosheds_applicability, Watershed_Source, Force_HydroSHEDS,
-        run_type, target_years, Use_WRTDS, Data_Release, Shapefile_Source,
+        run_type, target_years, Use_WRTDS, Spatial_Data_Version,
+        Shapefile_Source,
         recommend_run_now, recommendation_basis, approval_reason
       ),
       as.character
     )
   )
 
-hydrosheds_mixed <- bind_rows(hydrosheds_mixed, cameroon_hydrosheds_full_record) %>%
+hydrosheds_mixed <- bind_rows(
+  hydrosheds_mixed,
+  forced_hydrosheds_full_record
+) %>%
   distinct(
     LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
     .keep_all = TRUE
@@ -392,7 +404,8 @@ provided_shapefile_candidates <- ref_key %>%
   select(
     LTER, Stream_Name, Discharge_File_Name, Shapefile_Name,
     candidate_group, hydrosheds_applicability, Watershed_Source, Force_HydroSHEDS,
-    run_type, target_years, drainSqKm, Use_WRTDS, Data_Release, Shapefile_Source,
+    run_type, target_years, drainSqKm, Use_WRTDS, Spatial_Data_Version,
+    Shapefile_Source,
     recommend_run_now, recommendation_basis, approval_reason
   ) %>%
   mutate(
@@ -410,7 +423,7 @@ provided_shapefile_candidates <- ref_key %>%
     run_type = as.character(run_type),
     target_years = as.character(target_years),
     Use_WRTDS = as.character(Use_WRTDS),
-    Data_Release = as.character(Data_Release),
+    Spatial_Data_Version = as.character(Spatial_Data_Version),
     Shapefile_Source = as.character(Shapefile_Source)
   ) %>%
   distinct()
@@ -419,22 +432,18 @@ approval_mixed <- bind_rows(hydrosheds_mixed, provided_shapefile_candidates) %>%
   arrange(run_type, desc(Watershed_Source == "hydrosheds"), LTER, Stream_Name) %>%
   distinct()
 
+holdout_rules <- override_rules %>%
+  filter(Action == "holdout", Stream_Name != "*")
 holdouts <- ref[, ref_cols] %>%
-  filter(
-    (LTER == "NWT" & Stream_Name %in% c("ALBION", "COMO", "MARTINELLI", "SADDLE STREAM 007")) |
-      (LTER == "MD" & Stream_Name %in% c("Euston Weir", "Merbein", "Barham", "Jingellic"))
+  inner_join(
+    holdout_rules[, c("LTER", "Stream_Name", "Rule_Status", "Reason")],
+    by = c("LTER", "Stream_Name")
   ) %>%
   mutate(
     candidate_group = "manual_review_holdout",
     hydrosheds_applicability = "not_auto_flagged",
-    rule_status = c(
-      rep("not_flagged_area_le_100", 4),
-      rep("not_flagged_missing_or_le_100_area", 4)
-    ),
-    recommendation = c(
-      rep("Do not include in a HydroSHEDS rerun under the >100 km2 rule.", 4),
-      rep("Do not include automatically unless you make a separate exception for these small-basin sites.", 4)
-    )
+    rule_status = Rule_Status,
+    recommendation = Reason
   )
 
 approval_path <- file.path(

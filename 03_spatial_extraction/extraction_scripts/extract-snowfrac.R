@@ -85,14 +85,7 @@ merge_subset_outputs <- !is.null(subset_targets) &&
 file_list <- list()
 
 
-# ## NEW SITES added for Data Release 2 ##
-default_regions <- c("north-america-usa", "north-america-arctic",
-                     "cropped-russia-west", "cropped-russia-west-2",
-                     "cropped-russia-center", "cropped-russia-east",
-                     "puerto-rico", "scandinavia",
-                     "amazon", "australia",
-                     "canada", "congo",
-                     "germany", "united-kingdom")
+default_regions <- load_dynamic_driver_regions("snow")
 
 region_set <- resolve_target_regions(
   subset_targets = subset_targets,
@@ -100,15 +93,15 @@ region_set <- resolve_target_regions(
 )
 
 for(region in region_set){
-
-# ## NEW SITES added for Data Release 2 ##
-# for(region in c("congo")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
-  file_df <- data.frame("region" = region,
-                        "files" = dir(path = file.path(raw_driver_dir,
-                                                       "raw-snow-v061", region))) %>% 
+  region_files <- dir(path = file.path(
+    raw_driver_dir, "raw-snow-v061", region
+  ))
+  file_df <- data.frame(
+                        "region" = rep(region, length(region_files)),
+                        "files" = region_files) %>%
     dplyr::filter(stringr::str_detect(string=files, pattern="MOD10A2.061_Eight_Day_Snow_Cover_")) 
   
   
@@ -163,29 +156,72 @@ has_usable_snow_metrics <- function(x) {
 
 target_sheds_for_snow_raster <- function(sheds_sf, raster_file) {
   raster_file <- basename(raster_file)
-  target_map <- c(
-    "p01" = "GRO_Kolyma",
-    "p02" = "GRO_Lena",
-    "p03" = "GRO_Mackenzie",
-    "p04" = "GRO_Ob",
-    "p05" = "GRO_Yenisey",
-    "p06" = "GRO_Yukon"
-  )
 
-  part <- stringr::str_match(raster_file, "^fg-gro-snow-(p[0-9]+)-")[, 2]
-  if (!is.na(part) && part %in% names(target_map)) {
-    target_shp <- target_map[[part]]
-    out <- sheds_sf[toupper(as.character(sheds_sf$Shapefile_Name)) == toupper(target_shp), , drop = FALSE]
-    return(out)
+  # Targeted AppEEARS downloads use "<site slug>__<AppEEARS filename>".
+  # Restrict each clipped raster to that one watershed so nearby or nested
+  # sites cannot inherit values from another site's request.
+  if (grepl("__", raster_file, fixed = TRUE)) {
+    site_slug <- sub("__.*$", "", raster_file)
+    shed_slugs <- tolower(gsub(
+      "^-+|-+$", "",
+      gsub("[^a-z0-9]+", "-", tolower(as.character(sheds_sf$Shapefile_Name)))
+    ))
+    targeted <- sheds_sf[shed_slugs == site_slug, , drop = FALSE]
+    if (nrow(targeted) == 1L) return(targeted)
+    if (nrow(targeted) > 1L) {
+      stop("Targeted snow raster matched more than one watershed: ", raster_file)
+    }
   }
 
-  if (startsWith(raster_file, "final-gap-north-america-usa-snow-v061-2025-20260607__")) {
-    return(sheds_sf[
-      toupper(as.character(sheds_sf$LTER)) == "LMP" &
-        toupper(as.character(sheds_sf$Shapefile_Name)) == "LMP",
+  route_path <- Sys.getenv(
+    "SILICA_RASTER_WATERSHED_ROUTES",
+    unset = file.path(
+      "03_spatial_extraction",
+      "config",
+      "raster_watershed_routes.tsv"
+    )
+  )
+  if (file.exists(route_path)) {
+    routes <- read.delim(
+      route_path,
+      stringsAsFactors = FALSE,
+      check.names = FALSE,
+      na.strings = c("", "NA")
+    )
+    required <- c("Product", "File_Regex", "LTER", "Shapefile_Name")
+    if (!all(required %in% names(routes))) {
+      stop(
+        "Raster route table must contain: ",
+        paste(required, collapse = ", "),
+        call. = FALSE
+      )
+    }
+    routes <- routes[
+      tolower(routes$Product) == "snow" &
+        vapply(routes$File_Regex, grepl, logical(1), x = raster_file),
       ,
       drop = FALSE
-    ])
+    ]
+    if (nrow(routes) > 1L) {
+      stop("Snow raster matched more than one configured route: ", raster_file)
+    }
+    if (nrow(routes) == 1L) {
+      keep <- rep(TRUE, nrow(sheds_sf))
+      if (!is.na(routes$LTER[[1]]) && nzchar(routes$LTER[[1]])) {
+        keep <- keep &
+          normalize_lter_key(sheds_sf$LTER) ==
+          normalize_lter_key(routes$LTER[[1]])
+      }
+      if (
+        !is.na(routes$Shapefile_Name[[1]]) &&
+          nzchar(routes$Shapefile_Name[[1]])
+      ) {
+        keep <- keep &
+          normalize_site_key(sheds_sf$Shapefile_Name) ==
+          normalize_site_key(routes$Shapefile_Name[[1]])
+      }
+      return(sheds_sf[keep, , drop = FALSE])
+    }
   }
 
   sheds_sf
@@ -314,11 +350,15 @@ for(annum in sort(unique(file_set$year))){
       raster_path <- file.path(raw_driver_dir, focal_driver, simp_df$region[j], simp_df$files[j])
       message("Reading snow raster: ", raster_path)
       snow_rast <- terra::rast(raster_path)
+      sheds_for_raster <- target_sheds_for_snow_raster(sheds, raster_path)
+      if (!nrow(sheds_for_raster)) {
+        stop("Snow raster did not match a target watershed: ", raster_path)
+      }
       
       # Extract all possible information from that dataframe
       ex_data <- tryCatch(
         {
-          exactextractr::exact_extract(x = snow_rast, y = sheds,
+          exactextractr::exact_extract(x = snow_rast, y = sheds_for_raster,
                                        include_cols = c("LTER", "Shapefile_Name"),
                                        progress = FALSE) %>%
             # Unlist to dataframe
@@ -326,7 +366,7 @@ for(annum in sort(unique(file_set$year))){
             # Drop coverage fraction column
             dplyr::select(-coverage_fraction) %>%
             # Drop NA values that were "extracted"
-            ## I.e., those that are outside of the current raster bounding nox
+            # These points fall outside the current raster's bounding box.
             dplyr::filter(!is.na(value)) %>%
             # Make new relevant columns
             dplyr::mutate(year = as.numeric(simp_df$year[j]),
@@ -566,7 +606,7 @@ snow_export <- sheds %>%
     LTER = toupper(as.character(LTER)),
     Shapefile_Name = toupper(as.character(Shapefile_Name))
   ) %>%
-  # Join the rock data
+  # Join the snow data
   dplyr::left_join(y = snow_actual, by = c("LTER", "Shapefile_Name")) %>%
   sf::st_drop_geometry()  
 
@@ -585,9 +625,6 @@ write_subset_csv(
   na = ""
 )
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = snow_out_file,
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(snow_out_file)
 
 # End ----

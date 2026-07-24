@@ -1,22 +1,9 @@
-## ------------------------------------------------------- ##
-        # Silica WG - Wrangle Watershed Shapefiles
-## ------------------------------------------------------- ##
-# Written by:
-## Nick J Lyon
-# Edited by Sidney Bush -- for data release 2
-## LATER: will need to add HydroSHEDS sites for: Murray-Darling (Australia) and Canada sites
-
-
-# Purpose:
-## Wrangle "artisanal" watershed shapefiles into a single file to extract driver data
-## Artisanal = mixed provenance / provided by WG participants
-
-## ------------------------------------------------------- ##
-                      # Housekeeping -----
-## ------------------------------------------------------- ##
+# Combine accepted watershed sources into one extraction-ready layer.
+#
+# Release-aware runs validate and select the watershed version recorded in the
+# site-reference table before the sources are combined.
 
 # Read needed libraries
-# install.packages("librarian")
 librarian::shelf(tidyverse, magrittr, googledrive, sf, supportR, readxl)
 
 # Do not clear the session/environment here. This script may be sourced by the
@@ -29,6 +16,7 @@ source(file = file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 
 subset_targets <- load_site_subset()
 site_coord_dir <- silica_site_coordinates_dir(path)
+canonical_release_mode <- silica_use_canonical_release_library()
 
 resolve_shared_sitecoord_file <- function(root_path, stem, ext = "shp") {
   candidates <- c(
@@ -57,8 +45,14 @@ if (toupper(Sys.getenv("SILICA_REBUILD_ARTISANAL", unset = "FALSE")) == "TRUE") 
   source(file.path(getwd(), "02_watershed_delineation", "01_wrangle-artisanal-watersheds.R"))
 }
 
-if (toupper(Sys.getenv("SILICA_REBUILD_HYDROSHEDS", unset = "FALSE")) == "TRUE") {
+if (!canonical_release_mode &&
+    toupper(Sys.getenv("SILICA_REBUILD_HYDROSHEDS", unset = "FALSE")) == "TRUE") {
   source(file.path(getwd(), "02_watershed_delineation", "02_wrangle-hydrosheds.R"))
+} else if (canonical_release_mode) {
+  message(
+    "Canonical release mode uses the validated one-site-per-folder library; ",
+    "skipping legacy HydroSHEDS reconstruction."
+  )
 }
 
 ## ------------------------------------------------------- ##
@@ -83,15 +77,16 @@ artisan_path <- if (!is.null(subset_targets) && !is.na(artisan_subset_path) && f
   artisan_full_path
 }
 
-hydro_path <- if (!is.null(subset_targets) && file.exists(hydro_subset_path)) {
-  message("Using subset hydrosheds shapefile: ", hydro_subset_path)
-  hydro_subset_path
-} else {
-  hydro_full_path
-}
-
 artisan <- sf::st_read(artisan_path)
-hydro <- sf::st_read(hydro_path)
+if (!canonical_release_mode) {
+  hydro_path <- if (!is.null(subset_targets) && file.exists(hydro_subset_path)) {
+    message("Using subset hydrosheds shapefile: ", hydro_subset_path)
+    hydro_subset_path
+  } else {
+    hydro_full_path
+  }
+  hydro <- sf::st_read(hydro_path)
+}
 
 clean_chr <- function(x) {
   x <- trimws(as.character(x))
@@ -123,10 +118,16 @@ site_metadata <- read_silica_site_reference(site_coord_dir) %>%
   dplyr::filter(!is.na(LTER), !is.na(shp_nm)) %>%
   dplyr::distinct(LTER, shp_nm, .keep_all = TRUE)
 
-all_shps <- dplyr::bind_rows(
-  add_missing_metadata_cols(artisan),
-  add_missing_metadata_cols(hydro)
-) %>%
+input_watersheds <- if (canonical_release_mode) {
+  list(add_missing_metadata_cols(artisan))
+} else {
+  list(
+    add_missing_metadata_cols(artisan),
+    add_missing_metadata_cols(hydro)
+  )
+}
+
+all_shps <- dplyr::bind_rows(input_watersheds) %>%
   dplyr::mutate(
     LTER = clean_chr(LTER),
     shp_nm = clean_chr(shp_nm),
