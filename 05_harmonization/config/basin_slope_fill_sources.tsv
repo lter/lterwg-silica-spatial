@@ -1,0 +1,3 @@
+Source_ID	File_Env	Default_File	Layout	Input_Key	Input_Value	Value_Transform
+us_missing_sites	SILICA_US_SLOPE_FILE	DSi_Basin_Slope_missing_sites.csv	wide_stream_columns			identity
+krycklan_gradient	SILICA_KRYCKLAN_SLOPE_FILE	Krycklan_basin_slopes.csv	long	Stream_Name	gradient_pct	percent_gradient_to_degrees

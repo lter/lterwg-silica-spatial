@@ -210,7 +210,7 @@ air_actual <- year_df %>%
 ## ------------------------------------------------------- ##
 # Let's get ready to export
 air_export <- sheds %>%
-  # Join the rock data
+  # Join the air-temperature data
   dplyr::left_join(y = air_actual, by = c("LTER", "Shapefile_Name"))%>%
   sf::st_drop_geometry()  
 
@@ -219,31 +219,8 @@ air_export <- sheds %>%
 dplyr::glimpse(air_export)
 
 air_out_file <- silica_driver_output_file(path, "si-extract_air-temp")
-legacy_air_files <- file.path(
-  extracted_dir,
-  c(
-    "si-extract_air-temp_2_cameroon_sites.csv",
-    "si-extract_air-temp_2_cameroon_site.csv",
-    "si-extract_air-temp_cameroon_sites_2.csv"
-  )
-)
-legacy_air_files <- legacy_air_files[file.exists(legacy_air_files)]
 
-if (length(legacy_air_files) > 0) {
-  stamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  invisible(lapply(legacy_air_files, function(old_file) {
-    new_file <- paste0(old_file, ".deprecated_", stamp)
-    ok <- file.rename(old_file, new_file)
-    if (!ok) {
-      warning("Failed to rename legacy file: ", old_file, call. = FALSE)
-    } else {
-      message("Deprecated legacy file naming: ", basename(old_file), " -> ", basename(new_file))
-    }
-    invisible(ok)
-  }))
-}
-
-# Export the summarized lithology data
+# Export the summarized air-temperature data
 write_subset_csv(
   df = air_export,
   output_path = air_out_file,
@@ -252,9 +229,6 @@ write_subset_csv(
   na = ""
 )
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = air_out_file,
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(air_out_file)
 
 # End ----

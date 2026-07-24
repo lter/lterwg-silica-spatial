@@ -40,6 +40,11 @@ if (!mode %in% c("full", "subset", "update_years", "hydrosheds", "combine_review
 set_env_value("SILICA_OUTPUT_DATE", setting("output_date", format(Sys.Date(), "%Y%m%d")))
 set_env_value("SILICA_RUN_LABEL", setting("run_label", ""))
 set_env_value("SILICA_RUN_MODE", mode)
+set_env_value(
+  "SILICA_USE_CANONICAL_RELEASE_LIBRARY",
+  setting("use_canonical_release_library", identical(mode, "full"))
+)
+set_env_value("SILICA_REFERENCE_RELEASE", setting("reference_release", 3))
 set_env_value("SILICA_SKIP_DRIVE_AUTH", setting("skip_drive_auth", TRUE))
 set_env_value("SILICA_SKIP_DRIVE_UPLOAD", setting("skip_drive_upload", TRUE))
 set_env_value("SILICA_REBUILD_ARTISANAL", setting("rebuild_artisanal", TRUE))
@@ -60,6 +65,19 @@ set_env_value(
 
 if (nzchar(setting("data_root", ""))) {
   set_env_value("SILICA_DATA_ROOT", setting("data_root"))
+}
+if (nzchar(setting("shape_library_root", ""))) {
+  set_env_value(
+    "SILICA_SHAPE_LIBRARY_ROOT",
+    setting("shape_library_root")
+  )
+}
+if (nzchar(setting("site_reference_file", ""))) {
+  site_reference_file <- normalizePath(
+    setting("site_reference_file"),
+    mustWork = TRUE
+  )
+  set_env_value("SILICA_SITE_REF_FILE", site_reference_file)
 }
 
 resolved_data_root <- resolve_silica_data_root()

@@ -22,80 +22,103 @@ get_arg <- function(flag, default = NULL) {
   args[hit[1] + 1]
 }
 
-resolve_input_path <- function(cli_value, env_var, candidates, label) {
-  if (!is.null(cli_value)) {
-    if (!file.exists(cli_value)) {
-      stop(label, " file does not exist: ", cli_value, call. = FALSE)
-    }
-    return(cli_value)
-  }
-
-  env_value <- Sys.getenv(env_var, unset = NA_character_)
-  if (!is.na(env_value) && nzchar(env_value)) {
-    if (!file.exists(env_value)) {
-      stop(label, " file from ", env_var, " does not exist: ", env_value, call. = FALSE)
-    }
-    return(env_value)
-  }
-
-  existing <- candidates[file.exists(candidates)]
-  if (length(existing)) {
-    return(existing[[1]])
-  }
-
-  stop(
-    paste0(
-      "Could not locate ", label, " file. Supply ", label, " via ",
-      if (label == "reference") "--ref or SILICA_TARGETED_REF_PATH" else "--combined or SILICA_TARGETED_COMBINED_PATH",
-      ". Checked:\n- ",
-      paste(candidates, collapse = "\n- ")
-    ),
-    call. = FALSE
-  )
-}
-
-latest_matching_paths <- function(pattern) {
-  hits <- Sys.glob(pattern)
-  if (!length(hits)) {
-    return(character(0))
-  }
-  hits[order(file.info(hits)$mtime, decreasing = TRUE)]
-}
-
 # Find the input files from a command-line flag first, then an environment
 # variable, then a short built-in list of expected locations.
 default_root <- silica_default_box_data_root()
 current_combined_candidates <- c(
-  latest_matching_paths(file.path(default_root, "all-data_si-extract_3_*.csv"))
+  latest_existing_paths(file.path(default_root, "all-data_si-extract_3_*.csv"))
 )
 current_combined_candidates <- current_combined_candidates[
   !grepl("rerun|combinedlocal|hydrosheds-full-record-recoverable", basename(current_combined_candidates), ignore.case = TRUE)
 ]
-ref_path <- resolve_input_path(
-  cli_value = get_arg("--ref"),
+ref_path <- resolve_workflow_input(
+  cli_path = get_arg("--ref"),
   env_var = "SILICA_TARGETED_REF_PATH",
   candidates = c(
-    file.path(default_root, "master-datasets", "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv"),
-    "/Users/sidneybush/Documents/GitHub/NCEAS_SiSyn_CQ/raw_data/Site_Reference_Table - WRTDS_Reference_Table_LTER_V2.csv"
+    file.path(
+      default_root,
+      "master-datasets",
+      "Site_Reference_Table - WRTDS_Reference_Table_LTER_V3.csv"
+    ),
+    file.path(
+      default_root,
+      "master-datasets",
+      "Site_Reference_Table - WRTDS_Reference_Table_LTER_V2.csv"
+    )
   ),
-  label = "reference"
+  label = "reference table",
+  cli_flag = "--ref"
 )
-combined_path <- resolve_input_path(
-  cli_value = get_arg("--combined"),
+combined_path <- resolve_workflow_input(
+  cli_path = get_arg("--combined"),
   env_var = "SILICA_TARGETED_COMBINED_PATH",
   candidates = current_combined_candidates,
-  label = "combined"
+  label = "current combined table",
+  cli_flag = "--combined"
 )
-legacy_path <- resolve_input_path(
-  cli_value = get_arg("--legacy"),
+legacy_path <- resolve_workflow_input(
+  cli_path = get_arg("--legacy"),
   env_var = "SILICA_TARGETED_LEGACY_PATH",
-  candidates = c(
-    file.path(default_root, "all-data_si-extract_2_20250325.csv"),
-    "/Users/sidneybush/Library/CloudStorage/Box-Box/Sidney_Bush/SiSyn/Spatial_controls_GRL/harmonization_files/inputs/all-data_si-extract_2_20250325.csv"
-  ),
-  label = "legacy combined"
+  label = "legacy comparison table",
+  cli_flag = "--legacy"
 )
 qa_root <- get_arg("--outdir", silica_review_root(resolve_silica_data_root()))
+region_map_path <- get_arg(
+  "--region-map",
+  file.path(
+    "03_spatial_extraction",
+    "config",
+    "hydrosheds_regions.tsv"
+  )
+)
+if (!file.exists(region_map_path)) {
+  stop("HydroSHEDS region map does not exist: ", region_map_path, call. = FALSE)
+}
+region_map <- read.delim(
+  region_map_path,
+  sep = "\t",
+  quote = "",
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+if (!all(c("LTER", "Region") %in% names(region_map))) {
+  stop("HydroSHEDS region map requires LTER and Region columns.", call. = FALSE)
+}
+if (anyDuplicated(region_map$LTER)) {
+  stop("HydroSHEDS region map contains duplicate LTER values.", call. = FALSE)
+}
+override_path <- get_arg(
+  "--overrides",
+  file.path(
+    "03_spatial_extraction",
+    "config",
+    "run_candidate_overrides.tsv"
+  )
+)
+if (!file.exists(override_path)) {
+  stop("Run-candidate override table does not exist: ", override_path, call. = FALSE)
+}
+override_rules <- read.delim(
+  override_path,
+  sep = "\t",
+  quote = "",
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+required_override_columns <- c(
+  "LTER", "Stream_Name", "Action", "Rule_Status", "Reason"
+)
+missing_override_columns <- setdiff(
+  required_override_columns,
+  names(override_rules)
+)
+if (length(missing_override_columns)) {
+  stop(
+    "Override table is missing columns: ",
+    paste(missing_override_columns, collapse = ", "),
+    call. = FALSE
+  )
+}
 rerun_dir <- file.path(qa_root, "rerun")
 harmonization_dir <- file.path(qa_root, "harmonization")
 large_basin_km2 <- suppressWarnings(as.numeric(get_arg("--large-basin-km2", "100")))
@@ -363,37 +386,19 @@ prior_missingness_keys <- if (!is.na(prior_missingness_path) && file.exists(prio
   tibble::tibble(site_id = character(0), in_prior_missingness_subset = logical(0))
 }
 
-# A small set of Amazon sites already have named shapefiles, but they still
-# need to be rerun because the projection metadata is known to be wrong or
-# missing.
-fixed_crs_named <- tribble(
-  ~LTER, ~Stream_Name, ~Discharge_File_Name, ~Shapefile_Name,
-  "Amazon", "Rio Japura", "Rio Japura_Q", "Rio_Japura",
-  "Amazon", "Rio Jurua", "Rio Jurua_Q", "Rio_Jurua",
-  "Amazon", "Rio Jutai", "Rio Jutai_Q", "Rio_Jutai",
-  "Amazon", "Amazon River at Santo Antonio do Ica", "Santo Antonio do Ica_Q", "Amazon_SantoAntonio",
-  "Amazon", "Rio Ica", "Rio Ica_Q", "Rio_Ica",
-  "Amazon", "Rio Negro", "Rio Negro_Q", "Rio_Negro",
-  "Amazon", "Amazon River at Vargem Grande", "Vargem Grande_Q", "Amazon_VergemGrande",
-  "Amazon", "Amazon River at Manacapuru", "Manacapuru_Q", "Amazon_Manacapuru",
-  "Amazon", "Rio Madeira", "Rio Madeira_Q", "Rio_Madeira",
-  "Amazon", "Rio Purus", "Rio Purus_Q", "Rio_Purus",
-  "Amazon", "Amazon River at Itapeua", "Itapeua_Q", "Itapeua"
+# Projection exceptions are maintained in the editable override table.
+fixed_crs_rules <- override_rules %>%
+  filter(Action == "fixed_crs", Stream_Name != "*")
+fixed_crs_named <- ref_key %>%
+  inner_join(
+    fixed_crs_rules[, c("LTER", "Stream_Name", "Rule_Status", "Reason")],
+    by = c("LTER", "Stream_Name")
   ) %>%
   mutate(
-    key = paste(
-      normalize_lter_key(LTER),
-      normalize_stream_key(Stream_Name),
-      tolower(Discharge_File_Name),
-      tolower(Shapefile_Name),
-      sep = "||"
-    )
-  ) %>%
-  mutate(
-    Region = "amazon",
+    Region = region_map$Region[match(LTER, region_map$LTER)],
     rerun_group = "fixed_crs_named_shapefile",
-    preferred_action = "assign_known_crs_eckert_iv_then_reproject_and_rerun",
-    reason = "Named shapefile exists but Amazon-family .prj is missing/undefined; repo reprojection log documents Eckert IV.",
+    preferred_action = "assign_known_crs_then_reproject_and_rerun",
+    reason = Reason,
     priority = 1L,
     Watershed_Source = NA_character_,
     Force_HydroSHEDS = NA_character_,
@@ -403,15 +408,8 @@ fixed_crs_named <- tribble(
   )
 
 hydrosheds_candidates <- ref_key %>%
+  left_join(region_map, by = "LTER") %>%
   mutate(
-    Region = dplyr::case_when(
-      LTER == "WesternAustralia" ~ "australia",
-      LTER == "HYBAM" ~ "amazon",
-      LTER %in% c("Tanguro", "Tanguro(Jankowski)") ~ "amazon",
-      LTER == "USGS" ~ "north-america-usa",
-      LTER == "Finnish Environmental Institute" ~ "scandinavia",
-      TRUE ~ NA_character_
-    ),
     rerun_group = "hydrosheds_candidate",
     preferred_action = "derive_or_recover_hydrosheds_polygon_then_rerun",
     reason = case_when(
@@ -478,18 +476,14 @@ legacy_gap_candidates <- ref_key %>%
     !has_dynamic_legacy,
     !has_dynamic_current
   ) %>%
+  left_join(region_map, by = "LTER") %>%
   mutate(
-    Region = dplyr::case_when(
-      LTER == "WesternAustralia" ~ "australia",
-      LTER %in% c("Amazon", "HYBAM", "Tanguro", "Tanguro(Jankowski)") ~ "amazon",
-      LTER == "Canada" ~ "north-america-canada",
-      LTER == "MD" ~ "australia",
-      LTER == "GRO" ~ "south-america",
-      TRUE ~ NA_character_
-    ),
     rerun_group = "hydrosheds_no_data_named_shapefile",
     preferred_action = "derive_or_recover_hydrosheds_polygon_then_rerun",
-    reason = "Named shapefile exists, but no dynamic spatial signal was present in either the legacy March 2025 or current May 2026 combined outputs.",
+    reason = paste(
+      "Named shapefile exists, but no dynamic spatial signal was present in",
+      "either the legacy or current combined outputs."
+    ),
     priority = 3L
   )
 
@@ -517,13 +511,6 @@ shared_polygons <- ref_key %>%
   filter(shared_rows > 1L) %>%
   arrange(Shapefile_Name, LTER, Stream_Name)
 
-obidos_override <- tribble(
-  ~LTER, ~Stream_Name, ~Discharge_File_Name, ~Shapefile_Name, ~shared_polygon, ~harmonization_role, ~clean_site_id, ~note,
-  "Amazon", "Amazon River at Obidos", "Obidos_Q", "Amazon_Obidos", "Amazon_Obidos", "shared_polygon_only", "GRO||GRO_Obidos_Q", "Polygon is shared, but this is not the release Obidos row.",
-  "GRO", "Obidos", "GRO_Obidos_Q", "Amazon_Obidos", "Amazon_Obidos", "release_site", "GRO||GRO_Obidos_Q", "Use this row as the release Obidos site in harmonization and final outputs.",
-  "HYBAM", "Obidos", "Obidos_Q", NA_character_, "Amazon_Obidos", "drop_or_convert", "GRO||GRO_Obidos_Q", "Do not treat HYBAM Obidos as the release Obidos site."
-)
-
 date_tag <- format(Sys.Date(), "%Y%m%d")
 rerun_list_path <- file.path(rerun_dir, paste0("targeted_rerun_list_", date_tag, ".csv"))
 subset_path <- file.path(rerun_dir, paste0("targeted_rerun_subset_", date_tag, ".csv"))
@@ -531,7 +518,6 @@ hydrosheds_subset_path <- file.path(rerun_dir, paste0("targeted_rerun_subset_hyd
 hydrosheds_approval_path <- file.path(rerun_dir, paste0("targeted_rerun_hydrosheds_candidates_for_approval_", date_tag, ".csv"))
 hydrosheds_approval_subset_path <- file.path(rerun_dir, paste0("targeted_rerun_subset_hydrosheds_for_approval_", date_tag, ".csv"))
 shared_path <- file.path(harmonization_dir, paste0("shared_polygon_sites_", date_tag, ".csv"))
-obidos_path <- file.path(harmonization_dir, paste0("obidos_harmonization_override_", date_tag, ".csv"))
 
 hydrosheds_approval <- rerun_list %>%
   dplyr::filter(grepl("^hydrosheds", rerun_group)) %>%
@@ -621,14 +607,12 @@ write.csv(
   na = ""
 )
 write.csv(shared_polygons, shared_path, row.names = FALSE, na = "")
-write.csv(obidos_override, obidos_path, row.names = FALSE, na = "")
 
 message("Wrote rerun list: ", rerun_list_path)
 message("Wrote rerun subset: ", subset_path)
 message("Wrote HydroSHEDS review candidates: ", hydrosheds_approval_path)
 message("Wrote HydroSHEDS ready subset: ", hydrosheds_approval_subset_path)
 message("Wrote shared-polygon review: ", shared_path)
-message("Wrote Obidos override table: ", obidos_path)
 message(
   "Summary: ",
   nrow(rerun_list), " rerun list rows, ",

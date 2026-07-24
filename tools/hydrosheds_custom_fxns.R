@@ -2,8 +2,9 @@
           # Load Custom HydroSHEDS Functions ----
 ## ------------------------------------------------------- ##
 
-# These are modified from someone's GitHub functions to accept non-S4 objects
-# Link to originals here: https://rdrr.io/github/ECCC-MSC/Basin-Delineation/
+# Adapted from the ECCC-MSC Basin Delineation functions linked below so they
+# also accept non-S4 objects.
+# Original functions: https://rdrr.io/github/ECCC-MSC/Basin-Delineation/
 
 # First function finds just the next upstream polygon(s)
 find_next_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F){
@@ -28,7 +29,7 @@ find_all_up <- function(HYBAS, HYBAS.ID, ignore.endorheic = F, split = F){
   HYBAS.ID <- as.character(HYBAS.ID)
   HYBAS.ID.master <- list()
   
-  #Get the possible upstream 'branches'
+  # Find the possible upstream branches.
   direct.upstream <- find_next_up(HYBAS = HYBAS, HYBAS.ID = HYBAS.ID,
                                   ignore.endorheic = ignore.endorheic)
   

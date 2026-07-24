@@ -2,8 +2,10 @@
                 # Hydrosheds  ----
 ## ------------------------------------------------------- ##
 
-# This script is currently for extracting watersheds for Canada and Murray Darling for Data Release 2
-# It can be adapted to add more regions by changing code in line 114 and 174
+# Build HydroBASINS watersheds for any approved site subset.
+#
+# Site-specific outlet adjustments are read from an editable TSV; they are not
+# embedded in this script.
                 
 ## ------------------------------------------------------- ##
                 # Housekeeping -----
@@ -41,16 +43,33 @@ resolve_shared_sitecoord_file <- function(root_path, stem, ext = "shp") {
   stop("Could not locate shared site-coordinate file for stem: ", stem, call. = FALSE)
 }
 
-# Shared key cleanup helpers, including older Congo Basin labels.
+# Shared identifier and subset helpers.
 subset_targets <- load_site_subset()
 site_coord_dir <- silica_site_coordinates_dir(path)
 
-excluded_missing_shp_lter <- c(
-  "ARC", "BcCZO", "BNZ", "Congo Basin", "Catalina Jemez", "Coal Creek11",
-  "Finnish Environmental Institute", "HYBAM", "KNZ", "KRR", "LMP", "LUQ",
-  "MCM", "PIE", "Tanguro(Jankowski)", "USGS"
+missing_shapefile_exclusions_path <- Sys.getenv(
+  "SILICA_MISSING_SHAPEFILE_LTER_EXCLUSIONS",
+  unset = file.path(
+    "02_watershed_delineation",
+    "config",
+    "missing_shapefile_lter_exclusions.tsv"
+  )
+)
+excluded_missing_shp_lter <- load_lter_exclusion_list(
+  missing_shapefile_exclusions_path
 )
 skip_drive_auth <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) == "true"
+site_reference_drive_folder_id <- Sys.getenv(
+  "SILICA_SITE_REFERENCE_DRIVE_FOLDER_ID",
+  unset = ""
+)
+if (!skip_drive_auth && !nzchar(site_reference_drive_folder_id)) {
+  stop(
+    "Set SILICA_SITE_REFERENCE_DRIVE_FOLDER_ID or set ",
+    "SILICA_SKIP_DRIVE_AUTH=TRUE.",
+    call. = FALSE
+  )
+}
                 
 ## ------------------------------------------------------- ##
           # Reference Table Acquisition ----
@@ -59,7 +78,9 @@ skip_drive_auth <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) == "tr
 if (skip_drive_auth) {
   message("Skipping Drive download of site reference table because SILICA_SKIP_DRIVE_AUTH=TRUE.")
 } else {
-  googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA")) %>%
+  googledrive::drive_ls(
+    googledrive::as_id(site_reference_drive_folder_id)
+  ) %>%
                                 dplyr::filter(name == "Site_Reference_Table") %>%
     googledrive::drive_download(file = ., overwrite = T,
                                 path = file.path(site_coord_dir,
@@ -86,6 +107,58 @@ coord_df <- read_silica_site_reference(site_coord_dir) %>%
                                          !is.null(subset_targets))
          & (!is.na(Latitude)&!is.na(Longitude))) %>%
   dplyr::select(-.LTER_KEY)
+
+outlet_override_path <- Sys.getenv(
+  "SILICA_OUTLET_COORDINATE_OVERRIDES",
+  unset = file.path(
+    "02_watershed_delineation",
+    "config",
+    "outlet_coordinate_overrides.tsv"
+  )
+)
+if (file.exists(outlet_override_path)) {
+  outlet_overrides <- read.delim(
+    outlet_override_path,
+    sep = "\t",
+    quote = "",
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  assert_required_columns(
+    outlet_overrides,
+    c("LTER", "Stream_Name", "Longitude", "Latitude", "Reason"),
+    label = outlet_override_path
+  )
+  outlet_overrides <- outlet_overrides %>%
+    dplyr::transmute(
+      .LTER_KEY = normalize_lter_key(LTER),
+      .STREAM_KEY = normalize_stream_key(Stream_Name),
+      .LONGITUDE_OVERRIDE = suppressWarnings(as.numeric(Longitude)),
+      .LATITUDE_OVERRIDE = suppressWarnings(as.numeric(Latitude))
+    )
+  if (anyDuplicated(outlet_overrides[, c(".LTER_KEY", ".STREAM_KEY")])) {
+    stop("Outlet override table contains duplicate site keys.", call. = FALSE)
+  }
+  coord_df <- coord_df %>%
+    dplyr::mutate(
+      .LTER_KEY = normalize_lter_key(LTER),
+      .STREAM_KEY = normalize_stream_key(Stream_Name)
+    ) %>%
+    dplyr::left_join(
+      outlet_overrides,
+      by = c(".LTER_KEY", ".STREAM_KEY")
+    ) %>%
+    dplyr::mutate(
+      Longitude = dplyr::coalesce(.LONGITUDE_OVERRIDE, Longitude),
+      Latitude = dplyr::coalesce(.LATITUDE_OVERRIDE, Latitude)
+    ) %>%
+    dplyr::select(
+      -.LTER_KEY,
+      -.STREAM_KEY,
+      -.LONGITUDE_OVERRIDE,
+      -.LATITUDE_OVERRIDE
+    )
+}
 
 if (!is.null(subset_targets) && nrow(subset_targets) > 0) {
   force_vals <- if ("Force_HydroSHEDS" %in% names(subset_targets)) {
@@ -308,16 +381,6 @@ sf::sf_use_s2(F)
 
 # Pull out HYBAS_IDs at site coordinates
 sites_actual <- good_sheds2 %>%
-  # Quickly address any coordinates that don't intersect with *any* HydroSHEDS (but should)
-  ## Only affects one site and that one is very near the ocean in reality
-  ## Longitude
-  dplyr::mutate(Longitude = dplyr::case_when(
-    # Bump a Finnish site a little further inland
-    LTER == "Finnish Environmental Institute" &
-      Stream_Name %in% c("Site 28208", "Oulujoki 13000") &
-      Longitude == 25.4685 ~ 25.5,
-    # Otherwise retain old coordinate
-    TRUE ~ Longitude)) %>%
   # Make this explicitly spatial
   sf::st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
   # Identify HydroSHEDS polygons that intersect with those coordinates
@@ -558,7 +621,12 @@ if (any(duplicate_hydrosheds_id, na.rm = TRUE)) {
 
 sites_actual <- cbind(sites_actual, "hydrosheds" = hydrosheds_id)
 reference_shp_nm <- trimws(as.character(sites_actual$Shapefile_Name))
-stale_generated_shp_nm <- grepl("^[A-Za-z0-9]+_hydrosheds_[0-9]+$", reference_shp_nm)
+# Replace legacy numeric labels with stable site-specific HydroSHEDS names.
+# MD is the Murray-Darling network.
+stale_generated_shp_nm <- grepl(
+  "^[A-Za-z0-9]+_hydrosheds_[0-9]+$|^Canada[1-6]$|^MD([7-9]|1[0-8])$",
+  reference_shp_nm
+)
 sites_actual$shp_nm <- dplyr::if_else(
   !is.na(reference_shp_nm) & nchar(reference_shp_nm) > 0 & !stale_generated_shp_nm,
   reference_shp_nm,

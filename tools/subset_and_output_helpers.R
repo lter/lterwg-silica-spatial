@@ -2,69 +2,24 @@
 # Silica WG - Optional Site Subset Helpers
 ## ------------------------------------------------------- ##
 
-# Normalize strings for robust matching across case/spacing differences
-normalize_site_key <- function(x) {
-  x <- trimws(as.character(x))
-  x <- tolower(x)
-  x[x %in% c("", "na")] <- NA_character_
-  x
+subset_helpers_source <- tryCatch({
+  source_files <- vapply(
+    sys.frames(),
+    function(frame) {
+      if (is.null(frame$ofile)) "" else as.character(frame$ofile)
+    },
+    character(1)
+  )
+  source_files <- source_files[nzchar(source_files)]
+  normalizePath(tail(source_files, 1), mustWork = TRUE)
+}, error = function(...) "")
+subset_helpers_tools_dir <- if (nzchar(subset_helpers_source)) {
+  dirname(subset_helpers_source)
+} else {
+  file.path(getwd(), "tools")
 }
-
-clean_lter_label <- function(x) {
-  x <- trimws(as.character(x))
-  x <- gsub("\\s*\\([^)]*\\)", "", x)
-  x <- trimws(x)
-  x[x %in% c("", "na")] <- NA_character_
-  x
-}
-
-clean_lter_column <- function(df, drop_duplicates = TRUE) {
-  if ("LTER" %in% names(df)) {
-    df$LTER <- clean_lter_label(df$LTER)
-  }
-
-  if (drop_duplicates) {
-    df <- df[!duplicated(df), , drop = FALSE]
-  }
-
-  df
-}
-
-# Clean LTER labels used by subset files and helper maps.
-# This is also where we keep known reference-table name changes across releases,
-# for example V2 -> V3 label changes such as:
-# - Swedish Goverment -> Sweden
-# - Carey -> PIE
-# Legacy local-country labels are also mapped to broader workflow groupings.
-normalize_lter_key <- function(x) {
-  x <- normalize_site_key(clean_lter_label(x))
-  x[x %in% c("walkerbranch")] <- "walker branch"
-  x[x %in% c("elbe")] <- "germany"
-  x[x %in% c("swedish goverment", "swedish government")] <- "sweden"
-  x[x %in% c("carey")] <- "pie"
-  x[x %in% c("cameroon", "cameroon site", "cameroon sites", "congo", "congo basin")] <- "congo-basin"
-  x
-}
-
-# Normalize region labels from subset files / helper maps
-normalize_region_key <- function(x) {
-  x <- normalize_site_key(x)
-  x <- gsub("[[:space:]_]+", "-", x)
-  x
-}
-
-# Clean stream-name variants that appear across discharge, reference, and spatial
-# outputs. This helper is for matching keys, so everything stays in a normalized
-# lowercase form.
-normalize_stream_key <- function(x) {
-  x <- normalize_site_key(x)
-  x[x %in% c("mg_weir", "mgweir")] <- "mgweir"
-  x[x %in% c("or_low", "orlow")] <- "orlow"
-  x[x %in% c("sopchoppy river", "sopchoppy river ")] <- "sopchoppy river"
-  x[x %in% c("east fork")] <- "east fork"
-  x[x %in% c("west fork")] <- "west fork"
-  x
-}
+source(file.path(subset_helpers_tools_dir, "identifier_helpers.R"))
+source(file.path(subset_helpers_tools_dir, "cloud_output_helpers.R"))
 
 # Load optional target-site subset file from environment
 load_site_subset <- function() {
@@ -954,6 +909,81 @@ infer_dynamic_region_from_coords <- function(latitude, longitude) {
   out
 }
 
+dynamic_region_config_path <- function(filename) {
+  file.path(
+    dirname(subset_helpers_tools_dir),
+    "03_spatial_extraction",
+    "config",
+    filename
+  )
+}
+
+load_dynamic_driver_regions <- function(driver, path = NULL) {
+  if (is.null(path)) {
+    path <- Sys.getenv(
+      "SILICA_DYNAMIC_DRIVER_REGIONS",
+      unset = dynamic_region_config_path("dynamic_driver_regions.tsv")
+    )
+  }
+  regions <- read.delim(
+    path,
+    sep = "\t",
+    quote = "",
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  assert_required_columns(
+    regions,
+    c("Driver", "Region"),
+    "dynamic driver regions"
+  )
+  driver_key <- tolower(trimws(driver))
+  regions <- regions[
+    tolower(trimws(regions$Driver)) == driver_key,
+    "Region",
+    drop = TRUE
+  ]
+  regions <- normalize_region_key(regions)
+  regions <- sort(unique(regions[!is.na(regions) & nzchar(regions)]))
+  if (!length(regions)) {
+    stop("No dynamic regions are configured for driver: ", driver, call. = FALSE)
+  }
+  regions
+}
+
+load_dynamic_region_routes <- function(path = NULL) {
+  if (is.null(path)) {
+    path <- Sys.getenv(
+      "SILICA_DYNAMIC_REGION_ROUTES",
+      unset = dynamic_region_config_path("dynamic_region_routes.tsv")
+    )
+  }
+  routes <- read.delim(
+    path,
+    sep = "\t",
+    quote = "",
+    stringsAsFactors = FALSE,
+    check.names = FALSE,
+    na.strings = character()
+  )
+  assert_required_columns(
+    routes,
+    c("LTER", "Stream_Name", "Region"),
+    "dynamic region routes"
+  )
+  routes <- routes %>%
+    dplyr::transmute(
+      .LTER_KEY = normalize_lter_key(LTER),
+      .STREAM_KEY = normalize_stream_key(Stream_Name),
+      region = normalize_region_key(Region)
+    )
+  duplicate_routes <- duplicated(routes[c(".LTER_KEY", ".STREAM_KEY")])
+  if (any(duplicate_routes)) {
+    stop("Dynamic region route table has duplicate site keys.", call. = FALSE)
+  }
+  routes
+}
+
 # Restrict dynamic-driver region loops when a subset is active
 resolve_target_regions <- function(subset_targets = NULL, default_regions) {
   forced_regions <- trimws(Sys.getenv("SILICA_FORCE_TARGET_REGIONS", unset = ""))
@@ -998,82 +1028,12 @@ resolve_target_regions <- function(subset_targets = NULL, default_regions) {
     }
   }
 
-  stream_region_overrides <- data.frame(
-    .LTER_KEY = c("lmp", "krr"),
-    .STREAM_KEY = c("nor27", "s65c"),
-    region = c("north-america-usa", "north-america-usa"),
-    stringsAsFactors = FALSE
-  )
-
-  region_map <- data.frame(
-    LTER_KEY = c(
-      "amazon",
-      "and",
-      "arc",
-      "australia",
-      "bcczo",
-      "canada",
-      "coloradoalpine",
-      "congo-basin",
-      "east riversfa",
-      "finnish environmental institute",
-      "germany",
-      "gro",
-      "guadeloupe",
-      "hbr",
-      "hybam",
-      "knz",
-      "krr",
-      "lmp",
-      "luq",
-      "mali",
-      "md",
-      "niva",
-      "nwt",
-      "pie",
-      "seine",
-      "sweden",
-      "uk",
-      "umr",
-      "usgs",
-      "walker branch",
-      "westernaustralia"
-    ),
-    region = c(
-      "amazon",
-      "north-america-usa",
-      "north-america-arctic",
-      "australia",
-      "north-america-usa",
-      "canada",
-      "north-america-usa",
-      "congo",
-      "north-america-usa",
-      "scandinavia",
-      "germany",
-      "amazon",
-      "puerto-rico",
-      "north-america-usa",
-      "amazon",
-      "north-america-usa",
-      "north-america-usa",
-      "north-america-usa",
-      "puerto-rico",
-      "mali",
-      "australia",
-      "scandinavia",
-      "north-america-usa",
-      "north-america-usa",
-      "germany",
-      "scandinavia",
-      "united-kingdom",
-      "north-america-usa",
-      "north-america-usa",
-      "north-america-usa",
-      "australia"
-    ),
-    stringsAsFactors = FALSE
-  )
+  region_routes <- load_dynamic_region_routes()
+  stream_region_routes <- region_routes %>%
+    dplyr::filter(!is.na(.STREAM_KEY), nzchar(.STREAM_KEY))
+  lter_region_routes <- region_routes %>%
+    dplyr::filter(is.na(.STREAM_KEY) | !nzchar(.STREAM_KEY)) %>%
+    dplyr::select(-.STREAM_KEY)
 
   region_targets <- subset_targets %>%
     dplyr::mutate(
@@ -1084,11 +1044,18 @@ resolve_target_regions <- function(subset_targets = NULL, default_regions) {
         longitude = if ("Longitude" %in% names(.)) Longitude else NA_real_
       )
     ) %>%
-    dplyr::left_join(stream_region_overrides, by = c(".LTER_KEY", ".STREAM_KEY")) %>%
-    dplyr::left_join(region_map, by = c(".LTER_KEY" = "LTER_KEY")) %>%
+    dplyr::left_join(
+      stream_region_routes,
+      by = c(".LTER_KEY", ".STREAM_KEY")
+    ) %>%
+    dplyr::left_join(
+      lter_region_routes,
+      by = ".LTER_KEY",
+      suffix = c("_stream", "_lter")
+    ) %>%
     dplyr::transmute(
       LTER,
-      region = dplyr::coalesce(region.x, coord_region, region.y)
+      region = dplyr::coalesce(region_stream, coord_region, region_lter)
     ) %>%
     dplyr::distinct()
 

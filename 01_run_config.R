@@ -44,6 +44,20 @@ run_settings <- list(
 
   # Optional paths / labels
   data_root = "",
+  # Full publication/extraction runs use the canonical release-aware watershed
+  # library at <data_root>/silica-shapefiles. Choose the published GlASS
+  # version whose frozen site-reference table defines the run. This is separate
+  # from each row's Spatial_Data_Version. The GlASS 3 review is complete,
+  # but the release remains unavailable until its final CSV is installed and
+  # the canonical watershed-library preflight passes.
+  # Leave blank for automatic behavior: TRUE for full runs and FALSE for the
+  # existing targeted/update workflows unless you opt them in explicitly.
+  use_canonical_release_library = "",
+  reference_release = 3,
+  # Leave blank to use <data_root>/silica-shapefiles and:
+  # reference_tables/published_glass_versions/glass_vN/site_reference_table.csv.
+  shape_library_root = "",
+  site_reference_file = "",
   site_followup_file = "",
   # subset_file should point to a CSV file, not a list typed into this script.
   #

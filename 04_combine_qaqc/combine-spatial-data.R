@@ -9,10 +9,16 @@ join_keys <- c(".LTER_KEY", ".STREAM_KEY", ".DISCHARGE_KEY", ".SHP_KEY")
 upload_to_google_drive <- toupper(Sys.getenv("SILICA_UPLOAD_TO_GOOGLE_DRIVE", unset = "FALSE")) == "TRUE"
 google_drive_folder_id <- Sys.getenv(
   "SILICA_GOOGLE_DRIVE_FOLDER_ID",
-  unset = "1zF_Itljwn0bUWSTHEkwkMDyNOiKPXRF1"
+  unset = ""
 )
 google_drive_account <- Sys.getenv("SILICA_GOOGLE_DRIVE_ACCOUNT", unset = "")
 google_drive_overwrite <- toupper(Sys.getenv("SILICA_GOOGLE_DRIVE_OVERWRITE", unset = "TRUE")) == "TRUE"
+if (upload_to_google_drive && !nzchar(google_drive_folder_id)) {
+  stop(
+    "Set SILICA_GOOGLE_DRIVE_FOLDER_ID before enabling Drive upload.",
+    call. = FALSE
+  )
+}
 
 log_table_summary <- function(df, label) {
   cat(label, ": rows=", nrow(df), " cols=", ncol(df), "\n", sep = "")
@@ -52,7 +58,7 @@ upload_file_to_google_drive <- function(path) {
     name = basename(path),
     overwrite = google_drive_overwrite
   )
-  cat("UPLOADED_TO_GOOGLE_DRIVE:", uploaded$name, "\n", sep = "")
+  cat("Uploaded to Google Drive: ", uploaded$name, "\n", sep = "")
   invisible(TRUE)
 }
 
@@ -64,17 +70,7 @@ norm_chr <- function(x) {
 }
 
 norm_lter <- function(x) {
-  x <- clean_lter_label(norm_chr(x))
-  dplyr::recode(
-    x,
-    "Swedish Goverment" = "Sweden",
-    "Swedish Government" = "Sweden",
-    "Carey" = "PIE",
-    "Cameroon" = "Congo Basin",
-    "Cameroon Site" = "Congo Basin",
-    "Cameroon Sites" = "Congo Basin",
-    .default = x
-  )
+  canonical_lter_label(norm_chr(x))
 }
 
 join_chr <- function(x) {
@@ -84,17 +80,7 @@ join_chr <- function(x) {
 }
 
 join_lter <- function(x) {
-  x <- join_chr(clean_lter_label(x))
-  dplyr::recode(
-    x,
-    "swedish goverment" = "sweden",
-    "swedish government" = "sweden",
-    "carey" = "pie",
-    "cameroon" = "congo basin",
-    "cameroon site" = "congo basin",
-    "cameroon sites" = "congo basin",
-    .default = x
-  )
+  normalize_lter_key(x)
 }
 
 add_join_keys <- function(df) {
@@ -451,16 +437,64 @@ driver_files <- if (nzchar(drivers_env)) {
   character(0)
 }
 driver_files <- driver_files[nzchar(driver_files)]
-clean_obidos_names <- tolower(Sys.getenv("SILICA_CLEAN_OBIDOS_NAMES", "true")) == "true"
+apply_site_exclusions <- tolower(Sys.getenv(
+  "SILICA_APPLY_SITE_EXCLUSIONS",
+  "true"
+)) == "true"
+site_exclusions_path <- Sys.getenv(
+  "SILICA_SITE_EXCLUSIONS",
+  unset = file.path(
+    "04_combine_qaqc",
+    "config",
+    "excluded_site_rows.tsv"
+  )
+)
 
-is_duplicate_obidos_row <- function(df) {
-  lter <- norm_lter(df$LTER)
-  stream <- norm_chr(df$Stream_Name)
-  discharge <- norm_chr(df$Discharge_File_Name)
-  shp <- norm_chr(df$Shapefile_Name)
-
-  (lter == "Amazon" & shp == "Amazon_Obidos" & discharge == "Obidos_Q") |
-    (lter == "HYBAM" & stream == "Obidos")
+site_exclusion_index <- function(df, path) {
+  if (!file.exists(path)) {
+    stop("Site-exclusion table not found: ", path, call. = FALSE)
+  }
+  exclusions <- read.delim(
+    path,
+    stringsAsFactors = FALSE,
+    check.names = FALSE,
+    na.strings = c("", "NA")
+  )
+  match_fields <- c(
+    "LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name"
+  )
+  if (!all(match_fields %in% names(exclusions))) {
+    stop(
+      "Site-exclusion table must contain: ",
+      paste(match_fields, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  excluded <- rep(FALSE, nrow(df))
+  for (index in seq_len(nrow(exclusions))) {
+    rule <- exclusions[index, , drop = FALSE]
+    rule_values <- vapply(
+      match_fields,
+      function(field) as.character(rule[[field]][[1]]),
+      character(1)
+    )
+    fields <- match_fields[!is.na(rule_values) & nzchar(trimws(rule_values))]
+    if (!length(fields)) {
+      stop("Site-exclusion rows must define at least one match field.", call. = FALSE)
+    }
+    matches <- rep(TRUE, nrow(df))
+    for (field in fields) {
+      left <- if (field == "LTER") join_lter(df[[field]]) else join_chr(df[[field]])
+      right <- if (field == "LTER") {
+        join_lter(rule[[field]])
+      } else {
+        join_chr(rule[[field]])
+      }
+      matches <- matches & !is.na(left) & left == right
+    }
+    excluded <- excluded | matches
+  }
+  excluded
 }
 
 ref_raw <- if (nzchar(base_file)) {
@@ -481,9 +515,12 @@ base <- ref_raw %>%
 log_table_summary(ref_raw, "raw_site_reference")
 log_table_summary(base, "normalized_site_reference_keys")
 
-if (clean_obidos_names) {
-  obidos_drop_idx <- is_duplicate_obidos_row(base)
-  base <- base[!obidos_drop_idx, , drop = FALSE]
+if (apply_site_exclusions) {
+  excluded_rows <- site_exclusion_index(base, site_exclusions_path)
+  if (any(excluded_rows)) {
+    message("Excluded ", sum(excluded_rows), " configured duplicate/alias row(s).")
+    base <- base[!excluded_rows, , drop = FALSE]
+  }
 }
 
 if (nzchar(data_root)) cat("data_root=", data_root, "\n", sep = "")
@@ -572,7 +609,7 @@ out_file <- Sys.getenv(
 )
 write.csv(out_final, out_file, row.names = FALSE, na = "")
 upload_file_to_google_drive(out_file)
-cat("WROTE:", out_file, "\n", sep = "")
+cat("Saved the combined spatial table: ", out_file, "\n", sep = "")
 cat("out_rows=", nrow(out_final), "\n", sep = "")
 cat("duplicate_site_groups_collapsed=", if (is.null(duplicate_site_groups)) 0 else nrow(duplicate_site_groups), "\n", sep = "")
 

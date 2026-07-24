@@ -1,20 +1,9 @@
-## ------------------------------------------------------- ##
-# Silica WG - Wrangle Watershed Shapefiles
-## ------------------------------------------------------- ##
-# Written by:
-## Nick J Lyon
-# Edited by Sidney Bush -- for data release 2
-
-# Purpose:
-## Wrangle "artisanal" watershed shapefiles into a single file to extract driver data
-## Artisanal = mixed provenance / provided by WG participants
-
-## ------------------------------------------------------- ##
-# Housekeeping -----
-## ------------------------------------------------------- ##
+# Prepare accepted non-HydroSHEDS watershed files for spatial extraction.
+#
+# Source provenance belongs in the site-reference table. Release-aware runs
+# select the exact accepted watershed version for each row.
 
 # Read needed libraries
-# install.packages("librarian")
 librarian::shelf(tidyverse, magrittr, googledrive, sf, supportR, readxl)
 
 # Do not clear the session/environment here. This script may be sourced by the
@@ -25,37 +14,44 @@ source(file = file.path(getwd(), "tools", "subset_and_output_helpers.R"))
 # Identify path to location of shared data
 (path <- resolve_silica_data_root())
 
-# Shared key cleanup helpers, including older Congo Basin labels.
+# Shared identifier and subset helpers.
 subset_targets <- load_site_subset()
 site_coord_dir <- silica_site_coordinates_dir(path)
 
-excluded_missing_shp_lter <- c(
-  "ARC",
-  "BcCZO",
-  "BNZ",
-  "Congo Basin",
-  "Catalina Jemez",
-  "Coal Creek11",
-  "Finnish Environmental Institute",
-  "HYBAM",
-  "KNZ",
-  "KRR",
-  "LMP",
-  "LUQ",
-  "MCM",
-  "PIE",
-  "Tanguro(Jankowski)",
-  "USGS"
+missing_shapefile_exclusions_path <- Sys.getenv(
+  "SILICA_MISSING_SHAPEFILE_LTER_EXCLUSIONS",
+  unset = file.path(
+    "02_watershed_delineation",
+    "config",
+    "missing_shapefile_lter_exclusions.tsv"
+  )
+)
+excluded_missing_shp_lter <- load_lter_exclusion_list(
+  missing_shapefile_exclusions_path
 )
 
-# Define the Drive folder for exporting checks / diagnostics to
-check_folder <- googledrive::as_id(
-  "https://drive.google.com/drive/u/1/folders/1-IawEkFjfkrzAlgolvS1KTTm0pEW9K9h"
-)
 skip_drive_auth <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) ==
   "true"
 skip_drive_upload <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_UPLOAD", "false")) ==
   "true"
+site_reference_drive_folder_id <- Sys.getenv(
+  "SILICA_SITE_REFERENCE_DRIVE_FOLDER_ID",
+  unset = ""
+)
+qa_drive_folder_id <- Sys.getenv("SILICA_QA_DRIVE_FOLDER_ID", unset = "")
+if (!skip_drive_auth && !nzchar(site_reference_drive_folder_id)) {
+  stop(
+    "Set SILICA_SITE_REFERENCE_DRIVE_FOLDER_ID or set ",
+    "SILICA_SKIP_DRIVE_AUTH=TRUE.",
+    call. = FALSE
+  )
+}
+if (!skip_drive_upload && !nzchar(qa_drive_folder_id)) {
+  stop(
+    "Set SILICA_QA_DRIVE_FOLDER_ID or set SILICA_SKIP_DRIVE_UPLOAD=TRUE.",
+    call. = FALSE
+  )
+}
 
 
 ## ------------------------------------------------------- ##
@@ -67,9 +63,9 @@ if (skip_drive_auth) {
     "Skipping Drive download of site reference table because SILICA_SKIP_DRIVE_AUTH=TRUE."
   )
 } else {
-  googledrive::drive_ls(googledrive::as_id(
-    "https://drive.google.com/drive/u/0/folders/0AIPkWhVuXjqFUk9PVA"
-  )) %>%
+  googledrive::drive_ls(
+    googledrive::as_id(site_reference_drive_folder_id)
+  ) %>%
     dplyr::filter(name == "Site_Reference_Table") %>%
     googledrive::drive_download(
       file = .,
@@ -78,22 +74,37 @@ if (skip_drive_auth) {
     )
 }
 
-# Read in site coordinates (i.e., ref table)
-coord_df <- read_silica_site_reference(site_coord_dir) %>%
-  ## Pare down to minimum needed columns
-  dplyr::select(
-    LTER,
-    Shapefile_Name,
-    Stream_Name,
-    drainSqKm,
-    Latitude,
-    Longitude,
-    Shapefile_CRS_EPSG
+canonical_release_mode <- silica_use_canonical_release_library()
+reference_raw <- read_silica_site_reference(site_coord_dir)
+if (canonical_release_mode &&
+    !"Spatial_Data_Version" %in% names(reference_raw)) {
+  stop(
+    "Canonical release mode requires Spatial_Data_Version ",
+    "in the site-reference table.",
+    call. = FALSE
+  )
+}
+
+# Read in site coordinates (i.e., reference table). In canonical mode, retain
+# the per-row spatial release so a same-named watershed can never be selected
+# from the wrong data_release_N directory.
+coord_df <- reference_raw %>%
+  dplyr::transmute(
+    LTER = LTER,
+    Shapefile_Name = Shapefile_Name,
+    Stream_Name = Stream_Name,
+    expert_area_km2 = drainSqKm,
+    Latitude = Latitude,
+    Longitude = Longitude,
+    crs_code = Shapefile_CRS_EPSG,
+    spatial_release = if (canonical_release_mode) {
+      suppressWarnings(as.integer(.data[["Spatial_Data_Version"]]))
+    } else {
+      0L
+    }
   ) %>%
   ## Drop duplicate rows (if any)
   dplyr::distinct() %>%
-  ## Rename some columns
-  dplyr::rename(expert_area_km2 = drainSqKm, crs_code = Shapefile_CRS_EPSG) %>%
   dplyr::mutate(.LTER_KEY = normalize_lter_key(LTER)) |>
   filter(
     is.na(Shapefile_Name) != T |
@@ -105,10 +116,33 @@ coord_df <- read_silica_site_reference(site_coord_dir) %>%
 
 coord_df <- filter_to_target_records(coord_df, subset_targets = subset_targets)
 
-hydrosheds_targets <- build_hydrosheds_target_keys(
-  subset_targets = subset_targets,
-  coord_df = coord_df
-)
+if (canonical_release_mode) {
+  invalid_release <- !is.na(coord_df$Shapefile_Name) &
+    (is.na(coord_df$spatial_release) | !coord_df$spatial_release %in% 1:3)
+  if (any(invalid_release)) {
+    bad <- unique(paste(
+      coord_df$LTER[invalid_release],
+      coord_df$Stream_Name[invalid_release],
+      coord_df$Shapefile_Name[invalid_release],
+      sep = " / "
+    ))
+    stop(
+      "Reference rows with Shapefile_Name must declare spatial release 1, 2, ",
+      "or 3 in canonical mode:\n- ",
+      paste(bad, collapse = "\n- "),
+      call. = FALSE
+    )
+  }
+}
+
+hydrosheds_targets <- if (canonical_release_mode) {
+  NULL
+} else {
+  build_hydrosheds_target_keys(
+    subset_targets = subset_targets,
+    coord_df = coord_df
+  )
+}
 
 if (!is.null(hydrosheds_targets)) {
   coord_df <- coord_df %>%
@@ -132,18 +166,42 @@ coord_df |> filter(is.na(Shapefile_Name)) |> pull(LTER) |> unique()
 # Acquire Shapefiles ----
 ## ------------------------------------------------------- ##
 
-# Identify all shapefiles currently in Aurora
-server_files <- data.frame(
-  "files" = dir(path = file.path(path, 'artisanal-shapefiles-2'))
-) %>%
-  # Split off file type
-  dplyr::mutate(
-    file_type = stringr::str_sub(
-      string = files,
-      start = nchar(files) - 3,
-      nchar(files)
+# Identify all shapefiles currently available. Canonical mode reads the
+# one-site-per-folder release library recursively; legacy mode retains the
+# former flat artisanal-shapefiles-2 behavior.
+if (canonical_release_mode) {
+  release_dirs <- silica_release_shapefile_dirs(path)
+  release_shp_paths <- lapply(names(release_dirs), function(release) {
+    files <- list.files(
+      release_dirs[[release]],
+      pattern = "[.]shp$",
+      recursive = TRUE,
+      full.names = TRUE,
+      ignore.case = TRUE
     )
-  )
+    data.frame(
+      files = files,
+      spatial_release = as.integer(release),
+      stringsAsFactors = FALSE
+    )
+  })
+  server_files <- dplyr::bind_rows(release_shp_paths) %>%
+    dplyr::mutate(file_type = ".shp")
+} else {
+  server_files <- data.frame(
+    "files" = dir(path = file.path(path, "artisanal-shapefiles-2")),
+    spatial_release = 0L
+  ) %>%
+    # Split off file type
+    dplyr::mutate(
+      file_type = stringr::str_sub(
+        string = files,
+        start = nchar(files) - 3,
+        nchar(files)
+      ),
+      files = file.path(path, "artisanal-shapefiles-2", files)
+    )
+}
 
 # Check that out
 dplyr::glimpse(server_files)
@@ -156,8 +214,8 @@ sort(unique(server_files$file_type))
 # So, I've downloaded the watersheds manually and re-uploaded to Aurora
 # This will need to be re-done if any files change / more shapefiles are added
 
-# See Drive folder to download here:
-## https://drive.google.com/drive/folders/1TLEFKLWUpTKwxKiZv9nqhdwccflPuF9g
+# The canonical source location is external. Set SILICA_DATA_ROOT to the
+# materialized library; do not embed a contributor-specific Drive link here.
 
 ## ------------------------------------------------------- ##
 # Combine Shapefiles ----
@@ -167,44 +225,86 @@ sort(unique(server_files$file_type))
 raw_sheds <- server_files %>%
   dplyr::filter(file_type == ".shp") %>%
   dplyr::transmute(
-    server_shp_name = gsub(pattern = "\\.shp", replacement = "", x = files),
-    shp_key = tolower(server_shp_name)
+    shp_path = files,
+    server_shp_name = tools::file_path_sans_ext(basename(files)),
+    shp_key = tolower(server_shp_name),
+    spatial_release = spatial_release
   ) %>%
   dplyr::distinct()
 
-# Warn if multiple on-disk files collapse to the same lowercase key
+# Stop if multiple on-disk files within one release collapse to the same key.
+# The same Shapefile_Name may legitimately exist in multiple releases.
 dup_raw <- raw_sheds %>%
-  dplyr::count(shp_key) %>%
+  dplyr::count(spatial_release, shp_key) %>%
   dplyr::filter(n > 1)
 if (nrow(dup_raw) > 0) {
-  warning(
-    "Some shapefiles share the same lowercase filename key. ",
-    "Please de-duplicate on-disk names before running."
+  stop(
+    "Some shapefiles within the same release share a lowercase filename key. ",
+    "De-duplicate the canonical release folder before running.",
+    call. = FALSE
   )
 }
 
 # Build a matching key in the reference table
 coord_df <- coord_df %>%
-  dplyr::mutate(shp_key = tolower(Shapefile_Name))
+  dplyr::mutate(
+    shp_key = tolower(Shapefile_Name),
+    library_key = paste(spatial_release, shp_key, sep = "::")
+  )
+raw_sheds <- raw_sheds %>%
+  dplyr::mutate(library_key = paste(spatial_release, shp_key, sep = "::"))
 
 # Compare shapefiles we have with those that are named in the reference table
 supportR::diff_check(
-  old = unique(coord_df$shp_key),
-  new = unique(raw_sheds$shp_key)
+  old = unique(coord_df$library_key),
+  new = unique(raw_sheds$library_key)
 )
 ## Any 'in old but not new' = shapefiles named in reference table but not on Aurora
 ## Any 'in new but not old' = shapefiles in Aurora that aren't in the reference table
 
+# Match river coordinates to release-specific bundles.
+matched_sheds <- coord_df %>%
+  # Attach the exact release-specific on-disk bundle.
+  dplyr::left_join(
+    raw_sheds,
+    by = c("library_key", "spatial_release", "shp_key")
+  )
+
+if (canonical_release_mode) {
+  missing_bundle <- !is.na(matched_sheds$Shapefile_Name) &
+    is.na(matched_sheds$server_shp_name)
+  if (any(missing_bundle)) {
+    bad <- unique(paste(
+      matched_sheds$spatial_release[missing_bundle],
+      matched_sheds$Shapefile_Name[missing_bundle],
+      matched_sheds$LTER[missing_bundle],
+      matched_sheds$Stream_Name[missing_bundle],
+      sep = " / "
+    ))
+    stop(
+      "The reference table names canonical watershed bundles that are absent ",
+      "from their declared release folder:\n- ",
+      paste(bad, collapse = "\n- "),
+      call. = FALSE
+    )
+  }
+}
+
 # Wrangle river coordinates
-good_sheds <- coord_df %>%
-  # Attach matching on-disk shapefile name (case-insensitive)
-  dplyr::left_join(raw_sheds, by = "shp_key") %>%
+good_sheds <- matched_sheds %>%
   # Keep only shapefiles in ref table and on Aurora
   dplyr::filter(!is.na(server_shp_name)) %>%
   # Drop any non-unique rows (shouldn't be any but good to double check)
   dplyr::distinct() %>%
   # Condense what remains to ensure no duplicates
-  dplyr::group_by(LTER, Shapefile_Name, server_shp_name, crs_code) %>%
+  dplyr::group_by(
+    LTER,
+    Shapefile_Name,
+    server_shp_name,
+    shp_path,
+    spatial_release,
+    crs_code
+  ) %>%
   dplyr::summarize(
     expert_area_km2 = mean(expert_area_km2, na.rm = T),
     Latitude = dplyr::first(Latitude),
@@ -233,50 +333,44 @@ all_shps <- sf::st_sf(
   geom = sf::st_sfc(crs = 4326)
 )
 
-known_crs_overrides <- tibble::tribble(
-  ~shp_key               , ~crs_override ,
-  "amazon_manacapuru"    , "ESRI:54012"  ,
-  "amazon_santoantonio"  , "ESRI:54012"  ,
-  "amazon_vergemgrande"  , "ESRI:54012"  ,
-  "atalaya_aval"         , "ESRI:54012"  ,
-  "borja"                , "ESRI:54012"  ,
-  "caracarai"            , "ESRI:54012"  ,
-  "cuidad_bolivar"       , "ESRI:54012"  ,
-  "franscisco"           , "ESRI:54012"  ,
-  "itaituba"             , "ESRI:54012"  ,
-  "itapeua"              , "ESRI:54012"  ,
-  "langa_tabiki"         , "ESRI:54012"  ,
-  "manacapuru"           , "ESRI:54012"  ,
-  "nazareth"             , "ESRI:54012"  ,
-  "porto_velho"          , "ESRI:54012"  ,
-  "rio_ica"              , "ESRI:54012"  ,
-  "rio_japura"           , "ESRI:54012"  ,
-  "rio_jurua"            , "ESRI:54012"  ,
-  "rio_jutai"            , "ESRI:54012"  ,
-  "rio_madeira"          , "ESRI:54012"  ,
-  "rio_negro"            , "ESRI:54012"  ,
-  "rio_purus"            , "ESRI:54012"  ,
-  "rurrenabaque"         , "ESRI:54012"  ,
-  "saut_maripa"          , "ESRI:54012"  ,
-  "congo_brazzaville"    , "ESRI:54012"  ,
-  "niger_bamako"         , "ESRI:54012"  ,
-  "elberiver"            , "ESRI:54012"  ,
-  "awout_messam"         , "EPSG:32632"  ,
-  "nyong_ayos"           , "EPSG:32632"  ,
-  "nyong_mbalmayo"       , "EPSG:32632"  ,
-  "nyong_olama"          , "EPSG:32632"  ,
-  "soo_pontsoo"          , "EPSG:32632"  ,
-  "vilajoen_vesistoalue" , "EPSG:3067"
+crs_override_path <- Sys.getenv(
+  "SILICA_ARTISANAL_CRS_OVERRIDES",
+  unset = file.path(
+    "02_watershed_delineation",
+    "config",
+    "artisanal_crs_overrides.tsv"
+  )
 )
+known_crs_overrides <- read.delim(
+  crs_override_path,
+  sep = "\t",
+  quote = "",
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+assert_required_columns(
+  known_crs_overrides,
+  c("Shapefile_Key", "CRS"),
+  "artisanal CRS override table"
+)
+known_crs_overrides <- known_crs_overrides %>%
+  dplyr::transmute(
+    shp_key = tolower(trimws(Shapefile_Key)),
+    crs_override = trimws(CRS)
+  )
+if (anyDuplicated(known_crs_overrides$shp_key)) {
+  stop("Artisanal CRS override table has duplicate keys.", call. = FALSE)
+}
 
 # Turn off spherical processing
 sf::sf_use_s2(F)
 
-# For each on-disk shapefile we have:
-for (focal_name in sort(unique(good_sheds$server_shp_name))) {
+# For each exact release-specific on-disk shapefile we have:
+for (focal_path in sort(unique(good_sheds$shp_path))) {
   # Identify table metadata for this shapefile
   focal_info <- good_sheds %>%
-    dplyr::filter(server_shp_name == focal_name)
+    dplyr::filter(shp_path == focal_path)
+  focal_name <- focal_info$server_shp_name[[1]]
 
   focal_override <- known_crs_overrides %>%
     dplyr::filter(shp_key == tolower(focal_name)) %>%
@@ -285,7 +379,7 @@ for (focal_name in sort(unique(good_sheds$server_shp_name))) {
 
   # Read in the shapefile
   focal_shp_raw <- sf::st_read(
-    file.path(path, "artisanal-shapefiles-2", paste0(focal_name, ".shp")),
+    focal_path,
     quiet = T
   )
 
@@ -366,6 +460,8 @@ for (focal_name in sort(unique(good_sheds$server_shp_name))) {
   message(
     "Completed processing for shapefile: ",
     focal_name,
+    ", release ",
+    focal_info$spatial_release[[1]],
     " (",
     focal_shp$LTER,
     ")"
@@ -485,7 +581,7 @@ if (skip_drive_upload) {
   googledrive::drive_upload(
     media = shape_check_file,
     overwrite = T,
-    path = check_folder
+    path = googledrive::as_id(qa_drive_folder_id)
   )
 }
 

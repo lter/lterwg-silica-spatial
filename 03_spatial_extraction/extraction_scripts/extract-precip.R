@@ -177,7 +177,7 @@ precip_check %>%
   labs(x = "Year", y = "Month Count") +
   theme_classic()
 
-# Check in a non-visal way too
+# Check the available years directly as well
 unique(1979:2022 %in% unique(full_out_df$year))
 precip_check %>%
   # Filter out those with 12 months
@@ -236,7 +236,7 @@ dplyr::glimpse(prec_export)
 # Create folder to export to
 precip_out_file <- silica_driver_output_file(path, "si-extract_precip")
 
-# Export the summarized lithology data
+# Export the summarized precipitation data
 write_subset_csv(
   df = prec_export,
   output_path = precip_out_file,
@@ -245,9 +245,6 @@ write_subset_csv(
   na = ""
 )
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = precip_out_file,
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(precip_out_file)
 
 # End ----

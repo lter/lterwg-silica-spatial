@@ -1,33 +1,35 @@
-## ------------------------------------------------------- ##
-              # Silica WG - Extract Drivers
-## ------------------------------------------------------- ##
-# Written by:
-## Nick J Lyon
-## Edited by Sidney A Bush 04/2024
-
-# Revisions as of 4/2024: 
-## Added additional regions for each extract- file (evapo, greenup, npp, snowfrac)
-
-# Purpose:
-## Re-wrangle the 'artisanal' watersheds and re-extract all drivers
-## Useful as a one-stop shop for updating driver data
-
-## ------------------------------------------------------- ##
-                    # Housekeeping -----
-## ------------------------------------------------------- ##
+# Rebuild the configured watershed layer and extract all spatial drivers.
+#
+# This is the publication-facing full-run mode. Use the targeted modes for
+# reviewed subsets or year extensions.
 
 # Make sure googledrive library is loaded
 library(googledrive)
 
+canonical_release_mode <- tolower(Sys.getenv(
+  "SILICA_USE_CANONICAL_RELEASE_LIBRARY",
+  unset = "TRUE"
+)) %in% c("1", "true", "yes", "y")
+
 Sys.setenv(
+  SILICA_USE_CANONICAL_RELEASE_LIBRARY = if (canonical_release_mode) "TRUE" else "FALSE",
+  SILICA_REFERENCE_RELEASE = Sys.getenv("SILICA_REFERENCE_RELEASE", unset = "3"),
   SILICA_REBUILD_ARTISANAL = Sys.getenv("SILICA_REBUILD_ARTISANAL", unset = "TRUE"),
-  SILICA_REBUILD_HYDROSHEDS = Sys.getenv("SILICA_REBUILD_HYDROSHEDS", unset = "TRUE")
+  SILICA_REBUILD_HYDROSHEDS = if (canonical_release_mode) {
+    "FALSE"
+  } else {
+    Sys.getenv("SILICA_REBUILD_HYDROSHEDS", unset = "TRUE")
+  }
 )
 
 # Optional no-drive mode for non-interactive runs on Aurora.
-skip_drive_auth <- tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) == "true"
+skip_drive_auth <- canonical_release_mode ||
+  tolower(Sys.getenv("SILICA_SKIP_DRIVE_AUTH", "false")) == "true"
 if (skip_drive_auth) {
-  message("Skipping drive_auth because SILICA_SKIP_DRIVE_AUTH=TRUE.")
+  message(
+    "Skipping Drive reference-table download; using the frozen canonical ",
+    "release reference."
+  )
 } else {
   # Authorize Google Drive
   ## Without this done first `source`ing any of these scripts will fail
@@ -53,7 +55,19 @@ if (skip_drive_upload) {
 # NOTE: Watershed shapefiles must be manually downloaded from Drive and uploaded to Aurora
 ## No automated way of accomplishing this task (unfortunately)
 
-# Rebuild the watershed shapefiles before extracting drivers
+# Fail before any extraction if the selected frozen reference table and
+# release-specific watershed bundles disagree.
+if (canonical_release_mode) {
+  status <- system2(
+    "Rscript",
+    file.path("tools", "validate_release_reference_library.R")
+  )
+  if (!identical(status, 0L)) {
+    stop("Canonical release-library preflight failed.", call. = FALSE)
+  }
+}
+
+# Rebuild the combined extraction watershed layer before extracting drivers.
 source(file = file.path("02_watershed_delineation", "03_combine-artisanal-hydrosheds.R"), echo = T)
 
 ## ------------------------------------------------------- ##

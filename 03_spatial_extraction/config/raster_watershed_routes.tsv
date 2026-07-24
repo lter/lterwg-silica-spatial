@@ -1,0 +1,8 @@
+Product	File_Regex	LTER	Shapefile_Name
+snow	^fg-gro-snow-p01-		GRO_Kolyma
+snow	^fg-gro-snow-p02-		GRO_Lena
+snow	^fg-gro-snow-p03-		GRO_Mackenzie
+snow	^fg-gro-snow-p04-		GRO_Ob
+snow	^fg-gro-snow-p05-		GRO_Yenisey
+snow	^fg-gro-snow-p06-		GRO_Yukon
+snow	^final-gap-north-america-usa-snow-v061-2025-20260607__	LMP	LMP

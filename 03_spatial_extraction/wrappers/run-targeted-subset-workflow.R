@@ -11,13 +11,9 @@ get_arg <- function(flag, default = NULL) {
 
 resolve_default_subset <- function() {
   review_root <- silica_review_root(resolve_silica_data_root())
-  cand <- Sys.glob(file.path(review_root, "rerun", "targeted_rerun_subset_hydrosheds_fallback_*.csv"))
-  if (!length(cand)) {
-    cand <- Sys.glob(file.path(review_root, "rerun", "targeted_rerun_subset_amazon_hybam_westaus_*.csv"))
-  }
-  if (!length(cand)) {
-    cand <- Sys.glob(file.path(review_root, "rerun", "targeted_rerun_subset_*.csv"))
-  }
+  cand <- Sys.glob(
+    file.path(review_root, "rerun", "targeted_rerun_subset_*.csv")
+  )
   if (!length(cand)) {
     stop("No targeted subset CSV found in ", file.path(review_root, "rerun"), ". Run hydrosheds mode from 02_run-workflow.R or build a subset file first.", call. = FALSE)
   }
@@ -51,7 +47,6 @@ Sys.setenv(
   SILICA_SKIP_DRIVE_AUTH = "TRUE",
   SILICA_SKIP_DRIVE_UPLOAD = "TRUE",
   SILICA_COMBINE_LOCAL_ONLY = "TRUE",
-  SILICA_CLEAN_OBIDOS_NAMES = "TRUE",
   SILICA_MERGE_SUBSET_OUTPUTS = "TRUE"
 )
 

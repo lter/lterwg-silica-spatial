@@ -1,0 +1,26 @@
+LTER	Stream_Name	Action	Rule_Status	Reason
+Canada	*	include_update_years	previously_reviewed	Carry forward previously reviewed HydroSHEDS sites when target years are missing.
+MD	*	include_update_years	previously_reviewed	Carry forward previously reviewed HydroSHEDS sites when target years are missing.
+Cameroon	Mbalmayo	force_hydrosheds	known_bad_named_watershed	Replace the documented unusable named watershed with a reviewed HydroSHEDS delineation.
+Cameroon	Messam	force_hydrosheds	known_bad_named_watershed	Replace the documented unusable named watershed with a reviewed HydroSHEDS delineation.
+Cameroon	Olama	force_hydrosheds	known_bad_named_watershed	Replace the documented unusable named watershed with a reviewed HydroSHEDS delineation.
+Cameroon	Pont_So'o	force_hydrosheds	known_bad_named_watershed	Replace the documented unusable named watershed with a reviewed HydroSHEDS delineation.
+NWT	ALBION	holdout	below_area_threshold	Do not include automatically under the configured drainage-area rule.
+NWT	COMO	holdout	below_area_threshold	Do not include automatically under the configured drainage-area rule.
+NWT	MARTINELLI	holdout	below_area_threshold	Do not include automatically under the configured drainage-area rule.
+NWT	SADDLE STREAM 007	holdout	below_area_threshold	Do not include automatically under the configured drainage-area rule.
+MD	Euston Weir	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
+MD	Merbein	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
+MD	Barham	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
+MD	Jingellic	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
+Amazon	Rio Japura	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Rio Jurua	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Rio Jutai	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Amazon River at Santo Antonio do Ica	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Rio Ica	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Rio Negro	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Amazon River at Vargem Grande	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Amazon River at Manacapuru	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Rio Madeira	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Rio Purus	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.
+Amazon	Amazon River at Itapeua	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.

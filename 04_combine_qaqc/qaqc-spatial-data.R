@@ -27,17 +27,7 @@ norm_chr <- function(x) {
 }
 
 norm_lter <- function(x) {
-  x <- clean_lter_label(norm_chr(x))
-  dplyr::recode(
-    x,
-    "Swedish Goverment" = "Sweden",
-    "Swedish Government" = "Sweden",
-    "Carey" = "PIE",
-    "Cameroon" = "Congo Basin",
-    "Cameroon Site" = "Congo Basin",
-    "Cameroon Sites" = "Congo Basin",
-    .default = x
-  )
+  canonical_lter_label(norm_chr(x))
 }
 
 join_chr <- function(x) {
@@ -45,17 +35,7 @@ join_chr <- function(x) {
 }
 
 join_lter <- function(x) {
-  x <- join_chr(clean_lter_label(x))
-  dplyr::recode(
-    x,
-    "swedish goverment" = "sweden",
-    "swedish government" = "sweden",
-    "carey" = "pie",
-    "cameroon" = "congo basin",
-    "cameroon site" = "congo basin",
-    "cameroon sites" = "congo basin",
-    .default = x
-  )
+  normalize_lter_key(x)
 }
 
 site_key <- function(df) {
@@ -69,14 +49,25 @@ site_key <- function(df) {
 }
 
 region_from_lter <- function(x) {
-  x <- join_lter(x)
-  dplyr::case_when(
-    x %in% c("amazon", "hybam", "gro") ~ "amazon",
-    x == "westernaustralia" ~ "australia",
-    x == "seine" ~ "europe-france",
-    x %in% c("congo basin", "congo_basin") ~ "africa-central",
-    TRUE ~ NA_character_
+  path <- Sys.getenv(
+    "SILICA_LTER_REGION_MAP",
+    unset = file.path(
+      "04_combine_qaqc", "config", "lter_regions.tsv"
+    )
   )
+  if (!file.exists(path)) {
+    stop("LTER region map not found: ", path, call. = FALSE)
+  }
+  region_map <- read.delim(
+    path,
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  if (!all(c("LTER", "Region") %in% names(region_map))) {
+    stop("LTER region map must contain LTER and Region.", call. = FALSE)
+  }
+  region_map$.lter_key <- join_lter(region_map$LTER)
+  region_map$Region[match(join_lter(x), region_map$.lter_key)]
 }
 
 row_has_any_values <- function(df, cols) {
@@ -333,7 +324,7 @@ cat("checked_file=", combined_file, "\n", sep = "")
 cat("rows=", nrow(combined), "\n", sep = "")
 cat("site_keys=", dplyr::n_distinct(combined$site_key), "\n", sep = "")
 cat("sites_needing_followup=", sum(site_flags$needs_followup), "\n", sep = "")
-cat("WROTE:", site_flags_out, "\n", sep = "")
-cat("WROTE:", summary_out, "\n", sep = "")
-cat("WROTE:", run_list_out, "\n", sep = "")
-cat("WROTE:", run_subset_out, "\n", sep = "")
+cat("Saved the site flags: ", site_flags_out, "\n", sep = "")
+cat("Saved the QA summary: ", summary_out, "\n", sep = "")
+cat("Saved the review list: ", run_list_out, "\n", sep = "")
+cat("Saved the rerun subset: ", run_subset_out, "\n", sep = "")

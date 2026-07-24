@@ -1,18 +1,7 @@
-## ------------------------------------------------------- ##
-   # Silica WG - Extract Spatial Data - Evapotranspiration
-## ------------------------------------------------------- ##
-# Written by:
-## Nick J Lyon, Sidney A Bush
-
-# Purpose:
-## Uses the watershed shapefiles built by "02_watershed_delineation/03_combine-artisanal-hydrosheds.R"
-## Extract the following data: EVAPOTRANSPIRATION
-
-## ------------------------------------------------------- ##
-                      # Housekeeping ----
-## ------------------------------------------------------- ##
-
-# Load needed libraries
+# Extract evapotranspiration summaries for the configured watershed set.
+#
+# Uses the combined layer prepared by
+# 02_watershed_delineation/03_combine-artisanal-hydrosheds.R.
 
 # Do not clear the session/environment here. This script may be sourced by the
 # workflow.
@@ -84,15 +73,15 @@ merge_subset_outputs <- !is.null(subset_targets) &&
 # Make an empty list
 file_list <- list()
 
-# ## NEW SITES for Data Release 2 ##
-default_regions <- c("north-america-usa", "north-america-arctic",
-                     "cropped-russia-west", "cropped-russia-west-2",
-                     "cropped-russia-center", "cropped-russia-east",
-                     "puerto-rico", "scandinavia",
-                     "amazon", "australia",
-                     "canada", "congo",
-                     "germany", "mali",
-                     "united-kingdom")
+default_regions <- load_dynamic_driver_regions("evapo")
+prepared_region_root <- file.path(raw_driver_dir, "raw-evapo-v061")
+prepared_regions <- if (dir.exists(prepared_region_root)) {
+  list.dirs(prepared_region_root, recursive = FALSE, full.names = FALSE)
+} else {
+  character(0)
+}
+prepared_regions <- prepared_regions[nzchar(prepared_regions)]
+default_regions <- unique(c(default_regions, prepared_regions))
 
 region_set <- resolve_target_regions(
   subset_targets = subset_targets,
@@ -100,9 +89,6 @@ region_set <- resolve_target_regions(
 )
 
 for(region in region_set){
-
-## NEW SITES for Data Release 2 ##
-# for(region in c("congo")){
   
   # This part is new -- we want to allow old and new versions of MODIS
   # Identify files in that folder
@@ -440,7 +426,7 @@ et_export <- sheds %>%
     LTER = toupper(as.character(LTER)),
     Shapefile_Name = toupper(as.character(Shapefile_Name))
   ) %>%
-  # Join the rock data
+  # Join the evapotranspiration data
   dplyr::left_join(y = et_actual, by = c("LTER", "Shapefile_Name"))%>%
   # this drops the geometry column, which causes issues on export
   sf::st_drop_geometry()  
@@ -461,9 +447,6 @@ write_subset_csv(
 ) ## Changed Nov 2024 to reflect new MODIS version for all sites
 
 
-# Upload to GoogleDrive
-googledrive::drive_upload(media = evapo_out_file,
-                          overwrite = T,
-                          path = googledrive::as_id("https://drive.google.com/drive/u/0/folders/1FBq2-FW6JikgIuGVMX5eyFRB6Axe2Hld"))
+upload_spatial_output(evapo_out_file)
 
 # End ----

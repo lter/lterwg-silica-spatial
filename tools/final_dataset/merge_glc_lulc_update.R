@@ -201,5 +201,5 @@ write_csv(combined_lulc, output_path)
 crosswalk_output <- file.path(dirname(output_path), "GLC_FCS30D_full_to_simple_class_translation.csv")
 write_csv(glc_class_crosswalk, crosswalk_output)
 
-message("Wrote: ", output_path)
-message("Wrote: ", crosswalk_output)
+message("Saved the updated land-cover table: ", output_path)
+message("Saved the stream-name crosswalk: ", crosswalk_output)

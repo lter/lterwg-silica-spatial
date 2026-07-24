@@ -16,6 +16,18 @@ get_arg <- function(flag, default = NULL) {
 today_tag <- format(Sys.Date(), "%Y%m%d")
 review_root <- get_arg("--outdir", silica_review_root(resolve_silica_data_root()))
 target_years <- silica_target_years()
+aurora_host <- get_arg(
+  "--aurora-host",
+  Sys.getenv("SILICA_AURORA_HOST", unset = "aurora")
+)
+remote_root <- get_arg(
+  "--remote-root",
+  Sys.getenv(
+    "SILICA_AURORA_ROOT",
+    unset = "/home/shares/lter-si/si-watershed-extract"
+  )
+)
+remote_run_lists <- file.path(remote_root, "review", "run-lists")
 
 full_subset <- get_arg(
   "--full-subset",
@@ -44,14 +56,16 @@ cat("5. Run the update_years subset on Aurora with target years.\n\n")
 if (!is.na(full_subset) && file.exists(full_subset)) {
   cat("Aurora command for the full-record pass:\n")
   cat(
-    "scp ", full_subset, " bush@aurora.nceas.ucsb.edu:/home/shares/lter-si/si-watershed-extract/review/run-lists/\n",
+    "scp ", full_subset, " ", aurora_host, ":", remote_run_lists, "/\n",
     sep = ""
   )
   cat(
-    "ssh bush@aurora.nceas.ucsb.edu 'cd /home/shares/lter-si/si-watershed-extract && ",
+    "ssh ", aurora_host, " 'cd ", remote_root, " && ",
     "SILICA_RUN_LABEL=aurora-full-record-",
     today_tag,
-    " bash 03_spatial_extraction/aurora/run-spatial-extraction-aurora.sh /home/shares/lter-si/si-watershed-extract/review/run-lists/",
+    " bash 03_spatial_extraction/aurora/run-spatial-extraction-aurora.sh ",
+    remote_run_lists,
+    "/",
     basename(full_subset),
     "'\n\n",
     sep = ""
@@ -59,19 +73,26 @@ if (!is.na(full_subset) && file.exists(full_subset)) {
 }
 
 if (!is.na(update_subset) && file.exists(update_subset)) {
-  year_text <- if (length(target_years)) paste(target_years, collapse = ",") else "2024"
+  default_year <- as.integer(format(Sys.Date(), "%Y")) - 1L
+  year_text <- if (length(target_years)) {
+    paste(target_years, collapse = ",")
+  } else {
+    as.character(default_year)
+  }
   cat("Aurora command for the update-years pass:\n")
   cat(
-    "scp ", update_subset, " bush@aurora.nceas.ucsb.edu:/home/shares/lter-si/si-watershed-extract/review/run-lists/\n",
+    "scp ", update_subset, " ", aurora_host, ":", remote_run_lists, "/\n",
     sep = ""
   )
   cat(
-    "ssh bush@aurora.nceas.ucsb.edu 'cd /home/shares/lter-si/si-watershed-extract && ",
+    "ssh ", aurora_host, " 'cd ", remote_root, " && ",
     "SILICA_TARGET_YEARS=",
     year_text,
     " SILICA_RUN_LABEL=aurora-update-years-",
     today_tag,
-    " bash 03_spatial_extraction/aurora/run-spatial-extraction-aurora.sh /home/shares/lter-si/si-watershed-extract/review/run-lists/",
+    " bash 03_spatial_extraction/aurora/run-spatial-extraction-aurora.sh ",
+    remote_run_lists,
+    "/",
     basename(update_subset),
     "'\n",
     sep = ""
