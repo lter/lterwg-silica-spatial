@@ -122,6 +122,37 @@ cli_integer <- function(
   parsed
 }
 
+cli_numeric <- function(
+  args,
+  flag,
+  default = NULL,
+  required = FALSE,
+  minimum = NULL,
+  maximum = NULL
+) {
+  value <- cli_value(
+    args,
+    flag,
+    default = default,
+    required = required
+  )
+  if (is.null(value)) {
+    return(NULL)
+  }
+
+  parsed <- suppressWarnings(as.numeric(value))
+  if (!is.finite(parsed)) {
+    stop(flag, " must be a number.", call. = FALSE)
+  }
+  if (!is.null(minimum) && parsed < minimum) {
+    stop(flag, " must be at least ", minimum, ".", call. = FALSE)
+  }
+  if (!is.null(maximum) && parsed > maximum) {
+    stop(flag, " must be no greater than ", maximum, ".", call. = FALSE)
+  }
+  parsed
+}
+
 env_value <- function(name, default = NULL, required = FALSE) {
   value <- trimws(Sys.getenv(name, unset = ""))
   if (!nzchar(value)) {

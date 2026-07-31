@@ -1,6 +1,4 @@
-#!/usr/bin/env Rscript
-
-# Validate a publication-ready GlASS site-reference table.
+# Validate the spatial site-reference table
 #
 # This script does not modify the source table. It writes a compact issue log
 # that identifies every problem by row, site, field, severity, and message.
@@ -105,19 +103,28 @@ add_issue(
   "Site or stream name is blank."
 )
 
+has_spatial <- tolower(rows$Has_Spatial_Data) == "yes"
 latitude <- as_number(rows$Latitude)
 longitude <- as_number(rows$Longitude)
 add_issue(
-  which(blank(rows$Latitude) | !is.finite(latitude) | latitude < -90 | latitude > 90),
+  which(
+    (!blank(rows$Latitude) &
+      (!is.finite(latitude) | latitude < -90 | latitude > 90)) |
+      (has_spatial & blank(rows$Latitude))
+  ),
   "Latitude",
   "ERROR",
-  "Latitude must be numeric and within -90 to 90."
+  "Accepted spatial rows require a numeric latitude within -90 to 90."
 )
 add_issue(
-  which(blank(rows$Longitude) | !is.finite(longitude) | longitude < -180 | longitude > 180),
+  which(
+    (!blank(rows$Longitude) &
+      (!is.finite(longitude) | longitude < -180 | longitude > 180)) |
+      (has_spatial & blank(rows$Longitude))
+  ),
   "Longitude",
   "ERROR",
-  "Longitude must be numeric and within -180 to 180."
+  "Accepted spatial rows require a numeric longitude within -180 to 180."
 )
 
 area <- as_number(rows$drainSqKm)
@@ -140,14 +147,19 @@ add_issue(
   "A source is present but the drainage area is blank."
 )
 
-for (field in c("Use_WRTDS", "Has_Spatial_Data")) {
-  add_issue(
-    which(invalid_choice(rows[[field]], c("Yes", "No")) | blank(rows[[field]])),
-    field,
-    "ERROR",
-    "Allowed values are Yes and No."
-  )
-}
+add_issue(
+  which(invalid_choice(rows$Use_WRTDS, c("Yes", "No"))),
+  "Use_WRTDS",
+  "ERROR",
+  "Allowed values are Yes, No, or blank."
+)
+add_issue(
+  which(invalid_choice(rows$Has_Spatial_Data, c("Yes", "No")) |
+    blank(rows$Has_Spatial_Data)),
+  "Has_Spatial_Data",
+  "ERROR",
+  "Allowed values are Yes and No."
+)
 
 version_fields <- c(
   "GlASS_First_Release",
@@ -192,7 +204,6 @@ add_issue(
   "Spatial data cannot predate the site's first GlASS release."
 )
 
-has_spatial <- tolower(rows$Has_Spatial_Data) == "yes"
 spatial_fields <- c(
   "Spatial_Data_Version", "Shapefile_Name", "Shapefile_CRS_EPSG",
   "Shapefile_Source"
@@ -218,14 +229,26 @@ for (field in c(
 }
 
 epsg <- as_number(rows$Shapefile_CRS_EPSG)
+documented_authority_crs <- grepl(
+  "^(EPSG|ESRI):[0-9]+$",
+  rows$Shapefile_CRS_EPSG,
+  ignore.case = TRUE
+)
+documented_custom_crs <- grepl(
+  "custom|no[[:space:]]*epsg",
+  rows$Shapefile_CRS_EPSG,
+  ignore.case = TRUE
+)
 add_issue(
   which(
     !blank(rows$Shapefile_CRS_EPSG) &
+      !documented_authority_crs &
+      !documented_custom_crs &
       (!is.finite(epsg) | epsg <= 0 | epsg != floor(epsg))
   ),
   "Shapefile_CRS_EPSG",
   "ERROR",
-  "CRS must be a positive integer EPSG code."
+  "CRS must be a positive integer EPSG code, an EPSG/ESRI authority code, or a documented custom CRS."
 )
 
 for (field in c("drainSqKm_source", "Shapefile_Link")) {
@@ -246,6 +269,12 @@ if ("USGSGageNumber" %in% names(rows)) {
     "USGSGageNumber",
     "ERROR",
     "Gauge identifiers must be stored as text, not scientific notation."
+  )
+  add_issue(
+    which(grepl("^[0-9]{7}$", rows$USGSGageNumber)),
+    "USGSGageNumber",
+    "ERROR",
+    "Seven-digit USGS identifiers must retain their leading zero."
   )
 }
 
@@ -284,8 +313,18 @@ for (field in text_fields) {
 
 site_key <- paste(rows$LTER, rows$Stream_Name, sep = " / ")
 duplicate_key <- duplicated(site_key) | duplicated(site_key, fromLast = TRUE)
+duplicate_is_documented <- grepl(
+  "duplicate|alias|same physical",
+  paste(rows$CQ_Notes, rows$Spatial_Notes),
+  ignore.case = TRUE
+)
+duplicate_is_documented <- ave(
+  duplicate_is_documented,
+  site_key,
+  FUN = function(value) any(value)
+)
 add_issue(
-  which(duplicate_key),
+  which(duplicate_key & !duplicate_is_documented),
   "LTER + Stream_Name",
   "WARNING",
   "Duplicate site key: confirm that this is an intentional provenance alias."

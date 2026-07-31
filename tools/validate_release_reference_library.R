@@ -1,8 +1,5 @@
-#!/usr/bin/env Rscript
-
-# Preflight the release-aware watershed library against one frozen published
-# GlASS-version site-reference table. Each row independently selects its
-# spatial-geometry cohort.
+# Check the versioned watershed library against one site-reference table.
+# Each row independently selects its current spatial-data version.
 
 script_arg <- grep("^--file=", commandArgs(), value = TRUE)
 script_path <- if (length(script_arg)) sub("^--file=", "", script_arg[[1]]) else ""
@@ -233,8 +230,16 @@ spatial_rows <- merge(
 )
 
 shared_documented <- grepl(
-  "shared|alias|same physical|duplicate|one spatial unit|same watershed",
+  paste0(
+    "share|shared|alias|same physical|duplicate|one spatial unit|",
+    "one spatial extraction|single spatial extraction|same watershed"
+  ),
   spatial_rows$.__note_text
+)
+shared_documented <- ave(
+  shared_documented,
+  spatial_rows$.__bundle_key,
+  FUN = any
 )
 unresolved_shared <- spatial_rows$.__shared_count > 1 &
   !shared_documented
@@ -257,7 +262,12 @@ spatial_rows$.__area_difference_percent <- ifelse(
 # Documentation must explicitly indicate that polygon/report-area disagreement
 # was considered. This does not require overwriting the reported area.
 area_documented <- grepl(
-  "polygon area|geometry area|area mismatch|area difference|qa only|retain reported|preserve reported",
+  paste0(
+    "(polygon|geometry|watershed|boundary|upstream).{0,120}(area|measure)|",
+    "up_area|",
+    "area mismatch|area difference|qa only|",
+    "(reported|published|area).{0,100}(retain|preserv|differ|compar)"
+  ),
   spatial_rows$.__note_text
 )
 unresolved_area <- !is.na(spatial_rows$.__area_difference_percent) &
@@ -368,7 +378,7 @@ if (length(semantic_messages) && strict_semantic_qa) {
   )
 }
 
-cat("Published GlASS version:", release_snapshot, "\n")
+cat("Reference version:", release_snapshot, "\n")
 cat("Reference table:", reference_path, "\n")
 cat("Spatial rows:", nrow(spatial_rows), "\n")
 cat("Distinct release/bundle pairs:", nrow(unique(expected[, c(

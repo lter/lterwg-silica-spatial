@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 # Prepare isolated MODIS extraction inputs for accepted AppEEARS tasks.
 #
 # Each AppEEARS bundle is cropped for one watershed. Keeping every watershed in
@@ -16,7 +14,9 @@
 #   --status-file PATH    Task tracker keyed by task_name.
 #   --region-map PATH     TSV or CSV with LTER and Region columns.
 #   --start-year YEAR     First source year to stage (default: 2002).
-#   --end-year YEAR       Last source year to stage (default: 2022).
+#   --end-year YEAR       Last source year to stage (default: 2025).
+#   --driver NAME         Product to stage; repeat as needed. Defaults to all
+#                         four products. Choices: npp, greenup, evapo, snow.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -56,7 +56,7 @@ status_file <- cli_value(
 )
 status_file <- require_input_file(status_file, "task status file")
 start_year <- cli_integer(args, "--start-year", 2002L)
-end_year <- cli_integer(args, "--end-year", 2022L)
+end_year <- cli_integer(args, "--end-year", 2025L)
 if (start_year > end_year) {
   stop("--start-year cannot be later than --end-year.", call. = FALSE)
 }
@@ -199,6 +199,22 @@ product_rules <- data.frame(
   ),
   stringsAsFactors = FALSE
 )
+requested_drivers <- unique(cli_values(args, "--driver"))
+if (length(requested_drivers)) {
+  invalid_drivers <- setdiff(requested_drivers, product_rules$driver)
+  if (length(invalid_drivers)) {
+    stop(
+      "Unknown --driver value(s): ",
+      paste(invalid_drivers, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  product_rules <- product_rules[
+    product_rules$driver %in% requested_drivers,
+    ,
+    drop = FALSE
+  ]
+}
 
 parse_date <- function(filename) {
   stamp <- regmatches(filename, regexpr("[0-9]{8}T[0-9]{6}", filename))
@@ -328,30 +344,66 @@ if (anyDuplicated(accepted_watersheds$shp_nm)) {
 }
 
 dir.create(output_root, recursive = TRUE, showWarnings = FALSE)
-site_manifest <- vector("list", nrow(targets))
-raster_manifest <- vector("list", nrow(targets))
+target_groups <- split(seq_len(nrow(targets)), targets$watershed_key)
+site_manifest <- vector("list", length(target_groups))
+raster_manifest <- vector("list", length(target_groups))
 
-for (i in seq_len(nrow(targets))) {
-  target <- targets[i, , drop = FALSE]
-  task_name <- target$task_name[[1]]
+for (i in seq_along(target_groups)) {
+  target <- targets[target_groups[[i]], , drop = FALSE]
+  task_names <- unique(target$task_name)
   watershed_key <- target$watershed_key[[1]]
   site_slug <- gsub("(^-+|-+$)", "", gsub("[^a-z0-9]+", "-", tolower(watershed_key)))
   site_root <- file.path(output_root, "sites", site_slug)
 
-  expected_urls <- trimws(readLines(target$list_file[[1]], warn = FALSE))
-  expected_urls <- expected_urls[nzchar(expected_urls)]
-  expected_names <- basename(expected_urls)
-  if (anyDuplicated(expected_names)) {
-    stop("Duplicate bundle filename in ", target$list_file[[1]], call. = FALSE)
+  if (length(unique(target$Shapefile_Name)) != 1L) {
+    stop(
+      "Tasks for one watershed key map to different shapefiles: ",
+      watershed_key,
+      call. = FALSE
+    )
   }
 
-  source_files <- file.path(target$download_dir[[1]], expected_names)
+  task_sources <- bind_rows(lapply(seq_len(nrow(target)), function(task_index) {
+    expected_urls <- trimws(readLines(target$list_file[[task_index]], warn = FALSE))
+    expected_urls <- expected_urls[nzchar(expected_urls)]
+    data.frame(
+      task_name = target$task_name[[task_index]],
+      file_name = basename(expected_urls),
+      source_file = file.path(
+        target$download_dir[[task_index]],
+        basename(expected_urls)
+      ),
+      stringsAsFactors = FALSE
+    )
+  }))
+  expected_names <- task_sources$file_name
+  if (anyDuplicated(expected_names)) {
+    duplicate_names <- unique(expected_names[duplicated(expected_names)])
+    for (duplicate_name in duplicate_names) {
+      duplicate_files <- task_sources$source_file[
+        task_sources$file_name == duplicate_name
+      ]
+      if (any(!file.exists(duplicate_files)) ||
+          length(unique(file.info(duplicate_files)$size)) != 1L ||
+          length(unique(unname(tools::md5sum(duplicate_files)))) != 1L) {
+        stop(
+          "Conflicting copies of ", duplicate_name,
+          " were found across tasks for ", watershed_key,
+          call. = FALSE
+        )
+      }
+    }
+    task_sources <- task_sources[!duplicated(task_sources$file_name), , drop = FALSE]
+    expected_names <- task_sources$file_name
+  }
+
+  source_files <- task_sources$source_file
   missing_downloads <- source_files[
     !file.exists(source_files) | is.na(file.info(source_files)$size) | file.info(source_files)$size <= 0
   ]
   if (length(missing_downloads)) {
     stop(
-      "Downloaded bundle is incomplete for ", task_name, ": ",
+      "Downloaded bundle is incomplete for ", watershed_key, ": ",
       length(missing_downloads), " file(s) missing or empty.",
       call. = FALSE
     )
@@ -411,10 +463,15 @@ for (i in seq_len(nrow(targets))) {
       as.integer(format(selected_dates, "%Y")) <= end_year
     selected_names <- expected_names[selected][keep_year]
     selected_dates <- selected_dates[keep_year]
-    selected_sources <- file.path(target$download_dir[[1]], selected_names)
+    selected_sources <- task_sources$source_file[selected][keep_year]
+    selected_tasks <- task_sources$task_name[selected][keep_year]
 
     if (!length(selected_sources)) {
-      stop("No ", rule$driver[[1]], " rasters found for ", task_name, call. = FALSE)
+      stop(
+        "No ", rule$driver[[1]], " rasters found for ",
+        paste(task_names, collapse = ", "),
+        call. = FALSE
+      )
     }
 
     destination_dir <- file.path(
@@ -425,7 +482,7 @@ for (i in seq_len(nrow(targets))) {
     )
     if (dir.exists(legacy_target_dir) && !dir.exists(destination_dir)) {
       if (!file.rename(legacy_target_dir, destination_dir)) {
-        stop("Could not rename the staged geographic region for ", task_name, call. = FALSE)
+        stop("Could not rename the staged geographic region for ", watershed_key, call. = FALSE)
       }
     }
     destination_names <- mapply(
@@ -435,14 +492,14 @@ for (i in seq_len(nrow(targets))) {
       USE.NAMES = FALSE
     )
     if (anyDuplicated(destination_names)) {
-      stop("Staged raster names are not unique for ", task_name, call. = FALSE)
+      stop("Staged raster names are not unique for ", watershed_key, call. = FALSE)
     }
     destinations <- file.path(destination_dir, destination_names)
     Map(link_file, selected_sources, destinations)
 
     site_rasters[[j]] <- data.frame(
       watershed_key = watershed_key,
-      task_name = task_name,
+      task_name = selected_tasks,
       driver = rule$driver[[1]],
       date = format(selected_dates, "%Y-%m-%d"),
       source_file = selected_sources,
@@ -488,7 +545,7 @@ for (i in seq_len(nrow(targets))) {
   raster_manifest[[i]] <- bind_rows(site_rasters)
   site_manifest[[i]] <- data.frame(
     watershed_key = watershed_key,
-    task_name = task_name,
+    task_name = paste(task_names, collapse = " | "),
     site_slug = site_slug,
     site_root = normalizePath(site_root, mustWork = TRUE),
     subset_file = normalizePath(subset_file, mustWork = TRUE),
@@ -509,8 +566,8 @@ write.csv(site_manifest, file.path(output_root, "run_manifest.csv"), row.names =
 write.csv(raster_manifest, file.path(output_root, "raster_manifest.csv"), row.names = FALSE, na = "")
 
 driver_counts <- raster_manifest %>% count(watershed_key, driver, name = "raster_count")
-if (nrow(driver_counts) != nrow(targets) * 4L) {
-  stop("Prepared inputs do not contain all four products for every watershed.", call. = FALSE)
+if (nrow(driver_counts) != nrow(site_manifest) * nrow(product_rules)) {
+  stop("Prepared inputs do not contain every requested product for each watershed.", call. = FALSE)
 }
 write.csv(driver_counts, file.path(output_root, "prepared_raster_counts.csv"), row.names = FALSE)
 

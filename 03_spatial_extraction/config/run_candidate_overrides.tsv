@@ -9,8 +9,6 @@ NWT	ALBION	holdout	below_area_threshold	Do not include automatically under the c
 NWT	COMO	holdout	below_area_threshold	Do not include automatically under the configured drainage-area rule.
 NWT	MARTINELLI	holdout	below_area_threshold	Do not include automatically under the configured drainage-area rule.
 NWT	SADDLE STREAM 007	holdout	below_area_threshold	Do not include automatically under the configured drainage-area rule.
-MD	Euston Weir	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
-MD	Merbein	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
 MD	Barham	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
 MD	Jingellic	holdout	missing_or_below_area_threshold	Do not include automatically unless a documented exception is approved.
 Amazon	Rio Japura	fixed_crs	known_missing_crs	Assign the documented source CRS, reproject, and rerun the named watershed.

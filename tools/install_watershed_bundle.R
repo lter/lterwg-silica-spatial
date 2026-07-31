@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 # Install one validated watershed in the canonical spatial-version library.
 #
 # This is the general replacement for site-specific "materialize" scripts.

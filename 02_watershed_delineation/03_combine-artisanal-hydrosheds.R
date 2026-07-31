@@ -58,11 +58,6 @@ if (!canonical_release_mode &&
 ## ------------------------------------------------------- ##
                   # Acquire Shapefiles ----
 ## ------------------------------------------------------- ##
-artisan_full_path <- silica_sitecoord_existing_file(path, "silica-watersheds_artisanal", "shp")
-if (!file.exists(artisan_full_path)) {
-  artisan_full_path <- resolve_shared_sitecoord_file(path, "silica-watersheds_artisanal", "shp")
-}
-
 artisan_subset_path <- silica_sitecoord_existing_file(path, "silica-watersheds_artisanal_subset", "shp")
 if (!file.exists(artisan_subset_path)) {
   artisan_subset_path <- NA_character_
@@ -70,10 +65,22 @@ if (!file.exists(artisan_subset_path)) {
 hydro_full_path <- silica_sitecoord_existing_file(path, "silica-watersheds_hydrosheds", "shp")
 hydro_subset_path <- silica_sitecoord_existing_file(path, "silica-watersheds_hydrosheds_subset", "shp")
 
-artisan_path <- if (!is.null(subset_targets) && !is.na(artisan_subset_path) && file.exists(artisan_subset_path)) {
+artisan_path <- if (!is.null(subset_targets) && !is.na(artisan_subset_path)) {
   message("Using subset artisanal shapefile: ", artisan_subset_path)
   artisan_subset_path
 } else {
+  artisan_full_path <- silica_sitecoord_existing_file(
+    path,
+    "silica-watersheds_artisanal",
+    "shp"
+  )
+  if (!file.exists(artisan_full_path)) {
+    artisan_full_path <- resolve_shared_sitecoord_file(
+      path,
+      "silica-watersheds_artisanal",
+      "shp"
+    )
+  }
   artisan_full_path
 }
 

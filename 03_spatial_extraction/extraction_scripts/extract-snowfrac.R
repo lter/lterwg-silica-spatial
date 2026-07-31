@@ -38,7 +38,6 @@ sites <- read_silica_site_reference(site_coord_dir) %>%
 #                 nchar(Shapefile_Name) != 0 &
 #                 !Shapefile_Name %in% c("?", "MISSING"))
 
-# Check it out
 dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
@@ -94,8 +93,7 @@ region_set <- resolve_target_regions(
 
 for(region in region_set){
   
-  # This part is new -- we want to allow old and new versions of MODIS
-  # Identify files in that folder
+  # Collect current MODIS files for this region
   region_files <- dir(path = file.path(
     raw_driver_dir, "raw-snow-v061", region
   ))
@@ -334,7 +332,7 @@ for(annum in sort(unique(file_set$year))){
     # Assemble a file name for this extraction
     (export_name <- paste0(driver_short, "_extract_", annum, "_", day_num, ".csv"))
     
-    # File dataframe of files to just that doy
+    # Keep files for this day of year
     simp_df <- dplyr::filter(one_year, doy == day_num)
     
     # Make an empty list
@@ -488,13 +486,8 @@ keep_partial_2001 <- tolower(Sys.getenv("SILICA_SNOW_KEEP_PARTIAL_2001", "true")
 out_df <- full_out %>%
   purrr::map(dplyr::mutate, Shapefile_Name = as.character(Shapefile_Name)) %>%
   purrr::list_rbind() %>%
-  # And drop the placeholder dataframes when the extracted file is empty
-  ## Again, only happens because of an unsolvable issue with the raw data
-  dplyr::filter(Shapefile_Name != "xxx") %>%
-  dplyr::mutate(
-    LTER = toupper(as.character(LTER)),
-    Shapefile_Name = toupper(as.character(Shapefile_Name))
-  )
+  # Drop placeholders created for empty source rasters
+  dplyr::filter(Shapefile_Name != "xxx")
 
 if (!keep_partial_2001) {
   out_df <- out_df %>% dplyr::filter(year > 2001)
@@ -591,29 +584,14 @@ month_df <- snow_daily %>%
 snow_actual <- year_df %>%
   dplyr::left_join(month_df, by = c("LTER", "Shapefile_Name"))
 
-snow_actual <- snow_actual %>%
-  dplyr::mutate(
-    LTER = toupper(as.character(LTER)),
-    Shapefile_Name = toupper(as.character(Shapefile_Name))
-  )
-
 ## ------------------------------------------------------- ##
                  # Snow Fraction - Export ----
 ## ------------------------------------------------------- ##
-# Let's get ready to export
-snow_export <- sheds %>%
-  dplyr::mutate(
-    LTER = toupper(as.character(LTER)),
-    Shapefile_Name = toupper(as.character(Shapefile_Name))
-  ) %>%
-  # Join the snow data
-  dplyr::left_join(y = snow_actual, by = c("LTER", "Shapefile_Name")) %>%
+snow_export <- join_extracted_driver_values(sheds, snow_actual) %>%
   sf::st_drop_geometry()  
 
-# Check it out
 dplyr::glimpse(snow_export)
 
-# Create folder to export to
 snow_out_file <- silica_driver_output_file(path, paste0("si-extract_", col_prefix, "_v061"))
 
 # Export the summarized snow data

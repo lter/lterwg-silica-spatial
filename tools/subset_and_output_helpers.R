@@ -123,11 +123,9 @@ silica_hydrosheds_area_threshold_km2 <- function() {
   threshold
 }
 
-# Build the final list of subset rows that should go through HydroSHEDS.
-# Two routes are supported:
-# 1. Explicit flags in the subset CSV
-# 2. Automatic routing for subset rows that are missing a shapefile name and
-#    have a drainage area above the HydroSHEDS threshold
+# Build the final list of subset rows that should go through HydroSHEDS
+# Routes include explicit subset flags and automatic selection when a row has
+# no shapefile name and its drainage area exceeds the HydroSHEDS threshold
 build_hydrosheds_target_keys <- function(subset_targets = NULL, coord_df = NULL) {
   explicit_targets <- load_forced_hydrosheds_targets(subset_targets)
 
@@ -201,6 +199,37 @@ silica_output_tag <- function() {
     return(date_tag)
   }
   paste(date_tag, label, sep = "_")
+}
+
+# Join extracted values back to watershed metadata without changing the names
+# shown in the site reference table. Normalized keys handle documented aliases
+# and harmless differences in capitalization.
+join_extracted_driver_values <- function(sheds, values) {
+  required <- c("LTER", "Shapefile_Name")
+  assert_required_columns(sheds, required, "watershed layer")
+  assert_required_columns(values, required, "extracted driver values")
+
+  keyed_values <- values %>%
+    dplyr::mutate(
+      .LTER_KEY = normalize_lter_key(LTER),
+      .SHP_KEY = normalize_site_key(Shapefile_Name)
+    ) %>%
+    dplyr::select(-dplyr::all_of(required))
+
+  if (anyDuplicated(keyed_values[c(".LTER_KEY", ".SHP_KEY")])) {
+    stop(
+      "Extracted driver values contain duplicate watershed keys.",
+      call. = FALSE
+    )
+  }
+
+  sheds %>%
+    dplyr::mutate(
+      .LTER_KEY = normalize_lter_key(LTER),
+      .SHP_KEY = normalize_site_key(Shapefile_Name)
+    ) %>%
+    dplyr::left_join(keyed_values, by = c(".LTER_KEY", ".SHP_KEY")) %>%
+    dplyr::select(-.LTER_KEY, -.SHP_KEY)
 }
 
 silica_allow_overwrite <- function() {

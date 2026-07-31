@@ -28,7 +28,6 @@ sites <- read_silica_site_reference(site_coord_dir) %>%
 #                 nchar(Shapefile_Name) != 0 &
 #                 !Shapefile_Name %in% c("?", "MISSING"))
 
-# Check it out
 dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
@@ -90,11 +89,13 @@ region_set <- resolve_target_regions(
 
 for(region in region_set){
   
-  # This part is new -- we want to allow old and new versions of MODIS
-  # Identify files in that folder
-  file_df <- data.frame("region" = region,
-                        "files" = dir(path = file.path(raw_driver_dir,
-                                                       "raw-evapo-v061", region))) %>% 
+  # Collect current MODIS files for this region
+  region_files <- dir(path = file.path(
+    raw_driver_dir, "raw-evapo-v061", region
+  ))
+  file_df <- data.frame(
+                        "region" = rep(region, length(region_files)),
+                        "files" = region_files) %>%
     dplyr::filter(stringr::str_detect(string=files, pattern="MOD16A2GF.061_ET_500m_")) 
   
   # Add that set of files to the list
@@ -411,30 +412,15 @@ month_df <- out_df_v2 %>%
 et_actual <- year_df %>%
   dplyr::left_join(month_df, by = c("LTER", "Shapefile_Name"))
 
-et_actual <- et_actual %>%
-  dplyr::mutate(
-    LTER = toupper(as.character(LTER)),
-    Shapefile_Name = toupper(as.character(Shapefile_Name))
-  )
-
 ## ------------------------------------------------------- ##
             # Evapotranspiration - Export ----
 ## ------------------------------------------------------- ##
-# Let's get ready to export
-et_export <- sheds %>%
-  dplyr::mutate(
-    LTER = toupper(as.character(LTER)),
-    Shapefile_Name = toupper(as.character(Shapefile_Name))
-  ) %>%
-  # Join the evapotranspiration data
-  dplyr::left_join(y = et_actual, by = c("LTER", "Shapefile_Name"))%>%
-  # this drops the geometry column, which causes issues on export
+et_export <- join_extracted_driver_values(sheds, et_actual) %>%
+  # Remove geometry before writing the table
   sf::st_drop_geometry()  
 
-# Check it out
 dplyr::glimpse(et_export)
 
-# Create folder to export to
 evapo_out_file <- silica_driver_output_file(path, "si-extract_evapo_v061")
 
 # Export the summarized data

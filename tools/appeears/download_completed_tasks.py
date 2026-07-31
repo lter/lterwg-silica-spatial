@@ -293,7 +293,8 @@ def main() -> None:
             row["task_name"]: row for row in read_rows(timing_path)
         }
         for list_path in list_paths:
-            if timing_rows.get(task_name_from_list(list_path), {}).get("status") == "complete":
+            task_name = task_name_from_list(list_path)
+            if timing_rows.get(task_name, {}).get("status") == "complete":
                 continue
             process_task(
                 list_path,
@@ -304,6 +305,10 @@ def main() -> None:
                 watershed_by_task,
                 timing_rows,
             )
+            if timing_rows[task_name]["status"] != "complete":
+                raise RuntimeError(
+                    f"Incomplete AppEEARS download: {task_name}"
+                )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 # Validate and install a frozen GlASS site-reference snapshot.
 #
 # The living table keeps exactly three version fields:

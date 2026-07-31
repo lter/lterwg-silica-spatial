@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 # Assign a major drainage basin to each site-reference row.
 #
 # The reproducible default is a point-in-polygon lookup against GRDC Major

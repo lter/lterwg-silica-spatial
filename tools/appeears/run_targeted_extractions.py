@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Run four accepted MODIS extractions one watershed at a time.
+"""Run selected MODIS extractions one watershed at a time.
 
 The preparation script gives each watershed its own cropped rasters and accepted
 geometry. This runner keeps that isolation, records timing by watershed and
@@ -64,7 +63,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-date", required=True, help="Output date as YYYYMMDD.")
     parser.add_argument("--start-year", type=int, default=2002)
-    parser.add_argument("--end-year", type=int, default=2022)
+    parser.add_argument("--end-year", type=int, default=2025)
     parser.add_argument(
         "--exclude-task-pattern",
         action="append",
@@ -84,9 +83,21 @@ def parse_args() -> argparse.Namespace:
         help="Number of watersheds to process at once. The default is three.",
     )
     parser.add_argument(
+        "--driver",
+        action="append",
+        choices=DRIVERS,
+        default=[],
+        help="Run only this MODIS driver. Repeat to select more than one.",
+    )
+    parser.add_argument(
         "--reconcile-only",
         action="store_true",
         help="Rebuild timing from completed outputs and logs without running extraction.",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Repeat selected extractions even when completed outputs are present.",
     )
     args = parser.parse_args()
     if not re.fullmatch(r"[0-9]{8}", args.output_date):
@@ -102,6 +113,12 @@ def utc_now() -> datetime:
 
 def iso_utc(value: datetime) -> str:
     return value.isoformat().replace("+00:00", "Z")
+
+
+def normalized_run_label(value: str) -> str:
+    """Match the filename label normalization used by the R workflow."""
+    label = re.sub(r"[^a-z0-9]+", "-", value.strip().lower())
+    return label.strip("-")
 
 
 def parse_time(value: str) -> datetime | None:
@@ -166,13 +183,17 @@ class TimingLedger:
             row = self.driver_rows.get((watershed_key, driver))
             return dict(row) if row else None
 
-    def start_site(self, site: dict[str, str]) -> None:
+    def start_site(self, site: dict[str, str], restart: bool = False) -> None:
         with self.lock:
             previous = self.site_rows.get(site["watershed_key"], {})
             self.site_rows[site["watershed_key"]] = {
                 "watershed_key": site["watershed_key"],
                 "task_name": site["task_name"],
-                "started_at_utc": previous.get("started_at_utc") or iso_utc(utc_now()),
+                "started_at_utc": (
+                    iso_utc(utc_now())
+                    if restart
+                    else previous.get("started_at_utc") or iso_utc(utc_now())
+                ),
                 "completed_at_utc": "",
                 "elapsed_hours": "",
                 "status": "in_progress",
@@ -204,10 +225,15 @@ class TimingLedger:
         driver: str,
         output_file: Path,
         log_file: Path,
+        restart: bool = False,
     ) -> str:
         with self.lock:
             previous = self.driver_rows.get((site["watershed_key"], driver), {})
-            started = previous.get("started_at_utc") or iso_utc(utc_now())
+            started = (
+                iso_utc(utc_now())
+                if restart
+                else previous.get("started_at_utc") or iso_utc(utc_now())
+            )
             self.driver_rows[(site["watershed_key"], driver)] = {
                 "watershed_key": site["watershed_key"],
                 "task_name": site["task_name"],
@@ -310,7 +336,10 @@ def reconcile_completed_timing(
                     "elapsed_hours": elapsed_hours(started, completed),
                     "status": "complete",
                     "completed_drivers": str(len(DRIVERS)),
-                    "message": "All four MODIS driver outputs are ready for watershed-level QA.",
+                    "message": (
+                        f"All {len(DRIVERS)} selected MODIS driver outputs are ready "
+                        "for watershed-level QA."
+                    ),
                 }
                 completed_sites += 1
         ledger.save()
@@ -325,11 +354,16 @@ def extraction_environment(
     environment = os.environ.copy()
     environment.update(
         {
+            # The isolated site directory is a complete temporary data root.
+            # Explicitly setting it keeps local runs independent of a shared
+            # workstation or Aurora directory layout.
+            "SILICA_DATA_ROOT": site["site_root"],
             "SILICA_BASE_FILE": site["base_file"],
             "SILICA_WATERSHED_FILE": site["watershed_file"],
             "SILICA_RAW_DRIVER_DIR": site["raw_driver_dir"],
             "SILICA_EXTRACTED_DIR": site["output_dir"],
             "SILICA_QA_ROOT": site["qa_dir"],
+            "SILICA_FORCE_TARGET_REGIONS": site["workflow_region"],
             "SILICA_RUN_STATIC_DRIVERS": "false",
             "SILICA_RUN_DYNAMIC_DRIVERS": "true",
             "SILICA_DYNAMIC_DRIVER_NAMES": driver,
@@ -338,7 +372,7 @@ def extraction_environment(
             "SILICA_TARGET_YEAR_END": str(args.end_year),
             "SILICA_OUTPUT_DATE": args.output_date,
             "SILICA_RUN_LABEL": args.run_label,
-            "SILICA_ALLOW_OVERWRITE": "false",
+            "SILICA_ALLOW_OVERWRITE": "true" if args.force else "false",
             "SILICA_RESUME_PARTIALS": "true",
             "SILICA_SNOW_KEEP_PARTIAL_2001": "false",
             "SILICA_SNOW_TERRA_FALLBACK": "true",
@@ -355,7 +389,7 @@ def run_site(
     args: argparse.Namespace,
     run_tag: str,
 ) -> tuple[str, bool, str]:
-    ledger.start_site(site)
+    ledger.start_site(site, restart=args.force)
     completed = 0
 
     for driver in DRIVERS:
@@ -363,12 +397,23 @@ def run_site(
         log_file = Path(site["site_root"]) / "logs" / f"extract-{driver}.log"
         timing = ledger.driver_row(site["watershed_key"], driver)
         output_is_ready = destination.exists() and destination.stat().st_size > 0
-        if timing and timing.get("status") == "complete" and output_is_ready:
+        if (
+            not args.force
+            and timing
+            and timing.get("status") == "complete"
+            and output_is_ready
+        ):
             completed += 1
             continue
 
         log_file.parent.mkdir(parents=True, exist_ok=True)
-        ledger.start_driver(site, driver, destination, log_file)
+        ledger.start_driver(
+            site,
+            driver,
+            destination,
+            log_file,
+            restart=args.force,
+        )
         command = [
             rscript,
             "03_spatial_extraction/wrappers/run-targeted-subset-workflow.R",
@@ -405,13 +450,19 @@ def run_site(
             f"The {driver} output was written and is ready for QA.",
         )
 
-    message = "All four MODIS driver outputs are ready for watershed-level QA."
+    message = (
+        f"All {len(DRIVERS)} selected MODIS driver outputs are ready "
+        "for watershed-level QA."
+    )
     ledger.finish_site(site, "complete", completed, message)
     return site["watershed_key"], True, message
 
 
 def main() -> None:
+    global DRIVERS
     args = parse_args()
+    if args.driver:
+        DRIVERS = tuple(dict.fromkeys(args.driver))
     repo_root = Path.cwd().resolve()
     run_root = args.run_root.resolve()
     manifest_path = run_root / "run_manifest.csv"
@@ -441,7 +492,7 @@ def main() -> None:
     if not rscript:
         raise SystemExit("Rscript is not available on this computer.")
     workers = max(1, min(args.workers, len(sites)))
-    run_tag = f"{args.output_date}_{args.run_label}"
+    run_tag = f"{args.output_date}_{normalized_run_label(args.run_label)}"
     ledger = TimingLedger(run_root)
     if args.reconcile_only:
         completed = reconcile_completed_timing(sites, ledger, run_tag)

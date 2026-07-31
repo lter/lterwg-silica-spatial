@@ -38,7 +38,6 @@ sites <- read_silica_site_reference(site_coord_dir) %>%
 #                 nchar(Shapefile_Name) != 0 &
 #                 !Shapefile_Name %in% c("?", "MISSING"))
 
-# Check it out
 dplyr::glimpse(sites)
 
 # Grab the shapefiles the previous script (see PURPOSE section) created
@@ -93,11 +92,13 @@ region_set <- resolve_target_regions(
 
 for(region in region_set){
   
-  # This part is new -- we want to allow old and new versions of MODIS
-  # Identify files in that folder
-  file_df <- data.frame("region" = region,
-                        "files" = dir(path = file.path(raw_driver_dir,
-                                                       "raw-greenup-v061", region))) %>% 
+  # Collect current MODIS files for this region
+  region_files <- dir(path = file.path(
+    raw_driver_dir, "raw-greenup-v061", region
+  ))
+  file_df <- data.frame(
+                        "region" = rep(region, length(region_files)),
+                        "files" = region_files) %>%
     dplyr::filter(stringr::str_detect(string=files, pattern="MCD12Q2.061_Greenup_")) 
   
   
@@ -295,17 +296,12 @@ out_df <- out_list %>%
 # Glimpse this too
 dplyr::glimpse(out_df)
 
-# Let's get ready to export
-greenup_export <- sheds %>%
-  # Join the greenup data
-  dplyr::left_join(y = out_df, by = c("LTER", "Shapefile_Name"))%>%
-  # this drops the geometry column, which causes issues on export
+greenup_export <- join_extracted_driver_values(sheds, out_df) %>%
+  # Remove geometry before writing the table
   sf::st_drop_geometry()  
 
-# Check it out
 dplyr::glimpse(greenup_export)
 
-# Create folder to export to
 greenup_out_file <- silica_driver_output_file(path, "si-extract_greenup_v061")
 
 # Export the summarized greenup data

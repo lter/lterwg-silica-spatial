@@ -150,8 +150,8 @@ silica_reference_release <- function(required = FALSE) {
   if (!nzchar(value)) {
     if (required) {
       stop(
-        "Set SILICA_REFERENCE_RELEASE to 1, 2, or 3 when using the canonical ",
-        "published GlASS reference table.",
+        "Set SILICA_REFERENCE_RELEASE to 1, 2, or 3 when using the versioned ",
+        "site-reference table.",
         call. = FALSE
       )
     }
@@ -205,7 +205,7 @@ silica_release_reference_file <- function(root_path, release = NULL) {
   )
   if (!file.exists(candidate)) {
     stop(
-      "No installed site-reference table for published GlASS version ",
+      "No installed site-reference table for reference version ",
       release,
       ": ",
       candidate,

@@ -1,6 +1,6 @@
 # AppEEARS Dataset Audit
 
-Updated: 2026-07-23
+Updated: 2026-07-29
 
 We reviewed the site-reference table and watersheds maintained with the current
 AppEEARS dataset. The audit covers both extraction methods. Coordinates,
@@ -11,11 +11,13 @@ repository, and publication records.
 The review found misspelled site names, encoding problems, incorrect
 coordinates, drainage-area unit errors, duplicate aliases, missing source
 information, and watersheds linked to the wrong station. We rejected polygons
-that were corrupt, incomplete, far from the sampling outlet, or inconsistent
-with the reported drainage area.
+that were corrupt, incomplete, or far from the sampling outlet. Where an
+independent drainage area was available, we also used it to check the polygon.
 
 We kept reported drainage areas when they were supported by a reliable source.
-Sites were left blank when no watershed could be verified.
+Sites were left blank when no watershed could be verified. A missing reported
+area did not by itself disqualify a watershed; derived polygons without an
+independent area check are marked in the table.
 
 The table records the first planned release for each site, the chemistry and
 discharge version currently in use, and the spatial-data version currently in

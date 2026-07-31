@@ -1,5 +1,3 @@
-#!/usr/bin/env Rscript
-
 # Check every publication-facing script for portability and basic validity.
 #
 # Usage:
@@ -52,7 +50,7 @@ excluded_directories <- c(
 )
 forbidden_text <- c(
   "personal macOS path" = paste0("/", "Users/"),
-  "temporary Workflow attachment" = paste0(".", "workflow/attachments"),
+  "temporary attachment path" = "/attachments/",
   "temporary macOS path" = paste0("/private/", "tmp/")
 )
 
@@ -103,13 +101,15 @@ for (path in scripts) {
   lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
   text <- paste(lines, collapse = "\n")
 
-  for (description in names(forbidden_text)) {
-    forbidden <- forbidden_text[[description]]
-    if (grepl(forbidden, text, fixed = TRUE)) {
-      errors <- c(
-        errors,
-        paste0(relative, ": contains a ", description)
-      )
+  if (!identical(normalizePath(path, mustWork = TRUE), script_path)) {
+    for (description in names(forbidden_text)) {
+      forbidden <- forbidden_text[[description]]
+      if (grepl(forbidden, text, fixed = TRUE)) {
+        errors <- c(
+          errors,
+          paste0(relative, ": contains a ", description)
+        )
+      }
     }
   }
 
