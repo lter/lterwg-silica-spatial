@@ -181,7 +181,7 @@ if (canonical_release_mode) {
     )
     data.frame(
       files = files,
-      spatial_release = as.integer(release),
+      spatial_release = rep.int(as.integer(release), length(files)),
       stringsAsFactors = FALSE
     )
   })

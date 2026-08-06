@@ -59,10 +59,16 @@ read_reference <- function(path) {
       sep = "\t",
       quote = "",
       stringsAsFactors = FALSE,
-      check.names = FALSE
+      check.names = FALSE,
+      colClasses = "character"
     )
   } else if (extension == "csv") {
-    data <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+    data <- read.csv(
+      path,
+      stringsAsFactors = FALSE,
+      check.names = FALSE,
+      colClasses = "character"
+    )
   } else {
     stop("The handoff reference table must be CSV or tab-separated text.", call. = FALSE)
   }

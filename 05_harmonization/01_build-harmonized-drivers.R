@@ -17,6 +17,20 @@ source(file.path("05_harmonization", "00_harmonization_functions.R"))
 # Read the latest vetted combined table
 harmonized <- read_harmonized_base_table(combined_file)
 
+gee_era5_annual <- NULL
+if (add_gee_era5_annual_columns) {
+  gee_era5_annual <- read_gee_era5_annual(gee_era5_dir)
+}
+
+gee_human_impacts <- list(static = data.frame(), annual = data.frame())
+if (add_gee_human_impact_columns) {
+  gee_human_impacts <- read_gee_human_impacts(gee_human_impacts_file)
+  harmonized <- add_gee_static_human_impacts(
+    harmonized,
+    gee_human_impacts$static
+  )
+}
+
 # Step 2
 # Add site-level Q summary variables
 wrtds_q <- NULL
@@ -84,7 +98,9 @@ if (add_gee_glc_land_cover_columns && nzchar(lulc_file) && file.exists(lulc_file
 annual_drivers <- build_annual_driver_table(
   harmonized,
   annual_discharge = annual_discharge_metrics,
-  wrtds_q = wrtds_q
+  wrtds_q = wrtds_q,
+  gee_era5_annual = gee_era5_annual,
+  gee_human_annual = gee_human_impacts$annual
 )
 site_average_drivers <- build_site_average_driver_table(harmonized, annual_drivers)
 

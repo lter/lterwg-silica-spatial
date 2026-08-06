@@ -43,6 +43,9 @@ prepare_combined_table <- function(df) {
   df$Shapefile_Name <- norm_chr(df$Shapefile_Name)
   df$Stream_ID <- build_stream_id(df)
   df$key <- build_harmonization_key(df)
+  if ("canonical_row_id" %in% names(df)) {
+    return(df %>% dplyr::distinct(canonical_row_id, .keep_all = TRUE))
+  }
   df %>% dplyr::distinct(key, .keep_all = TRUE)
 }
 
@@ -406,7 +409,7 @@ add_gee_glc_land_cover <- function(df, lulc_path) {
   if (any(unnamed_index_cols)) {
     gee <- gee[, !unnamed_index_cols, drop = FALSE]
   }
-  required <- c("Stream_Name", "Year", "Simple_Class", "LandClass_sum")
+  required <- c("Year", "Simple_Class", "LandClass_sum")
   missing_required <- setdiff(required, names(gee))
   if (length(missing_required)) {
     stop(
@@ -422,6 +425,72 @@ add_gee_glc_land_cover <- function(df, lulc_path) {
     value = TRUE
   )
   df_base <- df[, setdiff(names(df), old_land_cols), drop = FALSE]
+
+  if ("watershed_id" %in% names(gee) && "gee_watershed_id" %in% names(df_base)) {
+    gee_wide <- gee %>%
+      transmute(
+        watershed_id = trimws(as.character(watershed_id)),
+        Year = suppressWarnings(as.integer(Year)),
+        Simple_Class = clean_gee_glc_class_name(Simple_Class),
+        LandClass_sum = suppressWarnings(as.numeric(LandClass_sum))
+      ) %>%
+      filter(
+        nzchar(watershed_id),
+        !is.na(Year),
+        nzchar(Simple_Class)
+      ) %>%
+      group_by(watershed_id, Year, Simple_Class) %>%
+      summarise(
+        LandClass_sum = if (all(is.na(LandClass_sum))) {
+          NA_real_
+        } else {
+          mean(LandClass_sum, na.rm = TRUE)
+        },
+        .groups = "drop"
+      ) %>%
+      mutate(.gee_col = paste("gee_glc", Year, Simple_Class, sep = "_")) %>%
+      select(watershed_id, .gee_col, LandClass_sum) %>%
+      pivot_wider(names_from = .gee_col, values_from = LandClass_sum)
+
+    out <- df_base %>%
+      left_join(
+        gee_wide,
+        by = c("gee_watershed_id" = "watershed_id"),
+        na_matches = "never"
+      ) %>%
+      mutate(
+        gee_glc_match_method = ifelse(
+          gee_watershed_id %in% gee_wide$watershed_id,
+          "watershed_id",
+          "no GEE/GLC match"
+        ),
+        gee_glc_match = gee_glc_match_method == "watershed_id"
+      )
+
+    gee_value_cols <- grep("^gee_glc_[0-9]{4}_", names(out), value = TRUE)
+    after_candidates <- intersect(
+      c(
+        "Shapefile_Name", "Discharge_File_Name", "Stream_Name", "Stream_ID",
+        "gee_watershed_id"
+      ),
+      names(out)
+    )
+    if (length(after_candidates)) {
+      out <- out %>%
+        relocate(
+          all_of(c("gee_glc_match_method", "gee_glc_match", gee_value_cols)),
+          .after = all_of(tail(after_candidates, 1))
+        )
+    }
+    return(out)
+  }
+
+  if (!"Stream_Name" %in% names(gee)) {
+    stop(
+      "GEE/GLC LULC needs watershed_id or Stream_Name.",
+      call. = FALSE
+    )
+  }
 
   gee_long <- gee %>%
     transmute(
@@ -500,6 +569,129 @@ add_gee_glc_land_cover <- function(df, lulc_path) {
   }
 
   out
+}
+
+first_non_missing_gee <- function(value) {
+  keep <- !is.na(value) & nzchar(trimws(as.character(value)))
+  if (!any(keep)) return(NA_real_)
+  suppressWarnings(as.numeric(value[which(keep)[[1]]]))
+}
+
+read_gee_era5_annual <- function(directory) {
+  files <- list.files(
+    directory,
+    pattern = "^era5_land_[0-9]{4}_.*[.]csv$",
+    full.names = TRUE
+  )
+  if (!length(files)) {
+    stop("No annual GEE ERA5-Land files found in ", directory, call. = FALSE)
+  }
+  data <- bind_rows(lapply(files, function(path) {
+    item <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+    if (!"year" %in% names(item)) {
+      item$year <- suppressWarnings(as.integer(sub(
+        "^era5_land_([0-9]{4})_.*$", "\\1", basename(path)
+      )))
+    }
+    item
+  }))
+  required <- c("watershed_id", "year")
+  missing <- setdiff(required, names(data))
+  if (length(missing)) {
+    stop(
+      "Final GEE ERA5-Land files are missing: ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  value_columns <- intersect(
+    c(
+      "precip_mm", "temp_degC", "evapotrans_mm", "potential_evap_mm",
+      "snow_cover_fraction", "snow_water_equiv_mm"
+    ),
+    names(data)
+  )
+  if (!length(value_columns)) {
+    stop("Final GEE ERA5-Land files contain no registered values.", call. = FALSE)
+  }
+  out <- data %>%
+    transmute(
+      watershed_id = trimws(as.character(watershed_id)),
+      Year = suppressWarnings(as.integer(year)),
+      across(all_of(value_columns), ~ suppressWarnings(as.numeric(.x)))
+    )
+  if (anyDuplicated(out[, c("watershed_id", "Year")])) {
+    stop("Final GEE ERA5-Land data contain duplicate watershed-years.", call. = FALSE)
+  }
+  names(out)[match(value_columns, names(out))] <- paste0(
+    "gee_era5_", value_columns
+  )
+  out
+}
+
+read_gee_human_impacts <- function(path) {
+  data <- read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+  required <- c("watershed_id", "human_impact_dataset", "year")
+  missing <- setdiff(required, names(data))
+  if (length(missing)) {
+    stop(
+      "Final GEE human-impact data are missing: ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  metadata <- c(
+    "watershed_id", "lter", "shapefile_name", "stream_name", "Q_file_name",
+    "run_group", "hydrosheds_used", "hydrosheds_id", "expected_area_km2",
+    "drainage_area_source", "polygon_area_km2", "tiny_watershed",
+    "source_type", "human_impact_dataset", "human_impact_asset_id", "period",
+    "year", "reference_timeframe", "used_fine_scale_fallback"
+  )
+  value_columns <- setdiff(names(data), metadata)
+  if (!length(value_columns)) {
+    stop("Final GEE human-impact data contain no registered values.", call. = FALSE)
+  }
+  data[value_columns] <- lapply(
+    data[value_columns],
+    function(value) suppressWarnings(as.numeric(value))
+  )
+  data$watershed_id <- trimws(as.character(data$watershed_id))
+  data$Year <- suppressWarnings(as.integer(data$year))
+
+  collapse <- function(input, group_columns) {
+    if (!nrow(input)) return(data.frame())
+    out <- input %>%
+      group_by(across(all_of(group_columns))) %>%
+      summarise(
+        across(all_of(value_columns), first_non_missing_gee),
+        .groups = "drop"
+      )
+    names(out)[match(value_columns, names(out))] <- paste0(
+      "gee_human_", value_columns
+    )
+    out
+  }
+
+  list(
+    static = collapse(data[is.na(data$Year), , drop = FALSE], "watershed_id"),
+    annual = collapse(
+      data[!is.na(data$Year), , drop = FALSE],
+      c("watershed_id", "Year")
+    )
+  )
+}
+
+add_gee_static_human_impacts <- function(df, static_data) {
+  if (!nrow(static_data)) return(df)
+  if (!"gee_watershed_id" %in% names(df)) {
+    stop("Combined data lack gee_watershed_id.", call. = FALSE)
+  }
+  left_join(
+    df,
+    static_data,
+    by = c("gee_watershed_id" = "watershed_id"),
+    na_matches = "never"
+  )
 }
 
 # Basin slope fill
@@ -707,7 +899,10 @@ extract_one_annual_driver <- function(df, spec) {
   }
 
   base_cols <- intersect(
-    c("Stream_ID", "LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name", "key"),
+    c(
+      "Stream_ID", "LTER", "Stream_Name", "Discharge_File_Name",
+      "Shapefile_Name", "key", "canonical_row_id", "gee_watershed_id"
+    ),
     names(df)
   )
 
@@ -738,7 +933,13 @@ extract_one_annual_driver <- function(df, spec) {
   out
 }
 
-build_annual_driver_table <- function(df, annual_discharge = NULL, wrtds_q = NULL) {
+build_annual_driver_table <- function(
+  df,
+  annual_discharge = NULL,
+  wrtds_q = NULL,
+  gee_era5_annual = NULL,
+  gee_human_annual = NULL
+) {
   pieces <- lapply(seq_len(nrow(annual_driver_specs)), function(i) {
     extract_one_annual_driver(df, annual_driver_specs[i, ])
   })
@@ -749,7 +950,10 @@ build_annual_driver_table <- function(df, annual_discharge = NULL, wrtds_q = NUL
   }
 
   join_cols <- intersect(
-    c("Stream_ID", "LTER", "Stream_Name", "Discharge_File_Name", "Shapefile_Name", "key", "Year"),
+    c(
+      "Stream_ID", "LTER", "Stream_Name", "Discharge_File_Name",
+      "Shapefile_Name", "key", "canonical_row_id", "gee_watershed_id", "Year"
+    ),
     names(pieces[[1]])
   )
 
@@ -769,6 +973,24 @@ build_annual_driver_table <- function(df, annual_discharge = NULL, wrtds_q = NUL
   if (!is.null(annual_discharge) && nrow(annual_discharge)) {
     annual <- annual %>%
       left_join(annual_discharge, by = c("Stream_ID", "Year"))
+  }
+
+  if (!is.null(gee_era5_annual) && nrow(gee_era5_annual)) {
+    annual <- annual %>%
+      left_join(
+        gee_era5_annual,
+        by = c("gee_watershed_id" = "watershed_id", "Year"),
+        na_matches = "never"
+      )
+  }
+
+  if (!is.null(gee_human_annual) && nrow(gee_human_annual)) {
+    annual <- annual %>%
+      left_join(
+        gee_human_annual,
+        by = c("gee_watershed_id" = "watershed_id", "Year"),
+        na_matches = "never"
+      )
   }
 
   annual
@@ -800,6 +1022,10 @@ build_site_average_driver_table <- function(df, annual_table) {
     ),
     names(annual_table)
   )
+  mean_cols <- unique(c(
+    mean_cols,
+    grep("^(gee_era5_|gee_human_)", names(annual_table), value = TRUE)
+  ))
 
   annual_means <- annual_table %>%
     mutate(.has_annual_driver_value = rowSums(!is.na(pick(all_of(mean_cols)))) > 0) %>%

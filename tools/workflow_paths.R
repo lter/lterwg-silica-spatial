@@ -138,6 +138,77 @@ resolve_silica_data_root <- function() {
   normalizePath(hit[[1]], mustWork = TRUE)
 }
 
+resolve_silica_new_sites_root <- function(required = TRUE) {
+  root <- env_value("SILICA_NEW_SITES_HANDOFF_ROOT", default = "")
+  if (!nzchar(root) || !dir.exists(root)) {
+    if (!required) return("")
+    stop(
+      "Set SILICA_NEW_SITES_HANDOFF_ROOT to the August site handoff.",
+      call. = FALSE
+    )
+  }
+  normalizePath(root, mustWork = TRUE)
+}
+
+expand_workflow_path <- function(
+  path,
+  data_root = NULL,
+  new_sites_root = NULL,
+  repo_root = silica_find_repo_root()
+) {
+  path <- trimws(as.character(path))
+  if (!nzchar(path)) return("")
+  if (grepl("${SILICA_DATA_ROOT}", path, fixed = TRUE)) {
+    if (is.null(data_root) || !nzchar(data_root)) {
+      data_root <- resolve_silica_data_root()
+    }
+    path <- sub("${SILICA_DATA_ROOT}", data_root, path, fixed = TRUE)
+  }
+  if (grepl("${SILICA_NEW_SITES_HANDOFF_ROOT}", path, fixed = TRUE)) {
+    if (is.null(new_sites_root) || !nzchar(new_sites_root)) {
+      new_sites_root <- resolve_silica_new_sites_root()
+    }
+    path <- sub(
+      "${SILICA_NEW_SITES_HANDOFF_ROOT}", new_sites_root, path, fixed = TRUE
+    )
+  }
+  if (grepl("^/", path)) path else file.path(repo_root, path)
+}
+
+portable_workflow_path <- function(
+  path,
+  data_root = NULL,
+  new_sites_root = NULL,
+  repo_root = silica_find_repo_root()
+) {
+  if (!nzchar(path)) return("")
+  if (is.null(data_root) || !nzchar(data_root)) {
+    data_root <- resolve_silica_data_root()
+  }
+  if (is.null(new_sites_root) || !nzchar(new_sites_root)) {
+    new_sites_root <- resolve_silica_new_sites_root(required = FALSE)
+  }
+  roots <- c(
+    repo_root = normalizePath(repo_root, mustWork = TRUE),
+    SILICA_DATA_ROOT = data_root,
+    SILICA_NEW_SITES_HANDOFF_ROOT = new_sites_root
+  )
+  for (name in names(roots)) {
+    root <- roots[[name]]
+    if (!nzchar(root)) next
+    prefix <- paste0(normalizePath(root, mustWork = FALSE), "/")
+    if (startsWith(path, prefix)) {
+      relative <- substring(path, nchar(prefix) + 1L)
+      return(if (name == "repo_root") {
+        relative
+      } else {
+        paste0("${", name, "}/", relative)
+      })
+    }
+  }
+  path
+}
+
 silica_use_canonical_release_library <- function() {
   tolower(Sys.getenv(
     "SILICA_USE_CANONICAL_RELEASE_LIBRARY",

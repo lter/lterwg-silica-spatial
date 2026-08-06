@@ -1,0 +1,4 @@
+source_id	action	path	expected_rows	role
+base_reference	base	generated_outputs/aurora/aurora-frozen-run-20260730/run-inputs/site_reference_table_audited_candidate_20260730.csv	1215	July 30 audited living-reference snapshot
+guadeloupe_reference_patch	patch	generated_outputs/rerun/20260804_guadeloupe_watersheds/guadeloupe_site_reference_recommendations.csv	6	August 4 Guadeloupe watershed corrections
+sisyn_new_sites_reference	append	${SILICA_NEW_SITES_HANDOFF_ROOT}/aurora/run_inputs/site_reference_table_new_sites_20260804.csv	154	August 4 public-data intake additions

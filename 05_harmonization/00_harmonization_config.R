@@ -172,6 +172,12 @@ lulc_file <- first_existing_path(
   "LULC harmonization file"
 )
 
+gee_era5_dir <- env_or_default("SILICA_GEE_ERA5_DIR", "")
+gee_human_impacts_file <- env_or_default(
+  "SILICA_GEE_HUMAN_IMPACTS_FILE",
+  ""
+)
+
 # Turn pieces on or off here
 add_q_summary <- TRUE
 build_rbi <- TRUE
@@ -181,6 +187,19 @@ gap_fill_basin_slope <- TRUE
 gap_fill_elevation <- TRUE
 add_max_daylength <- TRUE
 add_gee_glc_land_cover_columns <- TRUE
+add_gee_era5_annual_columns <- env_boolean("SILICA_ADD_GEE_ERA5")
+add_gee_human_impact_columns <- env_boolean("SILICA_ADD_GEE_HUMAN_IMPACTS")
+
+if (add_gee_era5_annual_columns && !dir.exists(gee_era5_dir)) {
+  stop("Missing final GEE ERA5-Land directory: ", gee_era5_dir, call. = FALSE)
+}
+if (add_gee_human_impact_columns && !file.exists(gee_human_impacts_file)) {
+  stop(
+    "Missing final GEE human-impact file: ",
+    gee_human_impacts_file,
+    call. = FALSE
+  )
+}
 
 # Required base file check
 if (!file.exists(combined_file)) {

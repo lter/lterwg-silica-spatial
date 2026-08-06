@@ -177,6 +177,18 @@ write_csv_atomic <- function(data, path) {
 }
 
 merge_product_rows <- function(existing, additions) {
+  identifier_columns <- c(
+    "LTER", "Shapefile_Name", "Discharge_File_Name", "Stream_Name"
+  )
+  for (column in intersect(identifier_columns, names(additions))) {
+    additions[[column]] <- as.character(additions[[column]])
+  }
+  if (!is.null(existing)) {
+    for (column in intersect(identifier_columns, names(existing))) {
+      existing[[column]] <- as.character(existing[[column]])
+    }
+  }
+
   key <- function(data) {
     paste(
       normalize_lter_key(data$LTER),
