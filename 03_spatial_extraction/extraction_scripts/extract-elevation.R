@@ -135,11 +135,20 @@ for (i in 1:nrow(sheds)){
   # Starting message
   message("Extracting slope for watershed ", i, " (", (nrow(sheds) - i), " remaining)")
   
-  # Crop and mask the elevation raster to each shapefile
-  cropped_raster <- terra::crop(x = elev_raw, y = terra::vect(sheds[i,]), mask = TRUE)
-  
-  # Calculate the slopes
+  # Keep neighboring DEM cells so small watersheds can calculate terrain
+  watershed <- terra::vect(sheds[i,])
+  watershed_extent <- terra::ext(watershed)
+  expanded_extent <- terra::ext(
+    terra::xmin(watershed_extent) - 2 * terra::xres(elev_raw),
+    terra::xmax(watershed_extent) + 2 * terra::xres(elev_raw),
+    terra::ymin(watershed_extent) - 2 * terra::yres(elev_raw),
+    terra::ymax(watershed_extent) + 2 * terra::yres(elev_raw)
+  )
+  cropped_raster <- terra::crop(x = elev_raw, y = expanded_extent)
+
+  # Calculate slope before masking to avoid small-watershed edge failures
   slope_raster <- terra::terrain(cropped_raster, v = "slope", unit = "degrees")
+  slope_raster <- terra::mask(slope_raster, watershed)
   
   # Extract the slopes into a dataframe
   slope_dataframe <- terra::as.data.frame(slope_raster)
