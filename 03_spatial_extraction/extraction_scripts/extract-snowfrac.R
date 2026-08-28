@@ -144,6 +144,10 @@ snow_reftable <- read.csv(file = file.path(raw_driver_dir, focal_driver, "snow_i
 dplyr::glimpse(snow_reftable)
 
 snow_metric_cols <- setdiff(names(snow_reftable), "value")
+snow_sum_cols <- paste0(snow_metric_cols, "__sum")
+snow_count_cols <- paste0(snow_metric_cols, "__n")
+snow_metric_values <- as.matrix(snow_reftable[, snow_metric_cols, drop = FALSE])
+snow_coverage_cache <- list()
 
 has_usable_snow_metrics <- function(x) {
   if (!nrow(x) || !length(snow_metric_cols) || !all(snow_metric_cols %in% names(x))) {
@@ -353,25 +357,65 @@ for(annum in sort(unique(file_set$year))){
         stop("Snow raster did not match a target watershed: ", raster_path)
       }
       
-      # Extract all possible information from that dataframe
+      # Summarize exact intersecting cells without retaining a pixel table
       ex_data <- tryCatch(
         {
-          exactextractr::exact_extract(x = snow_rast, y = sheds_for_raster,
-                                       include_cols = c("LTER", "Shapefile_Name"),
-                                       progress = FALSE) %>%
-            # Unlist to dataframe
-            purrr::map_dfr(dplyr::select, dplyr::everything()) %>%
-            # Drop coverage fraction column
-            dplyr::select(-coverage_fraction) %>%
-            # Drop NA values that were "extracted"
-            # These points fall outside the current raster's bounding box.
-            dplyr::filter(!is.na(value)) %>%
-            # Make new relevant columns
-            dplyr::mutate(year = as.numeric(simp_df$year[j]),
-                          doy = as.numeric(simp_df$doy[j]),
-                          .after = Shapefile_Name) %>%
-            # Attach the reference table for understanding the 'value' integer
-            dplyr::left_join(y = snow_reftable, by = "value")
+          purrr::map_dfr(seq_len(nrow(sheds_for_raster)), function(shed_index) {
+            shed <- sheds_for_raster[shed_index, , drop = FALSE]
+            grid_key <- paste(
+              terra::nrow(snow_rast),
+              terra::ncol(snow_rast),
+              paste(as.vector(terra::ext(snow_rast)), collapse = ","),
+              terra::crs(snow_rast),
+              shed$LTER,
+              shed$Shapefile_Name,
+              sep = "|"
+            )
+            if (is.null(snow_coverage_cache[[grid_key]])) {
+              coverage <- exactextractr::coverage_fraction(
+                snow_rast,
+                shed,
+                crop = TRUE
+              )[[1]]
+              coverage_values <- terra::values(coverage, mat = FALSE)
+              snow_coverage_cache[[grid_key]] <<- list(
+                extent = terra::ext(coverage),
+                inside_cells = which(!is.na(coverage_values) & coverage_values > 0)
+              )
+              rm(coverage, coverage_values)
+            }
+            coverage_info <- snow_coverage_cache[[grid_key]]
+            snow_crop <- terra::crop(
+              snow_rast,
+              coverage_info$extent,
+              snap = "near"
+            )
+            snow_codes <- terra::extract(
+              snow_crop,
+              coverage_info$inside_cells,
+              raw = TRUE
+            )[, 1]
+            snow_codes <- as.integer(snow_codes[!is.na(snow_codes)])
+            matched <- match(snow_codes, snow_reftable$value)
+            code_counts <- tabulate(matched, nbins = nrow(snow_reftable))
+            metric_sums <- colSums(
+              snow_metric_values * code_counts,
+              na.rm = TRUE
+            )
+            metric_counts <- colSums(
+              (!is.na(snow_metric_values)) * code_counts
+            )
+
+            row <- dplyr::tibble(
+              LTER = as.character(shed$LTER),
+              Shapefile_Name = as.character(shed$Shapefile_Name),
+              year = as.numeric(simp_df$year[j]),
+              doy = as.numeric(simp_df$doy[j])
+            )
+            row[snow_sum_cols] <- as.list(metric_sums)
+            row[snow_count_cols] <- as.list(metric_counts)
+            row
+          })
         },
         error = function(e) {
           stop(
@@ -383,10 +427,13 @@ for(annum in sort(unique(file_set$year))){
 	      )
 
       force_terra_fallback <- startsWith(basename(raster_path), "fg-gro-snow-")
-      if ((force_terra_fallback || !has_usable_snow_metrics(ex_data)) &&
+      usable_snow <- nrow(ex_data) > 0 && any(
+        rowSums(ex_data[, snow_count_cols, drop = FALSE]) > 0
+      )
+      if ((force_terra_fallback || !usable_snow) &&
           tolower(Sys.getenv("SILICA_SNOW_TERRA_FALLBACK", "true")) == "true") {
         message("using terra snow fallback for ", basename(raster_path))
-        ex_data <- terra_snow_summary_fallback(
+        fallback_data <- terra_snow_summary_fallback(
           snow_rast = snow_rast,
           sheds_sf = sheds,
           snow_reftable = snow_reftable,
@@ -394,6 +441,14 @@ for(annum in sort(unique(file_set$year))){
           doy_value = simp_df$doy[j],
           raster_file = raster_path
         )
+        ex_data <- fallback_data %>%
+          dplyr::select(LTER, Shapefile_Name, year, doy)
+        for (metric in snow_metric_cols) {
+          ex_data[[paste0(metric, "__sum")]] <- fallback_data[[metric]]
+          ex_data[[paste0(metric, "__n")]] <- as.numeric(
+            !is.na(fallback_data[[metric]])
+          )
+        }
         message("terra fallback rows: ", nrow(ex_data))
       }
       
@@ -410,16 +465,36 @@ for(annum in sort(unique(file_set$year))){
       # Handle the summarization within river (potentially across multiple rasters' pixels)
       dplyr::group_by(LTER, Shapefile_Name, year, doy) %>%
       dplyr::summarize(
-        total_snow_days = mean(snow_days, na.rm = T),
-        snow_pres_day_1 = mean(day_1_snow_pres, na.rm = T),
-        snow_pres_day_2 = mean(day_2_snow_pres, na.rm = T),
-        snow_pres_day_3 = mean(day_3_snow_pres, na.rm = T),
-        snow_pres_day_4 = mean(day_4_snow_pres, na.rm = T),
-        snow_pres_day_5 = mean(day_5_snow_pres, na.rm = T),
-        snow_pres_day_6 = mean(day_6_snow_pres, na.rm = T),
-        snow_pres_day_7 = mean(day_7_snow_pres, na.rm = T),
-        snow_pres_day_8 = mean(day_8_snow_pres, na.rm = T)) %>%
-      dplyr::ungroup()
+        dplyr::across(
+          dplyr::all_of(c(snow_sum_cols, snow_count_cols)),
+          ~sum(.x, na.rm = TRUE)
+        ),
+        .groups = "drop"
+      )
+    for (metric in snow_metric_cols) {
+      metric_count <- full_data[[paste0(metric, "__n")]]
+      full_data[[metric]] <- ifelse(
+        metric_count > 0,
+        full_data[[paste0(metric, "__sum")]] / metric_count,
+        NA_real_
+      )
+    }
+    full_data <- full_data %>%
+      dplyr::transmute(
+        LTER,
+        Shapefile_Name,
+        year,
+        doy,
+        total_snow_days = snow_days,
+        snow_pres_day_1 = day_1_snow_pres,
+        snow_pres_day_2 = day_2_snow_pres,
+        snow_pres_day_3 = day_3_snow_pres,
+        snow_pres_day_4 = day_4_snow_pres,
+        snow_pres_day_5 = day_5_snow_pres,
+        snow_pres_day_6 = day_6_snow_pres,
+        snow_pres_day_7 = day_7_snow_pres,
+        snow_pres_day_8 = day_8_snow_pres
+      )
     
     # Export this file for a given day
     write_subset_csv(

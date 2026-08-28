@@ -192,8 +192,7 @@ file_set <- filter_target_region_year_rows(file_set, driver = "evapo", region_co
 
 # Extract all possible information from each
 # Note this results in *many* NAs for pixels in sheds outside of each bounding box's extent
-# Create an empty list to hold diagnostic info for removed records
-removed_diagnostics <- list()
+coverage_cache <- list()
 
 # Loop over each year
 for(annum in sort(unique(file_set$year))) {
@@ -216,18 +215,45 @@ for(annum in sort(unique(file_set$year))) {
       message("Reading evapotranspiration raster: ", raster_path)
       et_rast <- terra::rast(raster_path)
       
-      # Extract all information from the raster
-      extracted_data <- tryCatch(
+      # Summarize exact intersecting cells without retaining a pixel table
+      ex_data <- tryCatch(
         {
-          exactextractr::exact_extract(x = et_rast, y = sheds,
-                                       include_cols = c("LTER", "Shapefile_Name"),
-                                       progress = FALSE) %>%
-            purrr::list_rbind() %>%
-            dplyr::select(-coverage_fraction) %>%
-            dplyr::filter(!is.na(value)) %>%
-            dplyr::mutate(year = as.numeric(simp_df$year[j]),
-                          doy = as.numeric(simp_df$doy[j]),
-                          .after = Shapefile_Name)
+          purrr::map_dfr(seq_len(nrow(sheds)), function(shed_index) {
+            shed <- sheds[shed_index, , drop = FALSE]
+            grid_key <- paste(
+              terra::nrow(et_rast),
+              terra::ncol(et_rast),
+              paste(as.vector(terra::ext(et_rast)), collapse = ","),
+              terra::crs(et_rast),
+              shed$Shapefile_Name,
+              sep = "|"
+            )
+            if (is.null(coverage_cache[[grid_key]])) {
+              coverage_cache[[grid_key]] <<- exactextractr::coverage_fraction(
+                et_rast,
+                shed,
+                crop = TRUE
+              )[[1]]
+            }
+            coverage <- coverage_cache[[grid_key]]
+            et_crop <- terra::crop(et_rast, coverage)
+            inside <- terra::values(coverage, mat = FALSE)
+            inside <- !is.na(inside) & inside > 0
+            et_values <- terra::values(et_crop, mat = FALSE)
+            covered <- inside & !is.na(et_values)
+            valid <- covered & et_values >= -3276.7 & et_values <= 3270
+            removed <- covered & et_values > 3270
+
+            dplyr::tibble(
+              LTER = as.character(shed$LTER),
+              Shapefile_Name = as.character(shed$Shapefile_Name),
+              year = as.numeric(simp_df$year[j]),
+              doy = as.numeric(simp_df$doy[j]),
+              value_sum = sum(et_values[valid]),
+              value_n = sum(valid),
+              removed_count = sum(removed)
+            )
+          })
         },
         error = function(e) {
           stop(
@@ -237,27 +263,16 @@ for(annum in sort(unique(file_set$year))) {
           )
         }
       )
-      
-      # Capture records where value > 3000 (for diagnostics)
-      removed <- extracted_data %>% dplyr::filter(value > 3270)
-      if(nrow(removed) > 0) {
-        removed <- removed %>% 
-          dplyr::mutate(region = simp_df$region[j],
-                        file = simp_df$files[j])
-        removed_diagnostics[[length(removed_diagnostics) + 1]] <- removed
-        removed_sites <- sort(unique(as.character(removed$Shapefile_Name)))
-        message("Diagnostic: Removed ", nrow(removed), " records for site: ",
-                paste(removed_sites, collapse = ", "), " in year: ", simp_df$year[j],
-                " doy: ", simp_df$doy[j])
+
+      removed_rows <- dplyr::filter(ex_data, removed_count > 0)
+      if(nrow(removed_rows) > 0) {
+        message(
+          "Diagnostic: Removed ", sum(removed_rows$removed_count),
+          " records for site: ",
+          paste(sort(unique(removed_rows$Shapefile_Name)), collapse = ", "),
+          " in year: ", simp_df$year[j], " doy: ", simp_df$doy[j]
+        )
       }
-      
-      # Now filter to keep only valid records 
-      ex_data <- extracted_data %>% 
-        dplyr::filter(value <= 3270 & value >= -3276.7)
-      
-      # Print unique value counts for current extraction
-      print("Unique value counts for current file extraction:")
-      print(ex_data %>% dplyr::count(value, sort = TRUE))
       
       # Add the cleaned data to the list for this day-of-year
       doy_list[[j]] <- ex_data
@@ -268,7 +283,14 @@ for(annum in sort(unique(file_set$year))) {
     full_data <- doy_list %>%
       purrr::list_rbind() %>%
       dplyr::group_by(LTER, Shapefile_Name, year, doy) %>%
-      dplyr::summarize(value = mean(value, na.rm = TRUE)) %>%
+      dplyr::summarize(
+        value_sum = sum(value_sum, na.rm = TRUE),
+        value_n = sum(value_n, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      dplyr::filter(value_n > 0) %>%
+      dplyr::mutate(value = value_sum / value_n) %>%
+      dplyr::select(-value_sum, -value_n) %>%
       dplyr::ungroup()
     
     # Export the day's processed data
@@ -284,16 +306,6 @@ for(annum in sort(unique(file_set$year))) {
   message("Processing ended year: ", annum)
 }
 
-# # After processing all files, combine and export diagnostic data if any exist
-# if(length(removed_diagnostics) > 0) {
-#   diagnostics_df <- purrr::list_rbind(removed_diagnostics)
-#   write.csv(diagnostics_df, file = file.path(path, "extracted-data", "evapotrans_removed_diagnostics.csv"),
-#             row.names = FALSE)
-#   message("Diagnostic data for removed records saved.")
-# } else {
-#   message("No records with values >3270 were found.")
-# }
-# 
 # # Clean up environment
 # rm(list = setdiff(ls(), c('path', 'sites', 'sheds', 'file_all', 'focal_driver')))
 
