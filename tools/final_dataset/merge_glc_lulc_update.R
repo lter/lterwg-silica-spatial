@@ -104,12 +104,20 @@ master_lulc <- read_csv(master_path, show_col_types = FALSE) %>%
 
 new_glc <- read_csv(new_glc_path, show_col_types = FALSE)
 
-required_cols <- c("Stream_Name", "Year", "LandClass", "Area_m2")
+required_cols <- c("Stream_Name", "Year", "Area_m2")
 missing_cols <- setdiff(required_cols, names(new_glc))
 
 # Stop early if the new GLC file is missing any columns used below.
 if (length(missing_cols) > 0) {
   stop("Missing required columns in new GLC file: ", paste(missing_cols, collapse = ", "))
+}
+has_landclass <- "LandClass" %in% names(new_glc)
+has_lc_id <- "LC_ID" %in% names(new_glc)
+if (!has_landclass && !has_lc_id) {
+  stop("New GLC input must contain LandClass or LC_ID.", call. = FALSE)
+}
+if (!has_landclass) {
+  new_glc$LandClass <- NA_character_
 }
 
 updated_sites <- new_glc %>%
