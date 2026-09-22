@@ -55,6 +55,6 @@ logs/
 -e/
 Rplots.pdf
 qa/
-generated_outputs/
-outputs/
+/generated_outputs
+/outputs
 .workflow_tmp/
