@@ -10,6 +10,7 @@ suppressPackageStartupMessages({
 })
 
 source(file.path("tools", "cli_helpers.R"))
+source(file.path("tools", "watershed_geometry_helpers.R"))
 
 args <- commandArgs(trailingOnly = TRUE)
 site_table_path <- require_input_file(
@@ -265,8 +266,8 @@ compare_geometry <- function(task_name, source_file) {
     6933
   ))
   final <- st_make_valid(st_transform(st_read(source_file, quiet = TRUE), 6933))
-  requested <- st_union(st_geometry(requested))
-  final <- st_union(st_geometry(final))
+  requested <- watershed_comparison_geometry(requested)
+  final <- watershed_comparison_geometry(final)
   requested_area <- as.numeric(st_area(requested))
   final_area <- as.numeric(st_area(final))
   intersection_area <- tryCatch(

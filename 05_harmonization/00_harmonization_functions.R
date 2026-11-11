@@ -419,6 +419,16 @@ add_gee_glc_land_cover <- function(df, lulc_path) {
     )
   }
 
+  expected_years <- 1985:2022
+  land_cover_years <- sort(unique(suppressWarnings(as.integer(gee$Year))))
+  land_cover_years <- land_cover_years[!is.na(land_cover_years)]
+  if (!identical(land_cover_years, expected_years)) {
+    stop(
+      "GEE/GLC LULC years must be exactly 1985 through 2022.",
+      call. = FALSE
+    )
+  }
+
   old_land_cols <- grep(
     "^(gee_glc_|gee_lulc_|glc_|gee_glc_match$|gee_glc_match_method$)",
     names(df),
