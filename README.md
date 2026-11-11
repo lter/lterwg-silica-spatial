@@ -6,31 +6,35 @@ includes AppEEARS requests, MODIS downloads, extraction, and QA. Aurora runs
 the soil, lithology, elevation, permafrost, precipitation, and air-temperature
 drivers.
 
-Earth Engine, GLC land cover, harmonization, and final spatial-data assembly
-belong in `data-workflow_spatial`.
+Use [data-workflow_spatial](https://github.com/global-river-chem/data-workflow_spatial)
+for Earth Engine, land cover, and final spatial-data assembly.
 
 ## Run the workflow
 
-Run commands from the repository root. The spatial-extraction README explains
-the independent AppEEARS and Aurora paths.
+Run these commands from the repository root. Choose the mode and reference
+release in [01_run_config.R](01_run_config.R). Set `SILICA_DATA_ROOT` if the
+shared data library is in a different location.
 
 ```bash
 Rscript tools/site_reference/validate_site_reference.R --input PATH
 Rscript 02_run-workflow.R
 ```
 
-Set `SILICA_DATA_ROOT` if the shared data library is not in its default
-location.
+The [spatial extraction guide](03_spatial_extraction/README.md) lists the
+AppEEARS request, queue, and Aurora handoff commands. The
+[queue retry helper](tools/appeears/run_verified_backlog_after_process.R)
+is optional when extraction needs to wait for an existing process.
 
 ## Repository layout
 
-- `02_watershed_delineation/`: watershed preparation
-- `03_spatial_extraction/`: local and Aurora extraction
-- `tools/appeears/`: AppEEARS request, download, extraction, and QA tools
+- [Watershed delineation](02_watershed_delineation/) prepares the versioned boundaries.
+- [Spatial extraction](03_spatial_extraction/) contains local and Aurora extraction and shared site rules.
+- [AppEEARS tools](tools/appeears/) handle requests, downloads, extraction, and checks.
 
-The site-reference table and configuration files define site-specific
-decisions. Raw downloads, exports, plots, credentials, and temporary work do
-not belong in Git.
+For earlier local releases, the
+[combine and harmonize wrapper](tools/run_combine_and_harmonization_workflow.R)
+runs the saved local combination and harmonization steps.
 
-See [spatial extraction](03_spatial_extraction/README.md) for the reusable
-AppEEARS and Aurora workflows.
+Keep the site-reference copy, watershed version, source checksums, request
+files, task IDs, and validation results with the dated run outside Git.
+Record the script version used for that run. Store credentials separately.
